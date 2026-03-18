@@ -1,0 +1,22 @@
+flask_route,purpose,laravel_route,controller,view
+/login,Auth login,login,AuthController@login,auth/login.blade.php
+/logout,Auth logout,logout,AuthController@logout,-
+/change-password,Change password,auth/change-password,AuthController@changePassword,auth/change-password.blade.php
+/users,Users management,admin/users,Admin/UserController@index,admin/users/index.blade.php
+/members,Members management,admin/members,Admin/MemberController@index,admin/members/index.blade.php
+/attendance,Daily attendance,admin/attendance,Admin/AttendanceController@index,admin/attendance/index.blade.php
+/attendance-monthly,Monthly attendance,admin/attendance-monthly,Admin/MonthlyAttendanceController@index,admin/attendance_monthly/index.blade.php
+/extras,Extra charges,admin/extras,Admin/ExtraController@index,admin/extras/index.blade.php
+/billing,Billing generation,admin/billing,Admin/BillingController@index,admin/billing/index.blade.php
+/payments,Payments workflow,admin/payments,Admin/PaymentController@index,admin/payments/index.blade.php
+/ledger,Ledger view,admin/ledger,Admin/LedgerController@index,admin/ledger/index.blade.php
+/summary,Summary,admin/summary,Admin/SummaryController@index,admin/summary/index.blade.php
+/reports,Reports hub,admin/reports,Admin/ReportController@index,admin/reports/index.blade.php
+/statement,Statement print,admin/statement,Admin/StatementController@index,admin/statement/index.blade.php
+/rates,Rate policy,admin/rates,Admin/RatePolicyController@index,admin/rates/index.blade.php
+/settings,Settings tabs,admin/settings,Admin/SettingsController@index,admin/settings/index.blade.php
+/member/dashboard,Member dashboard,member/dashboard,Member/DashboardController@index,member/dashboard.blade.php
+/member/bill,Member bill,member/bill,Member/BillController@index,member/bill.blade.php
+/member/attendance,Member attendance,member/attendance,Member/AttendanceController@index,member/attendance.blade.php
+/member/payments,Member payments,member/payments,Member/PaymentController@index,member/payments.blade.php
+/member/profile,Member profile,member/profile,Member/ProfileController@index,member/profile.blade.php

@@ -1,0 +1,4 @@
+<?php
+namespace App\Http\Controllers\Admin;
+use App\Http\Controllers\Controller; use App\Models\{Guest,GuestMeal}; use Illuminate\Http\Request;
+class GuestController extends Controller { public function index(){ $guests=Guest::latest()->get(); $meals=GuestMeal::latest('meal_date')->limit(100)->get(); $summary=(float)GuestMeal::sum('amount'); return view('admin.guests.index',compact('guests','meals','summary')); } public function storeGuest(Request $r){ Guest::create($r->validate(['name'=>'required','contact'=>'nullable','department'=>'nullable'])); return back()->with('success','Guest created'); } public function storeMeal(Request $r){ $d=$r->validate(['guest_id'=>'required|exists:guests,id','meal_date'=>'required|date','meal_type'=>'required','quantity'=>'required|integer|min:1','rate'=>'required|numeric|min:0']); $d['amount']=round($d['quantity']*$d['rate'],2); GuestMeal::create($d); return back()->with('success','Guest meal added'); }}

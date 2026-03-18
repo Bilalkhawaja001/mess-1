@@ -1,0 +1,63 @@
+{
+  "source_of_truth": "flask_templates",
+  "generated_for": "phase1_discovery",
+  "summary": {
+    "flask_templates": 71,
+    "laravel_views": 20,
+    "missing_or_unmapped_pages": 40
+  },
+  "missing_or_unmapped_pages": [
+    "admin_hub",
+    "ops_hub",
+    "reports_hub",
+    "inventory_hub",
+    "meals_hub",
+    "master_data",
+    "change_password",
+    "password_reset_request",
+    "password_reset",
+    "audit_log",
+    "downloads",
+    "reports_bills_download",
+    "bill_recovery",
+    "overall_recovery",
+    "recovery",
+    "finance_reports",
+    "department_ledger",
+    "departments",
+    "messes",
+    "mess_costing_bill_system",
+    "items",
+    "vendors",
+    "po",
+    "grn",
+    "stock_ledger",
+    "stock_balance",
+    "stock_count",
+    "menus",
+    "recipes",
+    "meal_plans",
+    "plan_link_issue",
+    "kitchen_issue",
+    "consumption_report",
+    "guests",
+    "guest_meals",
+    "member_attendance",
+    "member_bill",
+    "member_bills",
+    "member_bill_detail",
+    "member_payments",
+    "member_profile"
+  ],
+  "partial_or_conflicted_pages": [
+    {
+      "page": "member_dashboard",
+      "flask_route": "/member/dashboard",
+      "laravel_note": "blade exists, but web.php has duplicate /dashboard naming collision with admin route"
+    },
+    {
+      "page": "settings",
+      "laravel_note": "basic settings page exists; Flask has richer tabbed settings and admin app settings surface"
+    }
+  ]
+}

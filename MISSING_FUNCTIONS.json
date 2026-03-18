@@ -1,0 +1,40 @@
+{
+  "source_of_truth": "flask_routes_and_handlers",
+  "generated_for": "phase1_discovery",
+  "summary": {
+    "flask_method_endpoints": 155,
+    "laravel_method_endpoints": 37,
+    "unmatched_method_endpoints": 130
+  },
+  "critical_missing_functions": [
+    {"flask_function": "month_close", "path": "/month-close", "method": "POST"},
+    {"flask_function": "month_reopen", "path": "/month-reopen", "method": "POST"},
+    {"flask_function": "month_reset_hard", "path": "/month-reset-hard", "method": "POST"},
+    {"flask_function": "password_reset_request", "path": "/password-reset/request", "method": "GET|POST"},
+    {"flask_function": "password_reset", "path": "/password-reset", "method": "GET|POST"},
+    {"flask_function": "change_password", "path": "/change-password", "method": "GET|POST"},
+    {"flask_function": "import_ledger_page", "path": "/admin/import-ledger", "method": "GET|POST"},
+    {"flask_function": "admin_recompute_ledger", "path": "/admin/recompute-ledger", "method": "POST"},
+    {"flask_function": "import_opening_balances", "path": "/admin/import-opening-balances", "method": "POST"},
+    {"flask_function": "members_bulk_upload", "path": "/members/bulk-upload", "method": "POST"},
+    {"flask_function": "members_bulk_sample", "path": "/members/bulk-sample", "method": "GET"},
+    {"flask_function": "remove_members_selected", "path": "/members/remove-selected", "method": "POST"},
+    {"flask_function": "correct_billing_entry", "path": "/billing/<int:bill_id>/correct", "method": "POST"},
+    {"flask_function": "edit_payment", "path": "/payments/<int:payment_id>/edit", "method": "POST"},
+    {"flask_function": "rate_toggle_lock", "path": "/rates/<int:policy_id>/toggle-lock", "method": "POST"},
+    {"flask_function": "rate_update", "path": "/rates/<int:policy_id>/update", "method": "POST"},
+    {"flask_function": "delete_rate", "path": "/rates/<int:policy_id>/delete", "method": "POST"},
+    {"flask_function": "users_page", "path": "/users", "method": "GET|POST", "note": "Laravel lacks audit and permission parity around user management"},
+    {"flask_function": "audit_log", "path": "/audit-log", "method": "GET"},
+    {"flask_function": "department_ledger_page", "path": "/department-ledger", "method": "GET"},
+    {"flask_function": "finance_reports_page", "path": "/finance-reports", "method": "GET"}
+  ],
+  "module_level_missing_function_groups": {
+    "inventory": ["items", "items_import_csv", "edit_item", "stock_ledger", "stock_balance_page", "stock_count_page", "create_stock_txn", "approve_stock_txn_route"],
+    "procurement": ["vendors", "po_page", "approve_po", "grn_page", "approve_grn"],
+    "meals": ["menus_page", "recipes_page", "meal_plans_page", "kitchen_issue_page", "consumption_report_page"],
+    "guests": ["guests_page", "guest_meals_page", "approve_guest_meal", "export_guest_meals_excel"],
+    "downloads_exports": ["downloads_center", "downloads_bills_summary", "downloads_payroll", "downloads_ledger", "downloads_statement", "downloads_attendance", "bills_download_export_csv", "bills_download_export_xlsx"],
+    "member_portal": ["member_bill", "member_attendance", "member_payments", "member_profile"]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "source_of_truth": "flask",
+  "generated_for": "phase1_discovery",
+  "missing_modules": [
+    {
+      "module": "inventory_management",
+      "flask_evidence": ["/items", "/stock-ledger", "/stock-balance", "/stock-count", "/stock-txn"],
+      "laravel_status": "missing"
+    },
+    {
+      "module": "procurement",
+      "flask_evidence": ["/vendors", "/po", "/grn"],
+      "laravel_status": "missing"
+    },
+    {
+      "module": "meal_planning_and_kitchen",
+      "flask_evidence": ["/menus", "/recipes/<int:menu_id>", "/meal-plans", "/kitchen-issue", "/consumption-report"],
+      "laravel_status": "missing"
+    },
+    {
+      "module": "guest_management_and_billing",
+      "flask_evidence": ["/guests", "/guest-meals", "/guest-meals/export.xlsx"],
+      "laravel_status": "missing"
+    },
+    {
+      "module": "department_and_mess_accounting",
+      "flask_evidence": ["/departments", "/messes", "/department-ledger", "/mess-costing-bill-system"],
+      "laravel_status": "missing"
+    },
+    {
+      "module": "downloads_and_exports_center",
+      "flask_evidence": ["/downloads", "/downloads/bills-summary", "/downloads/payroll", "/reports/bills-download/export.xlsx"],
+      "laravel_status": "missing"
+    },
+    {
+      "module": "month_close_reopen_reset_ops",
+      "flask_evidence": ["/month-close", "/month-reopen", "/month-reset-hard"],
+      "laravel_status": "missing"
+    },
+    {
+      "module": "password_recovery_and_change_password",
+      "flask_evidence": ["/change-password", "/password-reset/request", "/password-reset"],
+      "laravel_status": "missing_or_partial"
+    },
+    {
+      "module": "member_self_service_portal",
+      "flask_evidence": ["/member/dashboard", "/member/bill", "/member/attendance", "/member/payments", "/member/profile"],
+      "laravel_status": "partial"
+    },
+    {
+      "module": "role_permission_audit",
+      "flask_evidence": ["permission", "role_permission", "/audit-log"],
+      "laravel_status": "partial"
+    }
+  ],
+  "partially_implemented_modules": [
+    "core_billing",
+    "members",
+    "attendance",
+    "payments",
+    "settings",
+    "reports_summary_statement"
+  ]
+}

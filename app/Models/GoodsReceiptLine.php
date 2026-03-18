@@ -1,0 +1,4 @@
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Model;
+class GoodsReceiptLine extends Model { protected $guarded=[]; }

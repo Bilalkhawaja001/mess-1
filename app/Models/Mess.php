@@ -1,4 +1,16 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
-class Mess extends Model { protected $guarded=[]; }
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Mess extends Model
+{
+    protected $guarded = [];
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+}

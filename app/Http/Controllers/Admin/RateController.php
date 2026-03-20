@@ -43,6 +43,10 @@ class RateController extends Controller
             'is_active'=>$request->boolean('is_active', true),
         ]);
 
+        if ($request->input('return_to') === 'settings') {
+            return redirect()->route('admin.settings.index', ['tab' => 'rates'])->with('success', 'Rate policy added (pending approval).');
+        }
+
         return redirect()->route('admin.rates.index')->with('success', 'Rate policy added (pending approval).');
     }
 

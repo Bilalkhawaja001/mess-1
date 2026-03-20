@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\BillingController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ExportCenterController;
 use App\Http\Controllers\Admin\ExtraController;
@@ -48,6 +49,15 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware(['auth'])-
 Route::get('/', function () {
     if (! auth()->check()) return redirect()->route('login');
     return auth()->user()->isMemberRole() ? redirect()->route('member.dashboard') : redirect()->route('admin.dashboard');
+});
+
+Route::get('/health', fn () => response()->json(['status' => 'ok']));
+Route::get('/ready', fn () => response()->json(['ready' => true]));
+
+Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'])->group(function () {
+    Route::get('/api/menus', [KitchenController::class, 'apiMenus'])->name('api.menus');
+    Route::get('/api/guest-rate', [GuestController::class, 'guestRate'])->name('api.guest-rate');
+    Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.legacy');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
@@ -136,6 +146,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
 
     Route::get('/summary', [SummaryController::class, 'index'])->name('summary.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
     Route::get('/statement', [StatementController::class, 'index'])->name('statement.index');
 
     Route::middleware('permission:inventory.manage')->group(function () {
@@ -157,9 +168,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::middleware('permission:kitchen.manage')->group(function () {
         Route::get('/kitchen', [KitchenController::class, 'index'])->name('kitchen.index');
         Route::post('/kitchen/menus', [KitchenController::class, 'storeMenu'])->name('kitchen.menus.store');
+        Route::post('/kitchen/menus/{menu}/edit', [KitchenController::class, 'updateMenu'])->name('kitchen.menus.edit.legacy');
+        Route::post('/kitchen/menus/{menu}/delete', [KitchenController::class, 'deleteMenu'])->name('kitchen.menus.delete.legacy');
         Route::post('/kitchen/recipes', [KitchenController::class, 'storeRecipe'])->name('kitchen.recipes.store');
+        Route::post('/kitchen/recipes/{recipe}/edit', [KitchenController::class, 'updateRecipe'])->name('kitchen.recipes.edit.legacy');
+        Route::post('/kitchen/recipes/{recipe}/delete', [KitchenController::class, 'deleteRecipe'])->name('kitchen.recipes.delete.legacy');
         Route::post('/kitchen/plans', [KitchenController::class, 'storePlan'])->name('kitchen.plans.store');
+        Route::post('/kitchen/plans/{plan}/edit', [KitchenController::class, 'updatePlan'])->name('kitchen.plans.edit.legacy');
+        Route::post('/kitchen/plans/{plan}/approve', [KitchenController::class, 'approvePlan'])->name('kitchen.plans.approve.legacy');
         Route::post('/kitchen/issues', [KitchenController::class, 'issue'])->name('kitchen.issues.store');
+        Route::post('/kitchen/issues/{issue}/approve', [KitchenController::class, 'approveIssue'])->name('kitchen.issues.approve.legacy');
     });
 
     Route::middleware('permission:guest.manage')->group(function () {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Guest;
 use App\Models\GuestMeal;
+use App\Models\RatePolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -12,6 +13,22 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class GuestController extends Controller
 {
+    public function guestRate(): \Illuminate\Http\JsonResponse
+    {
+        $today = now()->toDateString();
+        $rate = RatePolicy::query()
+            ->where('rate_type', 'GUEST_MEAL')
+            ->where('is_active', true)
+            ->whereDate('effective_from', '<=', $today)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $today);
+            })
+            ->orderByDesc('effective_from')
+            ->value('value');
+
+        return response()->json(['rate' => (float) ($rate ?? 0)]);
+    }
+
     public function index()
     {
         $guests = Guest::latest()->get();

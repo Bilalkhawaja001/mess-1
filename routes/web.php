@@ -67,6 +67,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::post('/members', [MemberController::class, 'store'])->name('members.store');
     Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
     Route::post('/members/{member}/toggle-active', [MemberController::class, 'toggleActive'])->name('members.toggle-active');
+    Route::post('/members/{member}/deactivate', [MemberController::class, 'deactivate'])->name('members.deactivate');
+    Route::post('/members/{member}/reactivate', [MemberController::class, 'reactivate'])->name('members.reactivate');
+    Route::post('/members/{member}/remove', [MemberController::class, 'remove'])->name('members.remove');
 
     Route::prefix('/member-accounts')->name('member-accounts.')->middleware('permission:superadmin.member_account_create')->group(function () {
         Route::get('/', [MemberAccountController::class, 'index'])->name('index');
@@ -82,6 +85,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::post('/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::get('/attendance-monthly', [MonthlyAttendanceController::class, 'index'])->name('attendance-monthly.index');
     Route::post('/attendance-monthly', [MonthlyAttendanceController::class, 'store'])->name('attendance-monthly.store');
+    Route::post('/attendance-monthly/approve', [MonthlyAttendanceController::class, 'approve'])->name('attendance-monthly.approve');
+    Route::post('/attendance-monthly/unlock', [MonthlyAttendanceController::class, 'unlock'])->name('attendance-monthly.unlock');
+    Route::get('/attendance-monthly/export', [MonthlyAttendanceController::class, 'export'])->name('attendance-monthly.export');
 
     Route::get('/extras', [ExtraController::class, 'index'])->name('extras.index');
     Route::post('/extras', [ExtraController::class, 'store'])->name('extras.store');
@@ -90,6 +96,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::post('/rates', [RateController::class, 'store'])->name('rates.store');
     Route::post('/rates/{rate}/toggle-approve', [RateController::class, 'toggleApprove'])->name('rates.toggle-approve');
     Route::post('/rates/{rate}/toggle-active', [RateController::class, 'toggleActive'])->name('rates.toggle-active');
+    Route::post('/rates/{rate}/toggle-lock', [RateController::class, 'toggleLock'])->name('rates.toggle-lock');
+    Route::post('/rates/{rate}/update', [RateController::class, 'update'])->name('rates.update.legacy');
+    Route::post('/rates/{rate}/delete', [RateController::class, 'destroy'])->name('rates.delete.legacy');
 
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
     Route::post('/billing/generate', [BillingController::class, 'generate'])->name('billing.generate');
@@ -136,7 +145,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::get('/procurement', [ProcurementController::class, 'index'])->name('procurement.index');
         Route::post('/procurement/vendors', [ProcurementController::class, 'storeVendor'])->name('procurement.vendors.store');
         Route::post('/procurement/po', [ProcurementController::class, 'storePo'])->name('procurement.po.store');
+        Route::post('/procurement/po/{po}/approve', [ProcurementController::class, 'approvePo'])->name('procurement.po.approve');
         Route::post('/procurement/grn', [ProcurementController::class, 'storeGrn'])->name('procurement.grn.store');
+        Route::post('/procurement/grn/{grn}/approve', [ProcurementController::class, 'approveGrn'])->name('procurement.grn.approve');
     });
 
     Route::middleware('permission:kitchen.manage')->group(function () {
@@ -150,7 +161,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::middleware('permission:guest.manage')->group(function () {
         Route::get('/guests', [GuestController::class, 'index'])->name('guests.index');
         Route::post('/guests', [GuestController::class, 'storeGuest'])->name('guests.store');
+        Route::post('/guests/{guest}/edit', [GuestController::class, 'updateGuest'])->name('guests.edit.legacy');
+        Route::post('/guests/{guest}/delete', [GuestController::class, 'deleteGuest'])->name('guests.delete.legacy');
         Route::post('/guests/meals', [GuestController::class, 'storeMeal'])->name('guests.meals.store');
+        Route::post('/guests/meals/{meal}/update', [GuestController::class, 'updateMeal'])->name('guests.meals.update.legacy');
+        Route::post('/guests/meals/{meal}/delete', [GuestController::class, 'deleteMeal'])->name('guests.meals.delete.legacy');
+        Route::post('/guests/meals/{meal}/approve', [GuestController::class, 'approveMeal'])->name('guests.meals.approve.legacy');
+        Route::get('/guests/meals/export', [GuestController::class, 'exportMeals'])->name('guests.meals.export');
     });
 
     Route::middleware('permission:accounting.manage')->group(function () {

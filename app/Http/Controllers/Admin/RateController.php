@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Rates\StoreRatePolicyRequest;
 use App\Models\RatePolicy;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -63,5 +64,35 @@ class RateController extends Controller
         $rate->is_active = ! $rate->is_active;
         $rate->save();
         return back()->with('success', 'Rate active status updated.');
+    }
+
+    public function toggleLock(RatePolicy $rate): RedirectResponse
+    {
+        // Flask parity: lock/unlock maps to active flag in current schema.
+        $rate->is_active = ! $rate->is_active;
+        $rate->save();
+
+        return back()->with('success', 'Rate lock status updated.');
+    }
+
+    public function update(Request $request, RatePolicy $rate): RedirectResponse
+    {
+        $data = $request->validate([
+            'value' => 'required|numeric|min:0',
+            'effective_from' => 'required|date',
+            'effective_to' => 'nullable|date|after_or_equal:effective_from',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $rate->update($data + ['is_active' => (bool) ($data['is_active'] ?? $rate->is_active)]);
+
+        return back()->with('success', 'Rate updated.');
+    }
+
+    public function destroy(RatePolicy $rate): RedirectResponse
+    {
+        $rate->delete();
+
+        return back()->with('success', 'Rate deleted.');
     }
 }

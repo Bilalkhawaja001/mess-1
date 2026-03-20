@@ -65,4 +65,33 @@ class MemberController extends Controller
 
         return redirect()->route('admin.members.index')->with('success', 'Member status updated.');
     }
+
+    public function deactivate(Member $member): RedirectResponse
+    {
+        if ($member->is_active) {
+            $member->is_active = false;
+            $member->leave_date = $member->leave_date ?: now()->toDateString();
+            $member->save();
+        }
+
+        return redirect()->route('admin.members.index')->with('success', 'Member deactivated.');
+    }
+
+    public function reactivate(Member $member): RedirectResponse
+    {
+        if (! $member->is_active) {
+            $member->is_active = true;
+            $member->leave_date = null;
+            $member->save();
+        }
+
+        return redirect()->route('admin.members.index')->with('success', 'Member reactivated.');
+    }
+
+    public function remove(Member $member): RedirectResponse
+    {
+        $member->delete();
+
+        return redirect()->route('admin.members.index')->with('success', 'Member removed.');
+    }
 }

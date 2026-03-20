@@ -70,6 +70,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::post('/members/{member}/deactivate', [MemberController::class, 'deactivate'])->name('members.deactivate');
     Route::post('/members/{member}/reactivate', [MemberController::class, 'reactivate'])->name('members.reactivate');
     Route::post('/members/{member}/remove', [MemberController::class, 'remove'])->name('members.remove');
+    Route::post('/members/import', [MemberController::class, 'import'])->name('members.import');
+    Route::get('/members/sample-csv', [MemberController::class, 'sampleCsv'])->name('members.sample-csv');
 
     Route::prefix('/member-accounts')->name('member-accounts.')->middleware('permission:superadmin.member_account_create')->group(function () {
         Route::get('/', [MemberAccountController::class, 'index'])->name('index');
@@ -99,6 +101,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::post('/rates/{rate}/toggle-lock', [RateController::class, 'toggleLock'])->name('rates.toggle-lock');
     Route::post('/rates/{rate}/update', [RateController::class, 'update'])->name('rates.update.legacy');
     Route::post('/rates/{rate}/delete', [RateController::class, 'destroy'])->name('rates.delete.legacy');
+    Route::post('/rates/import', [RateController::class, 'import'])->name('rates.import');
 
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
     Route::post('/billing/generate', [BillingController::class, 'generate'])->name('billing.generate');
@@ -139,6 +142,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::post('/inventory/items', [InventoryController::class, 'storeItem'])->name('inventory.items.store');
         Route::post('/inventory/transactions', [InventoryController::class, 'storeTxn'])->name('inventory.txns.store');
+        Route::post('/inventory/items/import', [InventoryController::class, 'importItems'])->name('inventory.items.import');
     });
 
     Route::middleware('permission:procurement.manage')->group(function () {
@@ -168,6 +172,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/guests/meals/{meal}/delete', [GuestController::class, 'deleteMeal'])->name('guests.meals.delete.legacy');
         Route::post('/guests/meals/{meal}/approve', [GuestController::class, 'approveMeal'])->name('guests.meals.approve.legacy');
         Route::get('/guests/meals/export', [GuestController::class, 'exportMeals'])->name('guests.meals.export');
+        Route::post('/guests/import', [GuestController::class, 'importGuests'])->name('guests.import');
+        Route::post('/guests/meals/import', [GuestController::class, 'importMeals'])->name('guests.meals.import');
     });
 
     Route::middleware('permission:accounting.manage')->group(function () {

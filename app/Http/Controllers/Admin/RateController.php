@@ -7,6 +7,7 @@ use App\Models\RatePolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class RateController extends Controller
@@ -94,5 +95,80 @@ class RateController extends Controller
         $rate->delete();
 
         return back()->with('success', 'Rate deleted.');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate(['file' => 'required|file|mimes:csv,txt']);
+        $counts = ['inserted' => 0, 'updated' => 0, 'failed' => 0];
+
+        foreach ($this->csvRows($request) as $row) {
+            $payload = [
+                'rate_type' => strtoupper(trim((string) ($row['rate_type'] ?? ''))),
+                'value' => $row['value'] ?? null,
+                'effective_from' => trim((string) ($row['effective_from'] ?? '')),
+                'effective_to' => $this->nullableText($row['effective_to'] ?? null),
+                'is_active' => $this->toBoolean($row['is_active'] ?? true),
+            ];
+
+            $validator = Validator::make($payload, [
+                'rate_type' => 'required|string|max:50',
+                'value' => 'required|numeric|min:0',
+                'effective_from' => 'required|date',
+                'effective_to' => 'nullable|date|after_or_equal:effective_from',
+                'is_active' => 'boolean',
+            ]);
+
+            if ($validator->fails()) {
+                $counts['failed']++;
+                continue;
+            }
+
+            $existing = RatePolicy::query()
+                ->where('rate_type', $payload['rate_type'])
+                ->whereDate('effective_from', $payload['effective_from'])
+                ->first();
+
+            if ($existing) {
+                $existing->update($payload);
+                $counts['updated']++;
+            } else {
+                RatePolicy::query()->create($payload);
+                $counts['inserted']++;
+            }
+        }
+
+        return back()->with('success', "Rates import done. Inserted: {$counts['inserted']}, Updated: {$counts['updated']}, Failed: {$counts['failed']}");
+    }
+
+    private function csvRows(Request $request): array
+    {
+        $rows = [];
+        $file = fopen($request->file('file')->getRealPath(), 'r');
+        $headers = fgetcsv($file) ?: [];
+        $headers = array_map(fn ($h) => strtolower(trim((string) $h)), $headers);
+
+        while (($line = fgetcsv($file)) !== false) {
+            if (! array_filter($line, fn ($v) => trim((string) $v) !== '')) {
+                continue;
+            }
+            $rows[] = array_combine($headers, array_pad($line, count($headers), null));
+        }
+
+        fclose($file);
+
+        return $rows;
+    }
+
+    private function nullableText(mixed $value): ?string
+    {
+        $v = trim((string) ($value ?? ''));
+
+        return $v === '' ? null : $v;
+    }
+
+    private function toBoolean(mixed $value): bool
+    {
+        return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'y'], true);
     }
 }

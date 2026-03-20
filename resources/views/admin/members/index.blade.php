@@ -4,8 +4,21 @@
 @section('page_title', 'Members Management')
 
 @section('content')
-<div class="mb-2">
+<div class="mb-2 d-flex gap-2 flex-wrap">
     <a href="{{ route('admin.member-accounts.index') }}" class="btn btn-sm btn-outline-dark">Manage Member Portal Accounts</a>
+    <a href="{{ route('admin.members.sample-csv') }}" class="btn btn-sm btn-outline-secondary">Download Sample CSV</a>
+</div>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-header">Bulk Import Members</div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('admin.members.import') }}" enctype="multipart/form-data" class="row g-2 align-items-center">
+            @csrf
+            <div class="col-md-6"><input type="file" name="file" class="form-control" accept=".csv,.txt" required></div>
+            <div class="col-md-3"><button class="btn btn-outline-primary">Import CSV</button></div>
+            <div class="col-12 text-muted small">Headers: member_code,name,department_name,mobile_number,join_date,leave_date,is_active</div>
+        </form>
+    </div>
 </div>
 
 <div class="card shadow-sm mb-3">

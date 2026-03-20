@@ -8,6 +8,8 @@ use App\Http\Requests\Members\UpdateMemberRequest;
 use App\Models\Member;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class MemberController extends Controller
@@ -93,5 +95,96 @@ class MemberController extends Controller
         $member->delete();
 
         return redirect()->route('admin.members.index')->with('success', 'Member removed.');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt',
+        ]);
+
+        $counts = ['inserted' => 0, 'updated' => 0, 'failed' => 0];
+
+        foreach ($this->csvRows($request) as $row) {
+            $payload = [
+                'member_code' => trim((string) ($row['member_code'] ?? '')),
+                'name' => trim((string) ($row['name'] ?? '')),
+                'department_name' => $this->nullableText($row['department_name'] ?? null),
+                'mobile_number' => $this->nullableText($row['mobile_number'] ?? null),
+                'join_date' => $this->nullableText($row['join_date'] ?? null),
+                'leave_date' => $this->nullableText($row['leave_date'] ?? null),
+                'is_active' => $this->toBoolean($row['is_active'] ?? true),
+            ];
+
+            $validator = Validator::make($payload, [
+                'member_code' => 'required|string|max:50',
+                'name' => 'required|string|max:120',
+                'department_name' => 'nullable|string|max:120',
+                'mobile_number' => 'nullable|string|max:40',
+                'join_date' => 'required|date',
+                'leave_date' => 'nullable|date',
+                'is_active' => 'boolean',
+            ]);
+
+            if ($validator->fails()) {
+                $counts['failed']++;
+                continue;
+            }
+
+            $existing = Member::query()->where('member_code', $payload['member_code'])->first();
+            if ($existing) {
+                $existing->update($payload);
+                $counts['updated']++;
+            } else {
+                Member::query()->create($payload);
+                $counts['inserted']++;
+            }
+        }
+
+        return back()->with('success', "Members import done. Inserted: {$counts['inserted']}, Updated: {$counts['updated']}, Failed: {$counts['failed']}");
+    }
+
+    public function sampleCsv()
+    {
+        $headers = ['member_code', 'name', 'department_name', 'mobile_number', 'join_date', 'leave_date', 'is_active'];
+        $sample = ['M-001', 'Ali Khan', 'Accounts', '03001234567', now()->toDateString(), '', '1'];
+
+        return response()->streamDownload(function () use ($headers, $sample) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $headers);
+            fputcsv($out, $sample);
+            fclose($out);
+        }, 'members_sample.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    private function csvRows(Request $request): array
+    {
+        $rows = [];
+        $file = fopen($request->file('file')->getRealPath(), 'r');
+        $headers = fgetcsv($file) ?: [];
+        $headers = array_map(fn ($h) => strtolower(trim((string) $h)), $headers);
+
+        while (($line = fgetcsv($file)) !== false) {
+            if (! array_filter($line, fn ($v) => trim((string) $v) !== '')) {
+                continue;
+            }
+            $rows[] = array_combine($headers, array_pad($line, count($headers), null));
+        }
+
+        fclose($file);
+
+        return $rows;
+    }
+
+    private function nullableText(mixed $value): ?string
+    {
+        $v = trim((string) ($value ?? ''));
+
+        return $v === '' ? null : $v;
+    }
+
+    private function toBoolean(mixed $value): bool
+    {
+        return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'y'], true);
     }
 }

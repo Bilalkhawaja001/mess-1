@@ -96,6 +96,10 @@ class RateController extends Controller
 
     public function destroy(RatePolicy $rate): RedirectResponse
     {
+        if ($rate->approved_at) {
+            return back()->with('error', 'Approved rates cannot be deleted. Unapprove first.');
+        }
+
         $rate->delete();
 
         return back()->with('success', 'Rate deleted.');

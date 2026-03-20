@@ -211,6 +211,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
     Route::post('/settings/{setting}/toggle', [SettingController::class, 'toggle'])->name('settings.toggle');
+
+    Route::middleware('permission:accounting.manage')->group(function () {
+        Route::post('/settings/departments', [SettingController::class, 'storeDepartment'])->name('settings.departments.store');
+        Route::post('/settings/departments/{department}/update', [SettingController::class, 'updateDepartment'])->name('settings.departments.update');
+        Route::post('/settings/departments/{department}/remove', [SettingController::class, 'removeDepartment'])->name('settings.departments.remove');
+        Route::post('/settings/departments/{department}/reactivate', [SettingController::class, 'reactivateDepartment'])->name('settings.departments.reactivate');
+
+        Route::post('/settings/messes', [SettingController::class, 'storeMess'])->name('settings.messes.store');
+        Route::post('/settings/messes/{mess}/update', [SettingController::class, 'updateMess'])->name('settings.messes.update');
+        Route::post('/settings/messes/{mess}/remove', [SettingController::class, 'removeMess'])->name('settings.messes.remove');
+        Route::post('/settings/messes/{mess}/reactivate', [SettingController::class, 'reactivateMess'])->name('settings.messes.reactivate');
+    });
 });
 
 Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:MEMBER'])->group(function () {

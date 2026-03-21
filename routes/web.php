@@ -146,12 +146,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
 
     Route::get('/summary', [SummaryController::class, 'index'])->name('summary.index');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/overall-recovery', [ReportController::class, 'overallRecovery'])->name('reports.overall-recovery');
     Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
     Route::get('/statement', [StatementController::class, 'index'])->name('statement.index');
 
     Route::middleware('permission:inventory.manage')->group(function () {
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::post('/inventory/items', [InventoryController::class, 'storeItem'])->name('inventory.items.store');
+        Route::post('/inventory/items/bulk-upload', [InventoryController::class, 'bulkUploadItems'])->name('inventory.items.bulk-upload');
         Route::post('/inventory/transactions', [InventoryController::class, 'storeTxn'])->name('inventory.txns.store');
         Route::post('/inventory/items/import', [InventoryController::class, 'importItems'])->name('inventory.items.import');
     });

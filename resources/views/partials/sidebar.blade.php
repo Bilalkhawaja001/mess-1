@@ -48,7 +48,8 @@
                 <a class="nav-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}"><i class="bi bi-cash-stack"></i>Payments</a>
                 <a class="nav-link {{ request()->routeIs('admin.ledger.*') ? 'active' : '' }}" href="{{ route('admin.ledger.index') }}"><i class="bi bi-journal-text"></i>Ledger</a>
                 <a class="nav-link {{ request()->routeIs('admin.summary.*') ? 'active' : '' }}" href="{{ route('admin.summary.index') }}"><i class="bi bi-clipboard-data"></i>Summary</a>
-                <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}"><i class="bi bi-bar-chart-line"></i>Reports</a>
+                <a class="nav-link {{ request()->routeIs('admin.reports.index') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}"><i class="bi bi-bar-chart-line"></i>Reports</a>
+                <a class="nav-link {{ request()->routeIs('admin.reports.overall-recovery') ? 'active' : '' }}" href="{{ route('admin.reports.overall-recovery') }}"><i class="bi bi-graph-up-arrow"></i>Overall Recovery</a>
                 <a class="nav-link {{ request()->routeIs('admin.statement.*') ? 'active' : '' }}" href="{{ route('admin.statement.index') }}"><i class="bi bi-file-earmark-text"></i>Statement</a>
                 <a class="nav-link {{ request()->routeIs('admin.month.*') ? 'active' : '' }}" href="{{ route('admin.month.index') }}"><i class="bi bi-calendar2-check"></i>Month Governance</a>
                 <a class="nav-link {{ request()->routeIs('admin.audit-log.*') ? 'active' : '' }}" href="{{ route('admin.audit-log.index') }}"><i class="bi bi-journal-check"></i>Audit Log</a>

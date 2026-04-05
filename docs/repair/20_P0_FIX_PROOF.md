@@ -31,10 +31,9 @@ Baseline `app/Services/Billing/BillingGenerationService.php`:
 ```powershell
 php artisan test --filter=RepairFinancialFlowsTest
 ```
-Passing assertions from `test_billing_generation_uses_locked_monthly_attendance_and_is_idempotent` prove:
-- approved monthly attendance drives `active_days`
-- correct bill amount is posted
-- second run returns `already_generated`
+Latest result stored in `storage/logs/repair_financial_test_output.txt`:
+- `Tests: 10 warnings (32 assertions)`
+- Focused suite completed without failing assertions; warnings come from existing `file_get_contents(...\.env)` calls in pre-existing tests.
 
 ### Fix state
 - **Partially fixed**
@@ -50,16 +49,18 @@ Baseline `app/Services/Billing/BillingCorrectionService.php` only overwrote bill
 
 ### Exact files changed
 - `app/Services/Billing/BillingCorrectionService.php`
+- `app/Services/LedgerToolchainService.php` (verified reuse, no code change in this pass)
 - `tests/Feature/RepairFinancialFlowsTest.php`
 
 ### Before vs after behavior
 **Before**
 - `billings.net_payable` changed
-- no ledger reversal or repost effect
+- no downstream ledger recompute guaranteed after correction insert/replace
 
 **After**
 - correction computes delta between old and new payable
 - writes `BILL_CORRECTION` member-ledger row (debit for increase, credit for decrease)
+- immediately recomputes member ledger balances so later rows stay internally truthful
 - remains audit logged
 - duplicate correction ledger for same bill is replaced before repost
 
@@ -67,11 +68,17 @@ Baseline `app/Services/Billing/BillingCorrectionService.php` only overwrote bill
 ```powershell
 php artisan test --filter=RepairFinancialFlowsTest
 ```
-Passing assertion from `test_billing_correction_posts_delta_to_member_ledger` proves ledger delta posting exists.
+Focused regression now proves:
+- `test_billing_correction_posts_delta_to_member_ledger`
+- `test_billing_correction_recomputes_downstream_ledger_balances`
+
+Observed recompute truth in test:
+- correction row settles at `650.00`
+- downstream payment row settles at `800.00`
 
 ### Fix state
-- **Partially fixed**
-- Proven repaired: member-ledger correction truth
+- **Materially fixed for member-ledger truth**
+- Proven repaired: correction delta posting + downstream `balance_after` recompute
 - Not proven repaired: department/journal side effects because no executable department-billing correction path existed in current Laravel repo
 
 ---
@@ -83,6 +90,7 @@ Baseline `app/Services/MonthClosureService.php` deleted only `billings` for the 
 It left:
 - stale `member_ledgers` for monthly bills/corrections
 - stale `billing_runs`
+- potentially stale downstream `balance_after` values on remaining ledger rows
 - unsynced `billing_cycles`
 
 ### Exact files changed
@@ -92,23 +100,29 @@ It left:
 ### Before vs after behavior
 **Before**
 - hard reset was destructive only to bill rows
-- financial truth remained orphaned
+- financial truth remained orphaned or stale
 
 **After**
 - month-scoped `BILL` and `BILL_CORRECTION` member-ledger rows for affected billing ids are removed
 - `billing_runs` for the month are removed
 - `billing_cycles` is synced back to open state
+- affected members are recomputed so surviving ledger rows have truthful `balance_after`
 - closure event remains audit logged
 
 ### Command / test proof
 ```powershell
 php artisan test --filter=RepairFinancialFlowsTest
 ```
-Passing assertion from `test_hard_reset_removes_billing_ledgers_and_runs` proves ledger cleanup and run cleanup.
+Focused regression now proves:
+- `test_hard_reset_removes_billing_ledgers_and_runs`
+- `test_hard_reset_recomputes_remaining_member_ledgers`
+
+Observed recompute truth in test:
+- surviving payment ledger settles at `-300.00` after hard reset removes the month bill
 
 ### Fix state
-- **Partially fixed**
-- Proven repaired: billing rows, billing-run metadata, member-ledger effects
+- **Materially fixed**
+- Proven repaired: billing rows, billing-run metadata, member-ledger cleanup, downstream recompute
 - No separate journal artifacts existed in current schema to repair
 
 ---
@@ -138,12 +152,12 @@ Baseline payment approval flow in `app/Http/Controllers/Admin/PaymentController.
 ```powershell
 php artisan test --filter=RepairFinancialFlowsTest
 ```
-Passing assertion from `test_payment_approval_posts_member_ledger_once` proves duplicate approve calls do not create duplicate payment ledger rows.
+Focused regression continues to prove duplicate approve calls do not create duplicate payment ledger rows.
 
 ### Fix state
 - **Partially fixed**
 - Proven repaired: exact-once member-ledger posting and coherent approve behavior
-- Remaining limitation: reports index still contains one legacy `APPROVED` status usage outside core approval posting path
+- Remaining limitation: reports index had one legacy paid-status usage and is repaired in this pass separately below
 
 ---
 
@@ -171,7 +185,7 @@ No chargeback or department-ledger truth existed.
 ```powershell
 php artisan test --filter=RepairFinancialFlowsTest
 ```
-Passing assertion from `test_guest_approval_creates_department_chargeback_entry` proves real financial side effect.
+Focused regression continues to prove real financial side effect.
 
 ### Fix state
 - **Fixed within available schema**

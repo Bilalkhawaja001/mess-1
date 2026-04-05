@@ -5,13 +5,16 @@ namespace App\Services\Billing;
 use App\Models\Billing;
 use App\Models\MemberLedger;
 use App\Services\AuditLogService;
+use App\Services\LedgerToolchainService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class BillingCorrectionService
 {
-    public function __construct(private readonly AuditLogService $auditLogService)
-    {
+    public function __construct(
+        private readonly AuditLogService $auditLogService,
+        private readonly LedgerToolchainService $ledgerToolchainService,
+    ) {
     }
 
     public function correct(Billing $billing, float $newNetPayable, string $reason, int $userId): Billing
@@ -64,6 +67,8 @@ class BillingCorrectionService
                     'posted_by_user_id' => $userId,
                 ]);
             }
+
+            $this->ledgerToolchainService->recompute((int) $billing->member_id);
 
             $this->auditLogService->log('billing.corrected', Billing::class, (int) $billing->id, $before, $billing->toArray(), $reason);
 

@@ -115,10 +115,9 @@ class KitchenController extends Controller
 
     public function approvePlan(MealPlan $plan): RedirectResponse
     {
-        // Operational parity endpoint; table has no approval columns yet.
         $plan->touch();
 
-        return back()->with('success', 'Meal plan approved');
+        return back()->with('success', 'Meal plan approval acknowledged. No inventory/accounting side-effect exists in current schema.');
     }
 
     public function issue(Request $request): RedirectResponse
@@ -147,9 +146,8 @@ class KitchenController extends Controller
 
     public function approveIssue(KitchenIssue $issue): RedirectResponse
     {
-        // Operational parity endpoint; table has no approval columns yet.
         $issue->touch();
 
-        return back()->with('success', 'Kitchen issue approved');
+        return back()->with('success', 'Kitchen issue approval acknowledged. Stock was already posted on issue create; no extra approval side-effect exists in current schema.');
     }
 }

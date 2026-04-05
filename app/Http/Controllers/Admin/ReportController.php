@@ -24,13 +24,20 @@ class ReportController extends Controller
 
         if ($monthCycle !== '') {
             $bills = Billing::query()->with('member')->where('month_cycle', $monthCycle)->get();
+            $paidStatuses = [
+                Payment::STATUS_APPROVED,
+                Payment::STATUS_SUCCESS,
+                Payment::STATUS_RECONCILIATION_PENDING,
+                Payment::STATUS_RECONCILED,
+            ];
+
             foreach ($bills as $b) {
                 $paid = (float) Payment::query()
                     ->where('member_id', $b->member_id)
-                    ->where('status', 'APPROVED')
+                    ->whereIn('status', $paidStatuses)
                     ->whereBetween('payment_date', [$monthCycle . '-01', date('Y-m-t', strtotime($monthCycle . '-01'))])
                     ->sum('amount');
-                $outstanding = (float) $b->net_payable - $paid;
+                $outstanding = round((float) $b->net_payable - $paid, 2);
                 $recoveryRows[] = [
                     'member_code' => $b->member->member_code ?? '',
                     'net_payable' => (float) $b->net_payable,

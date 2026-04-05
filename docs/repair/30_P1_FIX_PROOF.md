@@ -33,78 +33,92 @@ The P1 truth repair in this cycle was to make billing generation actually consum
 - `ExportCenterController` exports stock ledger, guest meals, and department ledger
 
 ### Files changed / verified
-- `tests/Feature/P0FinalReverificationTest.php` (proof for summary CSV/XLSX and audit trail)
+- `app/Http/Controllers/Admin/ReportController.php`
+- `tests/Feature/RepairFinancialFlowsTest.php`
 - `docs/repair/10_POST_REPAIR_ROUTE_MATRIX.md`
-- `docs/repair/40_PARITY_GAPS_REMAINING.md`
 
 ### Proof
 Commands/tests executed:
 ```powershell
+php artisan test --filter=RepairFinancialFlowsTest
 php artisan test
-php artisan route:list --name=admin.summary.index
-php artisan route:list --name=admin.reports.overall-recovery
-php artisan route:list --name=admin.ledger.index
 ```
-`P0FinalReverificationTest` proves:
-- summary CSV export works
-- summary XLSX export works
-- export actions are audit logged
+Focused regression now includes `test_reports_index_uses_current_paid_statuses`, proving `ReportController::index()` counts paid amounts from current lifecycle statuses:
+- `APPROVED`
+- `SUCCESS`
+- `RECONCILIATION_PENDING`
+- `RECONCILED`
 
 ### Status
-- **Partially verified**
-- Remaining gap: `ReportController::index()` still uses legacy `APPROVED` payment status when building month recovery rows
+- **Materially improved**
+- Month recovery row legacy paid-status logic is repaired in this pass
+- Remaining report parity still depends on wider monthly department/journal truth not fully proven in schema
 
 ---
 
 ## P1-3 Dashboard reality
 
 ### What was broken
-Baseline dashboard only exposed three small counters:
-- users
-- members
-- open billing cycles
+Controller/view contract mismatch existed:
+- controller sent `collections`, `recent_cycles`, `recent_activity`
+- blade still expected `collected`, `$recentCycles`, `$recentActivity`
+- some visual cells silently fell back to `0` where real values should have surfaced
 
 ### Files changed
 - `app/Http/Controllers/Admin/DashboardController.php`
+- `resources/views/admin/dashboard.blade.php`
 - `tests/Feature/RepairFinancialFlowsTest.php`
 
 ### Before vs after behavior
 **Before**
-- placeholder-thin dashboard with no payment/collection/billable/outstanding picture
+- dashboard could show zeros or empty sections despite controller data being present
+- recent cycle/activity sections used mismatched variable contracts
 
 **After**
-- query-backed dashboard stats now include:
-  - users
-  - members
-  - open billing cycles
-  - pending payments
-  - collections
-  - billable
-  - outstanding
-  - recent cycles
-  - recent activity
+- controller now exposes both snake_case and camelCase aliases for repaired compatibility
+- blade binds to truthfully available values instead of mismatched names
+- missing values display `—` instead of fake zero in financial cards
+- recent cycles and recent activity render from actual controller-provided collections/arrays
 
 ### Proof
-`test_dashboard_has_real_bound_metrics` verifies the dashboard view receives the expanded real stats array.
+Focused regression `test_dashboard_has_real_bound_metrics` now verifies:
+- `collections` and `collected` both exist
+- `recent_cycles`/`recentCycles` both exist
+- `recent_activity`/`recentActivity` both exist
+- rendered response includes real values like `400.00` and `M001 PAYMENT #1`
 
 ### Status
-- **Fixed for controller data binding**
-- View-layer visual parity beyond binding was not the main blocker and is not overstated here
+- **Fixed for real controller-view binding truth**
+- Dashboard mismatch from the prompt is resolved in code and test coverage
 
 ---
 
 ## P1-4 Kitchen / inventory / procurement / approval semantics
 
-### State verified
-- procurement GRN already posts stock transactions
-- kitchen issue create already posts stock movement
-- inventory import/bulk upload surfaces already existed in current repo
+### Flask truth-pack re-check
+Reviewed:
+- `templates/kitchen_issue.html`
+- `templates/finance_reports.html`
+- `templates/mess_costing_bill_system.html`
+- `tests/test_financial_reporting_alignment.py`
 
-### Remaining problem
-- `KitchenController::approvePlan()` still uses `touch()` only
-- `KitchenController::approveIssue()` still uses `touch()` only
-- procurement approvals remain shallow status updates rather than richer financial/accounting side effects
+This truth-pack confirms report/payment language and costing surfaces, but does **not** provide a concrete extra approval-side-effect contract beyond:
+- kitchen issue create flow
+- GRN create stock posting
+- PO/GRN visible status transitions
+
+### Files changed
+- `app/Http/Controllers/Admin/KitchenController.php`
+- `app/Http/Controllers/Admin/ProcurementController.php`
+- `tests/Feature/RepairFinancialFlowsTest.php`
+
+### What was repaired truthfully
+- Kitchen approval success messages now explicitly state there is **no additional schema-backed side-effect** available
+- Procurement PO approval remains a status transition, but success message now states no deeper accounting posting exists in current schema
+- GRN approval message explicitly states stock was already posted at GRN create and no extra approval-side-effect exists
+- Focused regression covers these endpoints so they remain explicit-safe instead of pretending parity
 
 ### Status
-- **Not fully fixed**
-- These are captured honestly as remaining parity gaps rather than falsely marked complete
+- **Not fully fixed as a deeper workflow parity feature**
+- **Made explicit and safe** based on available truth + schema
+- No fake inventory/accounting side-effect was invented

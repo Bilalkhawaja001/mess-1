@@ -2,74 +2,69 @@
 
 ## Application code
 
-### `app/Services/Billing/BillingGenerationService.php`
-Reworked billing generation to:
-- block generation on closed month state
-- prefer approved locked monthly attendance
-- fall back to daily attendance when monthly snapshot is not approved
-- clamp charged days to employment window
-- include monthly attendance in config hash for rerun semantics
+### `app/Http/Controllers/Admin/DashboardController.php`
+Repaired dashboard controller/view contract by:
+- exposing both snake_case and camelCase keys for compatibility during repair
+- shaping recent cycle/activity data into renderable arrays
+- providing real `collected` alias instead of forcing blade-side fake zero fallbacks
+
+### `resources/views/admin/dashboard.blade.php`
+Repaired real dashboard bindings by:
+- consuming `collections/collected` truthfully
+- consuming `recent_cycles/recentCycles` and `recent_activity/recentActivity`
+- rendering `—` when financial values are unavailable instead of silently faking `0`
 
 ### `app/Services/Billing/BillingCorrectionService.php`
-Changed correction flow from simple overwrite to financial delta posting through `member_ledgers` with `BILL_CORRECTION` references.
+Extended billing correction flow so it:
+- still posts delta to `member_ledgers`
+- now also recomputes downstream ledger balances immediately to keep `balance_after` truthful
 
 ### `app/Services/MonthClosureService.php`
-Repaired month close/reopen/hard reset to keep `billing_cycles` aligned and to remove stale billing ledger + billing run artifacts on hard reset.
+Extended hard reset flow so it:
+- captures affected member ids before deletion
+- removes bill/correction ledger rows for the reset month
+- recomputes surviving member ledgers afterward to prevent stale downstream balances
 
-### `app/Services/Payments/PaymentTransactionService.php`
-Adjusted manual verify behavior so already-successful/reconciliation-pending payments are not re-transitioned into invalid states.
+### `app/Http/Controllers/Admin/ReportController.php`
+Repaired month recovery report logic so paid totals now use current lifecycle truth instead of only legacy `APPROVED` status.
 
-### `app/Http/Controllers/Admin/PaymentController.php`
-Added stronger exact-once guard for payment approval and moved duplicate-ledger protection into approve path.
+### `app/Http/Controllers/Admin/KitchenController.php`
+Kept kitchen approvals truthful and explicit-safe:
+- no fake hidden side-effects added
+- success responses now explicitly say no extra schema-backed side-effect exists
 
-### `app/Http/Controllers/Admin/GuestController.php`
-Replaced fake approval (`touch()`) with real department-ledger chargeback posting keyed to guest meal reference. Also cleans chargeback row on delete.
-
-### `app/Http/Controllers/Admin/DashboardController.php`
-Expanded dashboard controller from minimal placeholder counters to query-backed financial and operational metrics.
+### `app/Http/Controllers/Admin/ProcurementController.php`
+Kept procurement approvals truthful and explicit-safe:
+- PO approval remains a status transition
+- GRN approval explicitly reflects that stock was already posted at create-time
+- no invented accounting side-effect was added
 
 ## Tests
 
 ### `tests/Feature/RepairFinancialFlowsTest.php`
-New focused regression suite covering:
-- billing generation
-- billing correction
-- month hard reset
-- payment approval exact-once ledger effect
-- guest approval financial posting
-- dashboard metric binding
+Expanded focused regression coverage for this pass:
+- dashboard binding/render truth
+- billing correction downstream ledger recompute
+- hard reset recompute of surviving ledger rows
+- report paid-status lifecycle logic
+- kitchen/procurement approval explicit-safe behavior
 
-### `tests/Feature/FunctionalCompletenessClosureTest.php`
-Updated string expectations so route-surface assertions match actual route declarations in `routes/web.php`.
-
-### `tests/Feature/P0FinalReverificationTest.php`
-Updated end-to-end verification so it runs against current seeded roles/payment architecture and validates repaired proof flow honestly.
-
-### `tests/Feature/ExampleTest.php`
-Adjusted default example expectation to match actual guest redirect behavior at `/`.
+### `phpunit.xml`
+Added deterministic testing `APP_KEY` so HTTP/request tests can execute in local sqlite memory runs without encryption-key failure noise.
 
 ## Proof docs
 
-### `docs/repair/00_BASELINE_AUDIT.md`
-Baseline code/truth audit before repairs.
-
-### `docs/repair/01_REPAIR_PLAN.md`
-Repair plan categorized into P0/P1/P2/P3.
-
-### `docs/repair/10_POST_REPAIR_ROUTE_MATRIX.md`
-Post-repair critical route/controller/service matrix.
-
 ### `docs/repair/20_P0_FIX_PROOF.md`
-Detailed P0 proof with broken state, file changes, and test evidence.
+Updated with real ledger recompute findings and focused-test output from this pass.
 
 ### `docs/repair/30_P1_FIX_PROOF.md`
-Detailed P1 proof and honest remaining workflow-shell gaps.
+Updated with dashboard contract repair, report status repair, and explicit-safe kitchen/procurement findings.
 
 ### `docs/repair/40_PARITY_GAPS_REMAINING.md`
-Real remaining parity blockers only.
+Rewritten to remove the now-fixed report legacy-status gap and to record the remaining real blockers, including full-suite warning state.
 
 ### `docs/repair/50_CHANGED_FILES_EXPLAINED.md`
 This file.
 
 ### `docs/repair/99_FINAL_PROOF.md`
-Final branch/test/go-no-go summary.
+Updated final branch/proof summary for this pass, including raw command results and honest NO-GO status.

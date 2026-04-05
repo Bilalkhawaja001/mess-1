@@ -1,66 +1,81 @@
 # 99 FINAL PROOF
 
 - Branch: repair/full-parity-fix
-- Final commit SHA at doc generation time: c09133c313664fb2957f872fba032e19623b8b2c
+- Base branch HEAD at start of this pass: `02df2cdadf3273aa6f61b7406560c833e0c9e36f`
 
-## Commits on repair branch (vs origin/main at doc time)
+## Repaired areas summary in this pass
+- Dashboard controller/view binding mismatch repaired so `collections/collected`, `recent_cycles/recentCycles`, and `recent_activity/recentActivity` now align truthfully.
+- Billing correction now recomputes downstream member-ledger balances after correction posting.
+- Month hard reset now recomputes surviving member-ledger rows after deleting month-linked bill/correction entries.
+- `ReportController::index()` now counts paid values using current payment lifecycle statuses instead of only legacy `APPROVED`.
+- Kitchen/procurement approval endpoints were rechecked against Flask truth-pack and kept explicit-safe without inventing missing accounting side-effects.
+- Local focused regression coverage added for the above repairs.
 
-`
-
-`
-
-## Repaired areas summary
-- Billing generation now enforces month closure, uses approved locked monthly attendance as primary source, falls back to daily attendance only when needed, clamps charged days to employment window, and includes monthly attendance in rerun hash.
-- Billing correction now posts financial delta truth into member ledger instead of only overwriting billing row.
-- Month hard reset now removes month billing rows, billing runs, and billing/correction member-ledger artifacts together.
-- Payment approval now guards exact-once ledger posting and avoids invalid repeated success transitions.
-- Guest meal approval now creates a real department chargeback ledger entry.
-- Dashboard controller now exposes query-backed financial/operational metrics beyond placeholder counts.
-
-## Tests run
-
-`
+## Commands actually run in this pass
+```powershell
 composer install --no-interaction
-php artisan key:generate --force
-php artisan migrate:fresh --seed --force
-php artisan test
-php artisan route:list --name=admin.billing.index
-php artisan route:list --name=admin.billing.generate
-php artisan route:list --name=admin.billing.correct
-php artisan route:list --name=admin.payments.index
-php artisan route:list --name=admin.payments.store
-php artisan route:list --name=admin.payments.approve
-php artisan route:list --name=admin.payments.transactions.verify
-php artisan route:list --name=admin.payments.reconciliations.reconcile
-php artisan route:list --name=admin.attendance-monthly.index
-php artisan route:list --name=admin.attendance-monthly.store
-php artisan route:list --name=admin.attendance-monthly.approve
-php artisan route:list --name=admin.attendance-monthly.unlock
-php artisan route:list --name=admin.attendance-monthly.export
-php artisan route:list --name=admin.month.index
-php artisan route:list --name=admin.month.close
-php artisan route:list --name=admin.month.reopen
-php artisan route:list --name=admin.month.hard-reset
-php artisan route:list --name=admin.guests.index
-php artisan route:list --name=admin.guests.meals.approve.legacy
-php artisan route:list --name=admin.reports.index
-php artisan route:list --name=admin.reports.overall-recovery
-php artisan route:list --name=admin.ledger.index
-php artisan route:list --name=admin.ledger.import
-php artisan route:list --name=admin.ledger.recompute
-php artisan route:list --name=admin.summary.index
-php artisan route:list --name=admin.dashboard
-`
+php artisan test --filter=RepairFinancialFlowsTest --compact > storage/logs/repair_financial_test_output.txt 2>&1
+php artisan test --compact > storage/logs/full_php_artisan_test_output.txt 2>&1
+```
 
-Result: php artisan test => **PASS** (13 tests, 71 assertions)
+## Raw result excerpts
+### Focused repair suite (`storage/logs/repair_financial_test_output.txt`)
+```text
+WARN  Tests\Feature\RepairFinancialFlowsTest
+! billing generation uses locked monthly attendance and is idempotent
+! billing correction posts delta to member ledger
+! hard reset removes billing ledgers and runs
+! payment approval posts member ledger once
+! guest approval creates department chargeback entry
+! dashboard has real bound metrics
+! billing correction recomputes downstream ledger balances
+! hard reset recomputes remaining member ledgers
+! reports index uses current paid statuses
+! kitchen and procurement approvals are explicit about schema limits
 
-## Route proof
-See docs/repair/10_POST_REPAIR_ROUTE_MATRIX.md.
+Tests: 10 warnings (32 assertions)
+Duration: 1.87s
+```
+Interpretation: no failing assertions remained in the focused suite; warnings come from existing file reads in pre-existing tests.
+
+### Full suite (`storage/logs/full_php_artisan_test_output.txt`)
+```text
+.!..!..!!!!!!!!!!
+
+Tests:    12 warnings, 5 passed (83 assertions)
+Duration: 2.04s
+```
+Interpretation: this is **not** a clean full-suite proof baseline.
+
+## Final branch SHA for this local pass
+- Working tree currently modified on branch `repair/full-parity-fix`
+- HEAD before any new commit in this pass: `02df2cdadf3273aa6f61b7406560c833e0c9e36f`
+- No new final commit was created in this pass yet.
+
+## Exact changed files in this pass
+- `app/Http/Controllers/Admin/DashboardController.php`
+- `app/Http/Controllers/Admin/KitchenController.php`
+- `app/Http/Controllers/Admin/ProcurementController.php`
+- `app/Http/Controllers/Admin/ReportController.php`
+- `app/Services/Billing/BillingCorrectionService.php`
+- `app/Services/MonthClosureService.php`
+- `phpunit.xml`
+- `resources/views/admin/dashboard.blade.php`
+- `tests/Feature/RepairFinancialFlowsTest.php`
+- `docs/repair/20_P0_FIX_PROOF.md`
+- `docs/repair/30_P1_FIX_PROOF.md`
+- `docs/repair/40_PARITY_GAPS_REMAINING.md`
+- `docs/repair/50_CHANGED_FILES_EXPLAINED.md`
+- `docs/repair/99_FINAL_PROOF.md`
 
 ## Explicit GO/NO-GO for cPanel deployment
 - **NO-GO for cPanel push**
-- Reason: material parity gaps still remain in department/journal monthly billing parity, legacy report payment-status logic, and kitchen/procurement approval semantics.
+
+### Why NO-GO remains true
+- Monthly billing department/journal parity is still unproven.
+- Kitchen/procurement approvals are only explicit-safe, not fully parity-proven.
+- Special costing subsystem parity remains unproven.
+- Full `php artisan test` did **not** produce a clean pass baseline in this local run.
 
 ## Honest final statement
-This branch is **NOT** ready for cPanel push because the blockers listed in docs/repair/40_PARITY_GAPS_REMAINING.md still remain.
-It **is** ready for human review on the repair branch with concrete P0 repairs and regression proof.
+This pass repaired the confirmed dashboard/report/ledger consistency defects, but the branch is still **NOT ready for cPanel push** because material parity and proof gaps remain.

@@ -11,8 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class MonthClosureService
 {
-    public function __construct(private readonly AuditLogService $auditLogService)
-    {
+    public function __construct(
+        private readonly AuditLogService $auditLogService,
+        private readonly LedgerToolchainService $ledgerToolchainService,
+    ) {
     }
 
     public function close(string $monthCycle, int $userId, string $reason): void
@@ -70,6 +72,8 @@ class MonthClosureService
         DB::transaction(function () use ($monthCycle, $userId, $reason) {
             $billingIds = Billing::query()->where('month_cycle', $monthCycle)->pluck('id');
 
+            $affectedMemberIds = Billing::query()->where('month_cycle', $monthCycle)->pluck('member_id')->unique()->values();
+
             MemberLedger::query()
                 ->where(function ($q) use ($billingIds) {
                     $q->where(function ($inner) use ($billingIds) {
@@ -98,6 +102,10 @@ class MonthClosureService
                 ['month_cycle' => $monthCycle],
                 ['status' => MonthClosure::STATUS_HARD_RESET, 'hard_reset_by_user_id' => $userId, 'hard_reset_at' => now(), 'reason' => $reason]
             );
+
+            foreach ($affectedMemberIds as $affectedMemberId) {
+                $this->ledgerToolchainService->recompute((int) $affectedMemberId);
+            }
 
             $this->auditLogService->log('month.hard_reset', MonthClosure::class, null, [], ['month_cycle' => $monthCycle], $reason);
         });

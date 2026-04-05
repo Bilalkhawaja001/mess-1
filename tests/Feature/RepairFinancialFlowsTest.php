@@ -14,6 +14,13 @@ use App\Models\MonthClosure;
 use App\Models\MonthlyAttendance;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Models\PurchaseOrder;
+use App\Models\Item;
+use App\Models\Vendor;
+use App\Models\Menu;
+use App\Models\KitchenIssue;
+use App\Models\MealPlan;
+use App\Models\GoodsReceipt;
 use App\Models\RatePolicy;
 use App\Models\Role;
 use App\Models\User;
@@ -290,8 +297,173 @@ class RepairFinancialFlowsTest extends TestCase
                 && $stats['open_cycles'] >= 1
                 && array_key_exists('pending_payments', $stats)
                 && array_key_exists('collections', $stats)
+                && array_key_exists('collected', $stats)
+                && array_key_exists('recent_cycles', $stats)
+                && array_key_exists('recentCycles', $stats)
+                && array_key_exists('recent_activity', $stats)
+                && array_key_exists('recentActivity', $stats)
                 && array_key_exists('billable', $stats)
                 && array_key_exists('outstanding', $stats);
         });
+        $response->assertSee('400.00');
+        $response->assertSee('M001 PAYMENT #1');
+    }
+
+    public function test_billing_correction_recomputes_downstream_ledger_balances(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->member();
+
+        $billing = Billing::query()->create([
+            'month_cycle' => '2026-03',
+            'member_id' => $member->id,
+            'active_days' => 10,
+            'rate_per_day' => 100,
+            'base_amount' => 1000,
+            'extras_amount' => 0,
+            'net_payable' => 1000,
+            'is_locked' => true,
+            'generated_by_user_id' => $admin->id,
+            'billing_status' => 'POSTED',
+        ]);
+
+        MemberLedger::query()->create([
+            'member_id' => $member->id,
+            'entry_date' => '2026-03-01',
+            'debit' => 1000,
+            'credit' => 0,
+            'ref_type' => 'BILL',
+            'ref_id' => $billing->id,
+            'balance_after' => 1000,
+            'reason_code' => 'BILLING_GENERATE',
+            'posted_by_user_id' => $admin->id,
+        ]);
+
+        MemberLedger::query()->create([
+            'member_id' => $member->id,
+            'entry_date' => '2026-03-15',
+            'debit' => 0,
+            'credit' => 200,
+            'ref_type' => 'PAYMENT',
+            'ref_id' => 22,
+            'balance_after' => 800,
+            'reason_code' => 'PAYMENT_MANUAL_VERIFIED',
+            'posted_by_user_id' => $admin->id,
+        ]);
+
+        app(BillingCorrectionService::class)->correct($billing, 850, 'fix', $admin->id);
+
+        $paymentLedger = MemberLedger::query()->where('ref_type', 'PAYMENT')->where('ref_id', 22)->firstOrFail();
+        $correctionLedger = MemberLedger::query()->where('ref_type', 'BILL_CORRECTION')->where('ref_id', $billing->id)->firstOrFail();
+
+        $this->assertSame('800.00', number_format((float) $paymentLedger->balance_after, 2, '.', ''));
+        $this->assertSame('650.00', number_format((float) $correctionLedger->balance_after, 2, '.', ''));
+    }
+
+    public function test_hard_reset_recomputes_remaining_member_ledgers(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->member();
+
+        $billing = Billing::query()->create([
+            'month_cycle' => '2026-03',
+            'member_id' => $member->id,
+            'active_days' => 10,
+            'rate_per_day' => 100,
+            'base_amount' => 1000,
+            'extras_amount' => 0,
+            'net_payable' => 1000,
+            'is_locked' => true,
+            'generated_by_user_id' => $admin->id,
+            'billing_status' => 'POSTED',
+        ]);
+
+        MemberLedger::query()->create([
+            'member_id' => $member->id,
+            'entry_date' => '2026-03-01',
+            'debit' => 1000,
+            'credit' => 0,
+            'ref_type' => 'BILL',
+            'ref_id' => $billing->id,
+            'balance_after' => 1000,
+            'reason_code' => 'BILLING_GENERATE',
+            'posted_by_user_id' => $admin->id,
+        ]);
+
+        $paymentLedger = MemberLedger::query()->create([
+            'member_id' => $member->id,
+            'entry_date' => '2026-03-20',
+            'debit' => 0,
+            'credit' => 300,
+            'ref_type' => 'PAYMENT',
+            'ref_id' => 23,
+            'balance_after' => 700,
+            'reason_code' => 'PAYMENT_MANUAL_VERIFIED',
+            'posted_by_user_id' => $admin->id,
+        ]);
+
+        app(MonthClosureService::class)->hardReset('2026-03', $admin->id, 'reset');
+
+        $paymentLedger->refresh();
+        $this->assertSame('-300.00', number_format((float) $paymentLedger->balance_after, 2, '.', ''));
+    }
+
+    public function test_reports_index_uses_current_paid_statuses(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->member();
+        Billing::query()->create([
+            'month_cycle' => '2026-03',
+            'member_id' => $member->id,
+            'active_days' => 10,
+            'rate_per_day' => 100,
+            'base_amount' => 1000,
+            'extras_amount' => 0,
+            'net_payable' => 1000,
+            'is_locked' => true,
+            'generated_by_user_id' => $admin->id,
+            'billing_status' => 'POSTED',
+        ]);
+
+        Payment::query()->create([
+            'member_id' => $member->id,
+            'bill_id' => 1,
+            'payment_date' => '2026-03-10',
+            'amount' => 400,
+            'currency' => 'PKR',
+            'method' => 'CASH',
+            'status' => Payment::STATUS_SUCCESS,
+            'posted_by_user_id' => $admin->id,
+        ]);
+
+        $this->actingAs($admin);
+        $response = $this->get('/admin/reports?month_cycle=2026-03');
+        $response->assertOk();
+        $response->assertViewHas('recoveryRows', function (array $rows) {
+            return count($rows) === 1
+                && (float) $rows[0]['paid'] === 400.0
+                && (float) $rows[0]['outstanding'] === 600.0;
+        });
+    }
+
+    public function test_kitchen_and_procurement_approvals_are_explicit_about_schema_limits(): void
+    {
+        $admin = $this->adminUser();
+        $item = Item::query()->create(['name' => 'Rice', 'sku' => 'RICE-1', 'unit' => 'kg', 'is_active' => true]);
+        $menu = Menu::query()->create(['name' => 'Lunch Menu', 'meal_type' => 'Lunch', 'is_active' => true]);
+        $plan = MealPlan::query()->create(['plan_date' => '2026-03-11', 'menu_id' => $menu->id, 'planned_servings' => 10]);
+        $issue = KitchenIssue::query()->create(['issue_date' => '2026-03-11', 'item_id' => $item->id, 'quantity' => 5, 'remarks' => 'initial']);
+        $vendor = Vendor::query()->create(['name' => 'Vendor A']);
+        $po = PurchaseOrder::query()->create(['vendor_id' => $vendor->id, 'po_number' => 'PO-1', 'po_date' => '2026-03-11', 'status' => 'ISSUED']);
+        $grn = GoodsReceipt::query()->create(['purchase_order_id' => $po->id, 'grn_number' => 'GRN-1', 'received_date' => '2026-03-11']);
+
+        $this->actingAs($admin);
+        $this->post("/admin/kitchen/plans/{$plan->id}/approve")->assertRedirect();
+        $this->post("/admin/kitchen/issues/{$issue->id}/approve")->assertRedirect();
+        $this->post("/admin/procurement/po/{$po->id}/approve")->assertRedirect();
+        $this->post("/admin/procurement/grn/{$grn->id}/approve")->assertRedirect();
+
+        $po->refresh();
+        $this->assertSame('RECEIVED', $po->status);
     }
 }

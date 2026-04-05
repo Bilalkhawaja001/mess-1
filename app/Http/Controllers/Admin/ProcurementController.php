@@ -66,7 +66,7 @@ class ProcurementController extends Controller
         $po->status = 'APPROVED';
         $po->save();
 
-        return back()->with('success', 'PO approved');
+        return back()->with('success', 'PO approved. Current schema has no deeper approval posting beyond status transition.');
     }
 
     public function storeGrn(Request $r): RedirectResponse
@@ -110,7 +110,8 @@ class ProcurementController extends Controller
     public function approveGrn(GoodsReceipt $grn): RedirectResponse
     {
         PurchaseOrder::whereKey($grn->purchase_order_id)->update(['status' => 'RECEIVED']);
+        $grn->touch();
 
-        return back()->with('success', 'GRN approved');
+        return back()->with('success', 'GRN approval acknowledged. Stock was already posted on GRN create; no extra approval side-effect exists in current schema.');
     }
 }

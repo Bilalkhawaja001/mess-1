@@ -1,31 +1,38 @@
 # 99 FINAL PROOF
 
 - Branch: `repair/full-parity-fix`
-- Scope of this pass: docs/proof formalization only for one blocker
-
-## Blocker under review
-- monthly billing department/journal parity
-
-## Final blocker result
-- **BLOCKED**
-
-## Why blocked
-- Flask truth confirms:
-  - member-ledger `BILL` rows per bill
-  - journal voucher per bill
-  - aggregated department-ledger posting per department per month
-- Current Laravel branch does **not** yet have an honest journal substrate for that parity.
-- Current `department_ledgers` shape is materially shallower than Flask truth.
-- No fake implementation was added in this pass.
+- Scope of this pass: architecture/design only for monthly billing department/journal accounting foundation
 
 ## What this pass did
-- formalized blocker result in proof docs
-- aligned parity-gap docs with blocker truth
-- added blocker-specific audit doc
+- froze the target architecture for monthly billing accounting foundation
+- documented target schema proposal
+- documented posting contracts and idempotency rules
+- documented implementation order and risks
+- documented real open questions that remain before coding
 
-## cPanel verdict
-- **NO-GO for cPanel push**
+## What this pass did NOT do
+- no production code
+- no migrations
+- no deployment
+- no parity implementation
 
-## Reason for NO-GO
-This blocker remains open and blocking.
-See `docs/repair/80_MONTHLY_DEPT_JOURNAL_PARITY_AUDIT.md`.
+## Blocker state after this pass
+- monthly billing department/journal parity is still **not implemented**
+- branch remains **NO-GO for cPanel push**
+- however the design/architecture foundation is now frozen enough for a clean implementation pass
+
+## Final design-pass verdict
+- **DESIGN READY**
+
+## Why DESIGN READY
+Because the following are now defined clearly enough for implementation:
+- target journal architecture
+- target department-ledger architecture
+- posting granularity
+- correction/reset strategy candidates and required pre-coding clarifications
+- schema/migration plan
+- service-layer plan
+- test plan
+
+## Remaining truth
+Implementation is still pending. This pass does **not** claim parity is fixed.

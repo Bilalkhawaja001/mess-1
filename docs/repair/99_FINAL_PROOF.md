@@ -1,58 +1,10 @@
 # 99 FINAL PROOF
 
-- Branch: repair/full-parity-fix
-- Base branch HEAD at start of this pass: `02df2cdadf3273aa6f61b7406560c833e0c9e36f`
+- Branch: `repair/full-parity-fix`
+- Final pushed commit SHA for this pass: `0ba359b3f8879dd27f919ec382c8050ef59e7750`
+- Compare link: `https://github.com/Bilalkhawaja001/mess-1/compare/02df2cdadf3273aa6f61b7406560c833e0c9e36f...0ba359b3f8879dd27f919ec382c8050ef59e7750`
 
-## Repaired areas summary in this pass
-- Dashboard controller/view binding mismatch repaired so `collections/collected`, `recent_cycles/recentCycles`, and `recent_activity/recentActivity` now align truthfully.
-- Billing correction now recomputes downstream member-ledger balances after correction posting.
-- Month hard reset now recomputes surviving member-ledger rows after deleting month-linked bill/correction entries.
-- `ReportController::index()` now counts paid values using current payment lifecycle statuses instead of only legacy `APPROVED`.
-- Kitchen/procurement approval endpoints were rechecked against Flask truth-pack and kept explicit-safe without inventing missing accounting side-effects.
-- Local focused regression coverage added for the above repairs.
-
-## Commands actually run in this pass
-```powershell
-composer install --no-interaction
-php artisan test --filter=RepairFinancialFlowsTest --compact > storage/logs/repair_financial_test_output.txt 2>&1
-php artisan test --compact > storage/logs/full_php_artisan_test_output.txt 2>&1
-```
-
-## Raw result excerpts
-### Focused repair suite (`storage/logs/repair_financial_test_output.txt`)
-```text
-WARN  Tests\Feature\RepairFinancialFlowsTest
-! billing generation uses locked monthly attendance and is idempotent
-! billing correction posts delta to member ledger
-! hard reset removes billing ledgers and runs
-! payment approval posts member ledger once
-! guest approval creates department chargeback entry
-! dashboard has real bound metrics
-! billing correction recomputes downstream ledger balances
-! hard reset recomputes remaining member ledgers
-! reports index uses current paid statuses
-! kitchen and procurement approvals are explicit about schema limits
-
-Tests: 10 warnings (32 assertions)
-Duration: 1.87s
-```
-Interpretation: no failing assertions remained in the focused suite; warnings come from existing file reads in pre-existing tests.
-
-### Full suite (`storage/logs/full_php_artisan_test_output.txt`)
-```text
-.!..!..!!!!!!!!!!
-
-Tests:    12 warnings, 5 passed (83 assertions)
-Duration: 2.04s
-```
-Interpretation: this is **not** a clean full-suite proof baseline.
-
-## Final branch SHA for this local pass
-- Working tree currently modified on branch `repair/full-parity-fix`
-- HEAD before any new commit in this pass: `02df2cdadf3273aa6f61b7406560c833e0c9e36f`
-- No new final commit was created in this pass yet.
-
-## Exact changed files in this pass
+## Exact changed files in this pushed pass
 - `app/Http/Controllers/Admin/DashboardController.php`
 - `app/Http/Controllers/Admin/KitchenController.php`
 - `app/Http/Controllers/Admin/ProcurementController.php`
@@ -68,14 +20,54 @@ Interpretation: this is **not** a clean full-suite proof baseline.
 - `docs/repair/50_CHANGED_FILES_EXPLAINED.md`
 - `docs/repair/99_FINAL_PROOF.md`
 
-## Explicit GO/NO-GO for cPanel deployment
+## What is fixed and GitHub-visible
+- Dashboard controller/view binding mismatch repaired.
+- Billing correction now triggers downstream ledger recompute.
+- Month hard reset now recomputes surviving ledger balances for affected members.
+- `ReportController::index()` now counts modern payment lifecycle statuses, not just legacy `APPROVED`.
+- Test APP_KEY issue repaired in `phpunit.xml`.
+- Focused financial regression coverage expanded.
+
+## Commands run in the latest verification pass
+```powershell
+composer install --no-interaction
+php artisan test --filter=RepairFinancialFlowsTest --compact > storage/logs/repair_financial_test_output_2.txt 2>&1
+php artisan test --compact > storage/logs/full_php_artisan_test_output_2.txt 2>&1
+php artisan route:list --name=admin.dashboard > storage/logs/route_admin_dashboard.txt 2>&1
+php artisan route:list --name=admin.reports.index > storage/logs/route_admin_reports_index.txt 2>&1
+php artisan route:list --name=admin.ledger.recompute > storage/logs/route_admin_ledger_recompute.txt 2>&1
+php artisan route:list --name=admin.month.hard-reset > storage/logs/route_admin_month_hard_reset.txt 2>&1
+php artisan route:list --name=admin.payments.approve > storage/logs/route_admin_payments_approve.txt 2>&1
+```
+
+## Raw result summary
+### Focused repair suite
+Source: `storage/logs/repair_financial_test_output_2.txt`
+- `Tests: 10 warnings (32 assertions)`
+- No failing assertion remained in the focused repair suite.
+
+### Full suite
+Source: `storage/logs/full_php_artisan_test_output_2.txt`
+- `Tests: 12 warnings, 5 passed (83 assertions)`
+- Full suite is still not clean enough for deployment-confidence GO.
+
+## Remaining gaps summary
+See `docs/repair/40_PARITY_GAPS_REMAINING.md`.
+Current blockers still include:
+- monthly billing department/journal parity
+- kitchen approval semantics
+- procurement approval semantics
+- guest department free-text linkage risk
+- warning-heavy full test baseline
+
+## Final verdict
 - **NO-GO for cPanel push**
 
-### Why NO-GO remains true
-- Monthly billing department/journal parity is still unproven.
-- Kitchen/procurement approvals are only explicit-safe, not fully parity-proven.
-- Special costing subsystem parity remains unproven.
-- Full `php artisan test` did **not** produce a clean pass baseline in this local run.
+## Exact blockers causing NO-GO
+1. Financial/accounting parity is still incomplete for monthly billing department/journal flow.
+2. Kitchen/procurement approval semantics are explicit-safe but not full-parity proven.
+3. Guest chargeback still depends on free-text department matching and can mis-post silently.
+4. Full `php artisan test` baseline is still warning-heavy and not deployment-clean.
 
-## Honest final statement
-This pass repaired the confirmed dashboard/report/ledger consistency defects, but the branch is still **NOT ready for cPanel push** because material parity and proof gaps remain.
+## Honest conclusion
+This branch is stronger than before and the verified dashboard/ledger/report fixes are now pushed to GitHub, but it is **still not truthfully safe for cPanel push**.

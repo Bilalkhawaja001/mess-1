@@ -17,6 +17,7 @@ use App\Services\Payments\PaymentTransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PaymentController extends Controller
@@ -106,7 +107,7 @@ class PaymentController extends Controller
 
     public function approve(Payment $payment, PaymentTransactionService $transactionService): RedirectResponse
     {
-        if (in_array($payment->status, [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED], true)) {
+        if (in_array($payment->status, [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILIATION_PENDING, Payment::STATUS_RECONCILED], true)) {
             return back()->with('info', 'Payment already verified.');
         }
 
@@ -115,27 +116,37 @@ class PaymentController extends Controller
             return back()->with('error', 'No transaction found for this payment.');
         }
 
-        $transactionService->manualVerify($txn, (int) Auth::id(), true);
+        DB::transaction(function () use ($payment, $txn, $transactionService) {
+            $transactionService->manualVerify($txn, (int) Auth::id(), true);
 
-        $lastBal = (float) (MemberLedger::query()
-            ->where('member_id', $payment->member_id)
-            ->orderByDesc('entry_date')
-            ->orderByDesc('id')
-            ->value('balance_after') ?? 0);
+            $existingLedger = MemberLedger::query()
+                ->where('member_id', $payment->member_id)
+                ->where('ref_type', 'PAYMENT')
+                ->where('ref_id', $payment->id)
+                ->first();
 
-        $newBal = round($lastBal - (float) $payment->amount, 2);
+            if (! $existingLedger) {
+                $lastBal = (float) (MemberLedger::query()
+                    ->where('member_id', $payment->member_id)
+                    ->orderByDesc('entry_date')
+                    ->orderByDesc('id')
+                    ->value('balance_after') ?? 0);
 
-        MemberLedger::query()->create([
-            'member_id' => $payment->member_id,
-            'entry_date' => $payment->payment_date,
-            'debit' => 0,
-            'credit' => $payment->amount,
-            'ref_type' => 'PAYMENT',
-            'ref_id' => $payment->id,
-            'balance_after' => $newBal,
-            'reason_code' => 'PAYMENT_MANUAL_VERIFIED',
-            'posted_by_user_id' => Auth::id(),
-        ]);
+                $newBal = round($lastBal - (float) $payment->amount, 2);
+
+                MemberLedger::query()->create([
+                    'member_id' => $payment->member_id,
+                    'entry_date' => $payment->payment_date,
+                    'debit' => 0,
+                    'credit' => $payment->amount,
+                    'ref_type' => 'PAYMENT',
+                    'ref_id' => $payment->id,
+                    'balance_after' => $newBal,
+                    'reason_code' => 'PAYMENT_MANUAL_VERIFIED',
+                    'posted_by_user_id' => Auth::id(),
+                ]);
+            }
+        });
 
         return redirect()->route('admin.payments.index')->with('success', 'Payment manually verified and posted to ledger.');
     }

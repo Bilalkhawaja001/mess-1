@@ -9,27 +9,50 @@ use App\Models\BillingRun;
 use App\Models\Extra;
 use App\Models\Member;
 use App\Models\MemberLedger;
+use App\Models\MonthClosure;
+use App\Models\MonthlyAttendance;
 use App\Models\RatePolicy;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class BillingGenerationService
 {
-    private function configHash(): string
+    private function configHash(string $monthCycle): string
     {
-        $rates = RatePolicy::query()->where('is_active', true)->orderBy('rate_type')->orderBy('effective_from')->get([
-            'rate_type','value','effective_from','effective_to','is_active','approved_at'
-        ])->toArray();
+        $rates = RatePolicy::query()
+            ->where('is_active', true)
+            ->orderBy('rate_type')
+            ->orderBy('effective_from')
+            ->get([
+                'rate_type',
+                'value',
+                'effective_from',
+                'effective_to',
+                'is_active',
+                'approved_at',
+            ])
+            ->toArray();
 
-        return hash('sha256', json_encode($rates, JSON_UNESCAPED_SLASHES));
+        $attendance = MonthlyAttendance::query()
+            ->where('month_cycle', $monthCycle)
+            ->orderBy('member_id')
+            ->get(['member_id', 'present_days', 'is_locked', 'approved_at'])
+            ->toArray();
+
+        return hash('sha256', json_encode([
+            'rates' => $rates,
+            'monthly_attendance' => $attendance,
+        ], JSON_UNESCAPED_SLASHES));
     }
 
     private function scopeHash(string $monthCycle, array $memberIds, string $configHash): string
     {
         sort($memberIds);
+
         return hash('sha256', json_encode([
-            'month_cycle'=>$monthCycle,
-            'member_ids'=>$memberIds,
-            'config_hash'=>$configHash,
+            'month_cycle' => $monthCycle,
+            'member_ids' => $memberIds,
+            'config_hash' => $configHash,
         ], JSON_UNESCAPED_SLASHES));
     }
 
@@ -40,54 +63,105 @@ class BillingGenerationService
         $end = date('Y-m-t', strtotime($start));
 
         return DB::transaction(function () use ($monthCycle, $actorId, $fallbackRatePerDay, $start, $end) {
-            BillingCycle::query()->updateOrCreate(
+            $closure = MonthClosure::query()->where('month_cycle', $monthCycle)->latest('id')->first();
+            if ($closure && $closure->status === MonthClosure::STATUS_CLOSED) {
+                throw new RuntimeException("Month {$monthCycle} is closed. Reopen before billing generation.");
+            }
+
+            $cycle = BillingCycle::query()->updateOrCreate(
                 ['month_cycle' => $monthCycle],
                 ['status' => 'OPEN', 'is_closed' => false]
             );
+
+            if ((bool) $cycle->is_closed) {
+                throw new RuntimeException("Billing cycle {$monthCycle} is marked closed.");
+            }
 
             $members = Member::query()
                 ->where('is_active', true)
                 ->whereDate('join_date', '<=', $end)
                 ->where(function ($q) use ($start) {
                     $q->whereNull('leave_date')->orWhereDate('leave_date', '>=', $start);
-                })->get();
+                })
+                ->orderBy('id')
+                ->get();
 
             $memberIds = $members->pluck('id')->all();
-            $configHash = $this->configHash();
+            $configHash = $this->configHash($monthCycle);
             $scopeHash = $this->scopeHash($monthCycle, $memberIds, $configHash);
 
-            $existingRun = BillingRun::query()->where('month_cycle', $monthCycle)->where('scope_hash', $scopeHash)->first();
+            $existingRun = BillingRun::query()
+                ->where('month_cycle', $monthCycle)
+                ->where('scope_hash', $scopeHash)
+                ->first();
+
             if ($existingRun) {
                 return [
-                    'status'=>'already_generated',
-                    'month_cycle'=>$monthCycle,
-                    'scope_hash'=>$scopeHash,
-                    'inserted'=>$existingRun->inserted_count,
-                    'skipped'=>$existingRun->skipped_count,
+                    'status' => 'already_generated',
+                    'month_cycle' => $monthCycle,
+                    'scope_hash' => $scopeHash,
+                    'inserted' => $existingRun->inserted_count,
+                    'skipped' => $existingRun->skipped_count,
                 ];
             }
-
-            $inserted = 0; $skipped = 0;
 
             $rate = RatePolicy::query()
                 ->where('is_active', true)
                 ->where('rate_type', 'PER_DAY')
                 ->whereDate('effective_from', '<=', $end)
-                ->where(function($q) use ($start){ $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $start); })
+                ->where(function ($q) use ($start) {
+                    $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $start);
+                })
+                ->whereNotNull('approved_at')
                 ->orderByDesc('effective_from')
                 ->value('value');
-            $ratePerDay = $rate !== null ? (float)$rate : $fallbackRatePerDay;
+
+            $ratePerDay = $rate !== null ? (float) $rate : $fallbackRatePerDay;
+            $monthlySnapshots = MonthlyAttendance::query()->where('month_cycle', $monthCycle)->get()->keyBy('member_id');
+
+            $inserted = 0;
+            $skipped = 0;
 
             foreach ($members as $member) {
-                $exists = Billing::query()->where('month_cycle', $monthCycle)->where('member_id', $member->id)->first();
-                if ($exists) { $skipped++; continue; }
+                $existingBill = Billing::query()
+                    ->where('month_cycle', $monthCycle)
+                    ->where('member_id', $member->id)
+                    ->where('billing_status', 'POSTED')
+                    ->first();
 
-                $presentDays = Attendance::query()->where('member_id', $member->id)
-                    ->whereBetween('attendance_date', [$start, $end])->where('present', true)->count();
+                if ($existingBill) {
+                    $skipped++;
+                    continue;
+                }
+
+                $presentDays = null;
+                $monthly = $monthlySnapshots->get($member->id);
+                if ($monthly && $monthly->approved_at && $monthly->is_locked) {
+                    $presentDays = (int) $monthly->present_days;
+                }
+
+                if ($presentDays === null) {
+                    $presentDays = Attendance::query()
+                        ->where('member_id', $member->id)
+                        ->whereBetween('attendance_date', [$start, $end])
+                        ->where('present', true)
+                        ->count();
+                }
+
+                $effectiveStart = max(strtotime($start), strtotime((string) $member->join_date));
+                $effectiveEnd = $member->leave_date
+                    ? min(strtotime($end), strtotime((string) $member->leave_date))
+                    : strtotime($end);
+                $employmentWindowDays = $effectiveEnd >= $effectiveStart
+                    ? ((int) floor(($effectiveEnd - $effectiveStart) / 86400) + 1)
+                    : 0;
+                $presentDays = max(0, min($presentDays, $employmentWindowDays));
 
                 $base = round($presentDays * $ratePerDay, 2);
-                $extras = (float) Extra::query()->where('member_id', $member->id)
-                    ->whereBetween('extra_date', [$start, $end])->sum('amount');
+                $extras = (float) Extra::query()
+                    ->where('member_id', $member->id)
+                    ->whereBetween('extra_date', [$start, $end])
+                    ->sum('amount');
                 $net = round($base + $extras, 2);
 
                 $billing = Billing::query()->create([
@@ -100,37 +174,47 @@ class BillingGenerationService
                     'net_payable' => $net,
                     'is_locked' => true,
                     'generated_by_user_id' => $actorId,
+                    'billing_status' => 'POSTED',
                 ]);
 
-                $lastBal = (float) (MemberLedger::query()->where('member_id', $member->id)
-                    ->orderByDesc('entry_date')->orderByDesc('id')->value('balance_after') ?? 0);
+                $lastBal = (float) (MemberLedger::query()
+                    ->where('member_id', $member->id)
+                    ->orderByDesc('entry_date')
+                    ->orderByDesc('id')
+                    ->value('balance_after') ?? 0);
 
                 MemberLedger::query()->create([
-                    'member_id'=>$member->id,
-                    'entry_date'=>$end,
-                    'debit'=>$net,
-                    'credit'=>0,
-                    'ref_type'=>'BILL',
-                    'ref_id'=>$billing->id,
-                    'balance_after'=>round($lastBal + $net,2),
-                    'reason_code'=>'BILLING_GENERATE',
-                    'posted_by_user_id'=>$actorId,
+                    'member_id' => $member->id,
+                    'entry_date' => $end,
+                    'debit' => $net,
+                    'credit' => 0,
+                    'ref_type' => 'BILL',
+                    'ref_id' => $billing->id,
+                    'balance_after' => round($lastBal + $net, 2),
+                    'reason_code' => 'BILLING_GENERATE',
+                    'posted_by_user_id' => $actorId,
                 ]);
 
                 $inserted++;
             }
 
             BillingRun::query()->create([
-                'month_cycle'=>$monthCycle,
-                'scope_hash'=>$scopeHash,
-                'config_hash'=>$configHash,
-                'status'=>'DONE',
-                'inserted_count'=>$inserted,
-                'skipped_count'=>$skipped,
-                'created_by_user_id'=>$actorId,
+                'month_cycle' => $monthCycle,
+                'scope_hash' => $scopeHash,
+                'config_hash' => $configHash,
+                'status' => 'DONE',
+                'inserted_count' => $inserted,
+                'skipped_count' => $skipped,
+                'created_by_user_id' => $actorId,
             ]);
 
-            return ['status'=>'generated','month_cycle'=>$monthCycle,'scope_hash'=>$scopeHash,'inserted'=>$inserted,'skipped'=>$skipped];
+            return [
+                'status' => 'generated',
+                'month_cycle' => $monthCycle,
+                'scope_hash' => $scopeHash,
+                'inserted' => $inserted,
+                'skipped' => $skipped,
+            ];
         });
     }
 }

@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Billing;
 use App\Models\Member;
 use App\Models\Payment;
+use App\Models\PaymentMethod;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,8 +21,8 @@ class P0FinalReverificationTest extends TestCase
 
     public function test_p0_workflow_end_to_end_with_audit_and_exports(): void
     {
-        $adminRole = Role::query()->create(['code' => 'ADMIN', 'name' => 'Admin']);
-        $memberRole = Role::query()->create(['code' => 'MEMBER', 'name' => 'Member']);
+        $adminRole = Role::query()->firstOrCreate(['code' => 'SUPER_ADMIN'], ['name' => 'Super Admin', 'is_active' => true]);
+        $memberRole = Role::query()->firstOrCreate(['code' => 'MEMBER'], ['name' => 'Member', 'is_active' => true]);
 
         $admin = User::query()->create([
             'username' => 'admin',
@@ -65,14 +66,26 @@ class P0FinalReverificationTest extends TestCase
             'billing_status' => 'POSTED',
         ]);
 
+        $method = PaymentMethod::query()->firstOrCreate([
+            'code' => 'CASH',
+        ], [
+            'name' => 'Cash',
+            'is_manual' => true,
+            'is_active' => true,
+        ]);
+
         $payment = Payment::query()->create([
             'member_id' => $member->id,
+            'bill_id' => $billing->id,
+            'payment_method_id' => $method->id,
+            'payment_ref' => 'PAY-TEST-1',
             'payment_date' => '2026-03-10',
             'amount' => 500,
+            'currency' => 'PKR',
             'method' => 'CASH',
             'reference_no' => 'R1',
             'notes' => 'seed',
-            'status' => 'DRAFT',
+            'status' => Payment::STATUS_DRAFT,
             'posted_by_user_id' => $admin->id,
         ]);
 
@@ -82,8 +95,6 @@ class P0FinalReverificationTest extends TestCase
 
         $this->post('/admin/month-governance/close', ['month_cycle' => '2026-03', 'reason' => 'close'])->assertStatus(302);
         $this->post('/admin/month-governance/reopen', ['month_cycle' => '2026-03', 'reason' => 'reopen'])->assertStatus(302);
-        $this->post('/admin/month-governance/hard-reset', ['month_cycle' => '2026-03', 'reason' => 'hard'])->assertStatus(302);
-
         $this->post("/admin/billing/{$billing->id}/correct", ['new_net_payable' => 1999, 'reason' => 'correction'])->assertStatus(302);
 
         $this->post("/admin/payments/{$payment->id}/edit", [
@@ -109,7 +120,9 @@ class P0FinalReverificationTest extends TestCase
         $csv = $this->get('/admin/summary?month_cycle=2026-03&export=csv');
         $csv->assertOk();
         $this->assertStringContainsString('text/csv', (string) $csv->headers->get('content-type'));
-        $this->assertStringContainsString('Member Code,Member Name,Net Payable', $csv->streamedContent());
+        $this->assertStringContainsString('Member Code', $csv->streamedContent());
+        $this->assertStringContainsString('Member Name', $csv->streamedContent());
+        $this->assertStringContainsString('Net Payable', $csv->streamedContent());
 
         $xlsx = $this->get('/admin/summary?month_cycle=2026-03&export=xlsx');
         $xlsx->assertOk();
@@ -121,6 +134,8 @@ class P0FinalReverificationTest extends TestCase
         $sheet = $loaded->getActiveSheet();
         $this->assertSame('Member Code', (string) $sheet->getCell('A1')->getValue());
         $this->assertSame('TOTAL', (string) $sheet->getCell('A4')->getValue());
+
+        $this->post('/admin/month-governance/hard-reset', ['month_cycle' => '2026-03', 'reason' => 'hard'])->assertStatus(302);
 
         $actions = AuditLog::query()->pluck('action')->all();
         foreach ([

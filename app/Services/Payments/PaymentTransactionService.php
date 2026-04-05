@@ -59,9 +59,7 @@ class PaymentTransactionService
 
         if ($status === Payment::STATUS_SUCCESS) {
             $this->paymentService->transition($payment, Payment::STATUS_SUCCESS, 'transaction-success');
-            if (! $payment->reconciliations()->exists()) {
-                $this->paymentReconciliationService->createPending($payment, $txn);
-            }
+            $this->paymentReconciliationService->createPending($payment, $txn);
         } elseif (in_array($status, [Payment::STATUS_FAILED, Payment::STATUS_CANCELLED, Payment::STATUS_EXPIRED], true)) {
             $this->paymentService->transition($payment, $status, 'transaction-finalized');
         }
@@ -76,11 +74,14 @@ class PaymentTransactionService
         $before = $txn->toArray();
         $txn->status = $markSuccess ? Payment::STATUS_SUCCESS : Payment::STATUS_FAILED;
         $txn->verified_at = now();
+        $txn->completed_at = $txn->completed_at ?: now();
         $txn->save();
 
         $payment = $txn->payment;
         if ($payment) {
-            $this->paymentService->transition($payment, $txn->status, 'admin-manual-verify');
+            if (! in_array($payment->status, [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED], true)) {
+                $this->paymentService->transition($payment, $txn->status, 'admin-manual-verify');
+            }
             if ($txn->status === Payment::STATUS_SUCCESS && ! $payment->reconciliations()->exists()) {
                 $this->paymentReconciliationService->createPending($payment, $txn);
             }

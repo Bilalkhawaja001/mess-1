@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
+use App\Models\DepartmentLedger;
 use App\Models\Guest;
 use App\Models\GuestMeal;
+use App\Models\Mess;
 use App\Models\RatePolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -100,6 +103,11 @@ class GuestController extends Controller
 
     public function deleteMeal(GuestMeal $meal): RedirectResponse
     {
+        DepartmentLedger::query()
+            ->where('reference_type', GuestMeal::class)
+            ->where('reference_id', $meal->id)
+            ->delete();
+
         $meal->delete();
 
         return back()->with('success', 'Guest meal deleted');
@@ -107,10 +115,30 @@ class GuestController extends Controller
 
     public function approveMeal(GuestMeal $meal): RedirectResponse
     {
-        // Approval endpoint for workflow parity (no dedicated approval columns yet).
-        $meal->touch();
+        $guest = $meal->guest;
+        $department = $guest ? Department::query()->where('name', $guest->department)->first() : null;
+        $mess = $department ? Mess::query()->where('department_id', $department->id)->orderBy('id')->first() : null;
 
-        return back()->with('success', 'Guest meal approved.');
+        $payload = [
+            'department_id' => $department?->id,
+            'mess_id' => $mess?->id,
+            'entry_date' => $meal->meal_date,
+            'entry_type' => 'DEBIT',
+            'amount' => $meal->amount,
+            'reference_type' => GuestMeal::class,
+            'reference_id' => $meal->id,
+            'remarks' => 'Guest meal chargeback approval',
+        ];
+
+        DepartmentLedger::query()->updateOrCreate(
+            [
+                'reference_type' => GuestMeal::class,
+                'reference_id' => $meal->id,
+            ],
+            $payload
+        );
+
+        return back()->with('success', 'Guest meal approved. Department ledger updated.');
     }
 
     public function exportMeals(Request $request): StreamedResponse

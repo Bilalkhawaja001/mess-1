@@ -17,19 +17,61 @@
     $recentActivity = $stats['recentActivity'] ?? ($stats['recent_activity'] ?? []);
 @endphp
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-    <div>
-        <h4 class="mb-1 fw-bold">Mess Billing Executive View</h4>
-        <div class="text-muted small">Operational + financial snapshot across billing, attendance, and collections.</div>
+<div class="hero-panel p-4 p-xl-5 mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <div class="section-kicker mb-3"><i class="bi bi-buildings"></i> Executive Control Layer</div>
+            <h3 class="mb-2 fw-bold">NODESKY Mess Billing Executive View</h3>
+            <div class="text-muted">Operational + financial snapshot across billing, attendance, and collections in a premium light workspace.</div>
+        </div>
+        <div class="text-md-end">
+            <div class="small text-muted text-uppercase fw-semibold mb-1">Live focus</div>
+            <div class="fw-semibold">Collections, member lifecycle, and billing governance</div>
+        </div>
     </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-xl col-md-6"><div class="card p-3"><div class="text-muted small">Total Users</div><div class="h4 mb-0">{{ $users }}</div><small class="text-muted">Active platform users</small></div></div>
-    <div class="col-xl col-md-6"><div class="card p-3"><div class="text-muted small">Active Members</div><div class="h4 mb-0">{{ $members }}</div><small class="text-muted">Billing-eligible members</small></div></div>
-    <div class="col-xl col-md-6"><div class="card p-3"><div class="text-muted small">Open Billing Cycles</div><div class="h4 mb-0">{{ $openCycles }}</div><small class="text-muted">Cycles currently in process</small></div></div>
-    <div class="col-xl col-md-6"><div class="card p-3"><div class="text-muted small">Pending Payments</div><div class="h4 mb-0">{{ $pendingPayments }}</div><small class="text-muted">Awaiting collection</small></div></div>
-    <div class="col-xl col-md-6"><div class="card p-3"><div class="text-muted small">Current Month Collections</div><div class="h4 mb-0">{{ $collections !== null ? number_format((float) $collections, 2) : '—' }}</div><small class="text-muted">Recovered in current cycle</small></div></div>
+<div class="row g-3 mb-4">
+    <div class="col-xl col-md-6">
+        <div class="card metric-card metric-blue p-3 p-xl-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div><div class="metric-label small">Total Users</div><div class="metric-value">{{ $users }}</div><div class="metric-caption small">Active platform users</div></div>
+                <div class="metric-icon"><i class="bi bi-people-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="card metric-card metric-purple p-3 p-xl-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div><div class="metric-label small">Active Members</div><div class="metric-value">{{ $members }}</div><div class="metric-caption small">Billing-eligible members</div></div>
+                <div class="metric-icon"><i class="bi bi-person-badge-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="card metric-card metric-emerald p-3 p-xl-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div><div class="metric-label small">Open Billing Cycles</div><div class="metric-value">{{ $openCycles }}</div><div class="metric-caption small">Cycles currently in process</div></div>
+                <div class="metric-icon"><i class="bi bi-calendar2-week-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="card metric-card metric-amber p-3 p-xl-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div><div class="metric-label small">Pending Payments</div><div class="metric-value">{{ $pendingPayments }}</div><div class="metric-caption small">Awaiting collection</div></div>
+                <div class="metric-icon"><i class="bi bi-cash-coin"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl col-md-6">
+        <div class="card metric-card metric-rose p-3 p-xl-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div><div class="metric-label small">Current Month Collections</div><div class="metric-value">{{ $collections !== null ? number_format((float) $collections, 2) : '—' }}</div><div class="metric-caption small">Recovered in current cycle</div></div>
+                <div class="metric-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-3">
@@ -38,9 +80,9 @@
             <h5 class="mb-1">Billing Overview</h5>
             <div class="text-muted small mb-3">High-level financial performance summary.</div>
             <div class="row g-2">
-                <div class="col-md-4"><div class="p-2 rounded border bg-light-subtle"><span class="small text-muted">Billable</span><div class="fw-semibold">{{ $billable !== null ? number_format((float) $billable, 2) : '—' }}</div></div></div>
-                <div class="col-md-4"><div class="p-2 rounded border bg-light-subtle"><span class="small text-muted">Collected</span><div class="fw-semibold">{{ $collected !== null ? number_format((float) $collected, 2) : '—' }}</div></div></div>
-                <div class="col-md-4"><div class="p-2 rounded border bg-light-subtle"><span class="small text-muted">Outstanding</span><div class="fw-semibold">{{ $outstanding !== null ? number_format((float) $outstanding, 2) : '—' }}</div></div></div>
+                <div class="col-md-4"><div class="p-3 rounded-4 border bg-white"><span class="small text-muted">Billable</span><div class="fw-semibold fs-5">{{ $billable !== null ? number_format((float) $billable, 2) : '—' }}</div></div></div>
+                <div class="col-md-4"><div class="p-3 rounded-4 border bg-white"><span class="small text-muted">Collected</span><div class="fw-semibold fs-5">{{ $collected !== null ? number_format((float) $collected, 2) : '—' }}</div></div></div>
+                <div class="col-md-4"><div class="p-3 rounded-4 border bg-white"><span class="small text-muted">Outstanding</span><div class="fw-semibold fs-5">{{ $outstanding !== null ? number_format((float) $outstanding, 2) : '—' }}</div></div></div>
             </div>
         </div>
 

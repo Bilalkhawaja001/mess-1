@@ -4,11 +4,18 @@
 @section('page_title', 'Member Dashboard')
 
 @section('content')
+<div class="hero-panel p-4 mb-4">
+    <div class="section-kicker mb-3"><i class="bi bi-person-workspace"></i> Member Workspace</div>
+    <h4 class="mb-2 fw-bold">Welcome, {{ $user->name ?? $user->username }}</h4>
+    <p class="text-muted mb-0">Member payment module enabled in architecture mode with the same premium NODESKY surface styling.</p>
+</div>
 <div class="card shadow-sm">
-    <div class="card-body">
-        <h5 class="mb-2">Welcome, {{ $user->name ?? $user->username }}</h5>
-        <p class="text-muted mb-2">Member payment module enabled (internal architecture mode, no live charging).</p>
-        <a class="btn btn-sm btn-primary" href="{{ route('member.payments.index') }}">My Payments</a>
+    <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <h5 class="mb-2">Member payments</h5>
+            <p class="text-muted mb-0">Review your payment history and account billing activity.</p>
+        </div>
+        <a class="btn btn-primary" href="{{ route('member.payments.index') }}">My Payments</a>
     </div>
 </div>
 @endsection

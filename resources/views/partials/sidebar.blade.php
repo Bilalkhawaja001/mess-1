@@ -4,10 +4,12 @@
 @endphp
 <aside class="sidebar">
     <div class="sb-brand">
-        <div class="logo">MB</div>
+        <div class="sb-brand-mark">
+            <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NODESKY logo">
+        </div>
         <div>
-            <div class="sb-title">Mess Billing Enterprise Panel</div>
-            <div class="sb-sub">Internal Operations</div>
+            <div class="sb-title">NODESKY Mess Billing</div>
+            <div class="sb-sub">Corporate Operations Suite</div>
         </div>
     </div>
 

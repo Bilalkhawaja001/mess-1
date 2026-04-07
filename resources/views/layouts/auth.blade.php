@@ -17,9 +17,32 @@
 <div class="auth-shell">
     <aside class="auth-aside">
         <div>
-            <div class="auth-hero-logo">
-                <img src="{{ asset('branding/login_logo_main_v4.png') }}" alt="Mess Billing logo">
+            <div class="auth-brand">
+                <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
             </div>
+            <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Premium Corporate Light</div>
+            <h1 class="display-6 fw-bold mb-3">Mess Billing Portal</h1>
+            <p class="mb-4 text-white">Modern operations interface for billing, attendance, finance workflows, and member services with enterprise-grade clarity.</p>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <div class="p-3 rounded-4 border border-light border-opacity-25 bg-white bg-opacity-10 h-100">
+                        <div class="fw-semibold mb-1">Operational Control</div>
+                        <div class="small text-white-50">Manage cycles, collections, attendance, and member activities from one clean system.</div>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="p-3 rounded-4 border border-light border-opacity-25 bg-white bg-opacity-10 h-100">
+                        <div class="fw-semibold mb-1">Member Workflows</div>
+                        <div class="small text-white-50">One clean access surface for sign-in, registration, recovery, and member account actions.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="auth-powered">
+            <div class="powered-by-logo powered-by-logo-lg">
+                <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
+            </div>
+            <div class="powered-by-text">Powerd by NodeSky(smc-Private)Limited</div>
         </div>
     </aside>
 

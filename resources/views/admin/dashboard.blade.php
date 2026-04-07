@@ -21,7 +21,7 @@
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
             <div class="section-kicker mb-3"><i class="bi bi-buildings"></i> Executive Control Layer</div>
-            <h3 class="mb-2 fw-bold">NODESKY Mess Billing Executive View</h3>
+            <h3 class="mb-2 fw-bold">Mess Billing Executive View</h3>
             <div class="text-muted">Operational + financial snapshot across billing, attendance, and collections in a premium light workspace.</div>
         </div>
         <div class="text-md-end">

@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'Login - NODESKY Mess Billing')
+@section('title', 'Login - Mess Billing')
 
 @section('auth_content')
 <div class="d-flex justify-content-between align-items-start gap-3 mb-4 flex-wrap">
@@ -9,7 +9,7 @@
         <h2 class="mb-2 fw-bold">Sign in to Mess Billing</h2>
         <p class="text-muted mb-0">Use your enterprise credentials to access operations, finance, and member workflows.</p>
     </div>
-    <span class="badge text-bg-light px-3 py-2">NODESKY Identity</span>
+    <span class="badge text-bg-light px-3 py-2">Member Access</span>
 </div>
 
 @include('partials.flash')

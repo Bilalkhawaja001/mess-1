@@ -1,11 +1,8 @@
 <header class="topbar">
     <div class="topbar-meta">
-        <div class="brand-logo d-none d-md-block">
-            <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NODESKY logo">
-        </div>
         <div>
             <div class="tb-title">@yield('page_title', 'Dashboard')</div>
-            <div class="tb-sub">NODESKY corporate billing command center</div>
+            <div class="tb-sub">Enterprise billing command center</div>
         </div>
     </div>
 

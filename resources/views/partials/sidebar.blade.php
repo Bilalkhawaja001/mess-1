@@ -4,11 +4,11 @@
 @endphp
 <aside class="sidebar">
     <div class="sb-brand">
-        <div class="sb-brand-mark">
-            <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NODESKY logo">
+        <div class="sb-brand-mark sb-brand-mark-generic">
+            <span>MB</span>
         </div>
         <div>
-            <div class="sb-title">NODESKY Mess Billing</div>
+            <div class="sb-title">Mess Billing</div>
             <div class="sb-sub">Corporate Operations Suite</div>
         </div>
     </div>
@@ -59,4 +59,11 @@
             </nav>
         </div>
     @endif
+
+    <div class="sb-powered">
+        <div class="sb-powered-logo">
+            <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
+        </div>
+        <div class="sb-powered-text">Powerd by "NodeSky(smc-Private)Limited"</div>
+    </div>
 </aside>

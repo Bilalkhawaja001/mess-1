@@ -21,7 +21,6 @@
         <main class="page-body">
             @include('partials.flash')
             @yield('content')
-            <div class="app-footer">Powered by NODESKY (SMC-PRIVATE) LIMITED</div>
         </main>
     </div>
 </div>

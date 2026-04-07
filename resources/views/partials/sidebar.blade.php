@@ -4,8 +4,8 @@
 @endphp
 <aside class="sidebar">
     <div class="sb-brand">
-        <div class="sb-brand-mark sb-brand-mark-generic">
-            <span>MB</span>
+        <div class="sb-brand-mark">
+            <img src="{{ asset('branding/dashboard_logo.png') }}" alt="Mess Billing dashboard logo">
         </div>
         <div>
             <div class="sb-title">Mess Billing</div>

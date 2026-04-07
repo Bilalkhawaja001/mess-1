@@ -64,6 +64,6 @@
         <div class="sb-powered-logo">
             <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
         </div>
-        <div class="sb-powered-text">Powerd by NodeSky(smc-Private)Limited</div>
+        <div class="sb-powered-text">Powered by NodeSky(smc-Private)Limited</div>
     </div>
 </aside>

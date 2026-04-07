@@ -42,7 +42,7 @@
             <div class="powered-by-logo powered-by-logo-lg">
                 <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
             </div>
-            <div class="powered-by-text">Powerd by NodeSky(smc-Private)Limited</div>
+            <div class="powered-by-text">Powered by NodeSky(smc-Private)Limited</div>
         </div>
     </aside>
 

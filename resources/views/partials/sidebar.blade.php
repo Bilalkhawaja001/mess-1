@@ -62,10 +62,7 @@
 
     <div class="sb-powered">
         <div class="sb-powered-logo">
-            <picture>
-                <source type="image/svg+xml" srcset="{{ asset('branding/nodesky_logo.svg') }}">
-                <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
-            </picture>
+            <img src="{{ asset('branding/nodesky_logo.svg') }}" alt="NodeSky logo" onerror="this.onerror=null;this.src='{{ asset('branding/nodesky_logo.png') }}';">
         </div>
         <div class="sb-powered-text">Powerd by "NodeSky(smc-Private)Limited"</div>
     </div>

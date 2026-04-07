@@ -18,10 +18,7 @@
     <aside class="auth-aside">
         <div>
             <div class="auth-brand">
-                <picture>
-                    <source type="image/svg+xml" srcset="{{ asset('branding/nodesky_logo.svg') }}">
-                    <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
-                </picture>
+                <img src="{{ asset('branding/nodesky_logo.svg') }}" alt="NodeSky logo">
             </div>
             <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Premium Corporate Light</div>
             <h1 class="display-6 fw-bold mb-3">Mess Billing Portal</h1>
@@ -43,10 +40,7 @@
         </div>
         <div class="auth-powered">
             <div class="powered-by-logo powered-by-logo-lg">
-                <picture>
-                    <source type="image/svg+xml" srcset="{{ asset('branding/nodesky_logo.svg') }}">
-                    <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
-                </picture>
+                <img src="{{ asset('branding/nodesky_logo.svg') }}" alt="NodeSky logo">
             </div>
             <div class="powered-by-text">Powerd by "NodeSky(smc-Private)Limited"</div>
         </div>

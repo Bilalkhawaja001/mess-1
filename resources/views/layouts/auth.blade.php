@@ -18,7 +18,11 @@
     <aside class="auth-aside">
         <div>
             <div class="auth-brand">
-                <img src="{{ asset('branding/nodesky_logo.svg') }}" alt="NodeSky logo">
+                @php
+                    $loginLogo = asset('branding/login_logo.png');
+                    $fallbackLogo = asset('branding/nodesky_logo.png');
+                @endphp
+                <img src="{{ $loginLogo }}" alt="Portal logo" onerror="this.onerror=null;this.src='{{ $fallbackLogo }}';">
             </div>
             <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Premium Corporate Light</div>
             <h1 class="display-6 fw-bold mb-3">Mess Billing Portal</h1>
@@ -39,10 +43,7 @@
             </div>
         </div>
         <div class="auth-powered">
-            <div class="powered-by-logo powered-by-logo-lg">
-                <img src="{{ asset('branding/nodesky_logo.svg') }}" alt="NodeSky logo">
-            </div>
-            <div class="powered-by-text">Powerd by "NodeSky(smc-Private)Limited"</div>
+            <div class="powered-by-text">Powered by NodeSky (SMC-Private) Limited</div>
         </div>
     </aside>
 

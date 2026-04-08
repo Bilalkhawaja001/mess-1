@@ -4,8 +4,12 @@
 @endphp
 <aside class="sidebar">
     <div class="sb-brand">
-        <div class="sb-brand-mark sb-brand-mark-generic">
-            <span>MB</span>
+        <div class="sb-brand-mark sb-brand-mark-logo">
+            @php
+                $dashboardLogo = asset('branding/dashboard_logo.png');
+                $fallbackDashboardLogo = asset('branding/nodesky_logo.png');
+            @endphp
+            <img src="{{ $dashboardLogo }}" alt="Mess Billing" onerror="this.onerror=null;this.src='{{ $fallbackDashboardLogo }}';">
         </div>
         <div>
             <div class="sb-title">Mess Billing</div>
@@ -61,9 +65,6 @@
     @endif
 
     <div class="sb-powered">
-        <div class="sb-powered-logo">
-            <img src="{{ asset('branding/nodesky_logo.svg') }}" alt="NodeSky logo" onerror="this.onerror=null;this.src='{{ asset('branding/nodesky_logo.png') }}';">
-        </div>
-        <div class="sb-powered-text">Powerd by "NodeSky(smc-Private)Limited"</div>
+        <div class="sb-powered-text">Powered by NodeSky (SMC-Private) Limited</div>
     </div>
 </aside>

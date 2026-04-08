@@ -442,6 +442,31 @@ a { text-decoration: none; }
 	overflow: hidden;
 }
 
+.auth-hero-logo {
+	width: 100%;
+	max-width: 640px;
+	height: 320px;
+	margin-top: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	border-radius: 24px;
+	background: radial-gradient(circle at top left, rgba(59,130,246,0.18), transparent 40%),
+	            radial-gradient(circle at bottom right, rgba(37,99,235,0.26), transparent 45%),
+	            linear-gradient(135deg, rgba(15,23,42,0.18), rgba(37,99,235,0.42));
+	box-shadow: 0 26px 52px rgba(15,23,42,0.40);
+}
+
+.auth-hero-logo img {
+	max-width: 100%;
+	max-height: 100%;
+	width: auto;
+	height: auto;
+	object-fit: contain;
+	display: block;
+}
+
 .auth-panel {
     width: min(540px, 100%);
     display: flex;
@@ -471,6 +496,31 @@ a { text-decoration: none; }
     padding-top: 18px;
     border-top: 1px solid rgba(255,255,255,0.16);
     text-align: center;
+}
+
+.powered-by-inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.powered-by-inline-logo {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: rgba(15,23,42,0.85);
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+}
+
+.powered-by-inline-logo img {
+	max-width: 100%;
+	max-height: 100%;
+	width: auto;
+	height: auto;
+	object-fit: contain;
+	display: block;
 }
 
 .powered-by-logo,

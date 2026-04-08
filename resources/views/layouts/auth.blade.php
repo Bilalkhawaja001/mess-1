@@ -37,9 +37,18 @@
                     </div>
                 </div>
             </div>
+
+            <div class="auth-hero-logo">
+                <img src="{{ asset('branding/login_logo.png') }}" alt="Mess Billing hero logo">
+            </div>
         </div>
         <div class="auth-powered">
-            <div class="powered-by-text">Powered by NodeSky (SMC-Private) Limited</div>
+            <div class="powered-by-inline">
+                <span class="powered-by-inline-logo">
+                    <img src="{{ asset('branding/login_logo.png') }}" alt="Powered by logo">
+                </span>
+                <span class="powered-by-text">Powered by NodeSky (SMC-Private) Limited</span>
+            </div>
         </div>
     </aside>
 

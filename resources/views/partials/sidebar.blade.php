@@ -5,7 +5,7 @@
 <aside class="sidebar">
     <div class="sb-brand">
         <div class="sb-brand-mark sb-brand-mark-logo">
-            <img src="{{ asset('branding/nodesky_logo.png') }}" alt="Mess Billing logo">
+            <img src="{{ asset('branding/dashboard_logo.png') }}" alt="Mess Billing logo">
         </div>
         <div>
             <div class="sb-title">Mess Billing</div>

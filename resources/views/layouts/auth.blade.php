@@ -18,7 +18,7 @@
     <aside class="auth-aside">
         <div>
             <div class="auth-brand">
-                <img src="{{ asset('branding/nodesky_logo.png') }}" alt="Mess Billing logo">
+                <img src="{{ asset('branding/login_logo.png') }}" alt="Mess Billing logo">
             </div>
             <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Premium Corporate Light</div>
             <h1 class="display-6 fw-bold mb-3">Mess Billing Portal</h1>

@@ -17,9 +17,6 @@
 <div class="auth-shell">
     <aside class="auth-aside">
         <div>
-            <div class="auth-brand">
-                <img src="{{ asset('branding/login_logo.png') }}" alt="Mess Billing logo">
-            </div>
             <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Premium Corporate Light</div>
             <h1 class="display-6 fw-bold mb-3">Mess Billing Portal</h1>
             <p class="mb-4 text-white-50">Modern operations interface for billing, attendance, finance workflows, and member services with enterprise-grade clarity.</p>
@@ -39,15 +36,7 @@
             </div>
 
             <div class="auth-hero-logo">
-                <img src="{{ asset('branding/login_logo.png') }}" alt="Mess Billing hero logo">
-            </div>
-        </div>
-        <div class="auth-powered">
-            <div class="powered-by-inline">
-                <span class="powered-by-inline-logo">
-                    <img src="{{ asset('branding/login_logo.png') }}" alt="Powered by logo">
-                </span>
-                <span class="powered-by-text">Powered by NodeSky (SMC-Private) Limited</span>
+                <img src="{{ asset('branding/login_logo_main_v4.png') }}" alt="Mess Billing logo">
             </div>
         </div>
     </aside>

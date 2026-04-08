@@ -72,15 +72,15 @@ a { text-decoration: none; }
 }
 
 .sb-brand-mark {
-    width: 58px;
-    height: 58px;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.96);
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    box-shadow: 0 10px 28px rgba(15,23,42,0.18);
-    flex-shrink: 0;
+	width: 64px;
+	height: 64px;
+	border-radius: 20px;
+	background: rgba(255,255,255,0.96);
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	box-shadow: 0 10px 28px rgba(15,23,42,0.18);
+	flex-shrink: 0;
 }
 
 .sb-brand-mark-generic {
@@ -432,14 +432,14 @@ a { text-decoration: none; }
 .auth-aside::after { width: 160px; height: 160px; bottom: -50px; left: -30px; }
 
 .auth-brand {
-    width: 120px;
-    height: 60px;
-    border-radius: 16px;
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.94);
-    box-shadow: 0 16px 34px rgba(2,6,23,0.24);
-    margin-bottom: 22px;
-    overflow: hidden;
+	width: 148px;
+	height: 68px;
+	border-radius: 18px;
+	padding: 6px 10px;
+	background: rgba(255,255,255,0.94);
+	box-shadow: 0 16px 34px rgba(2,6,23,0.24);
+	margin-bottom: 22px;
+	overflow: hidden;
 }
 
 .auth-panel {

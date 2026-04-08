@@ -5,11 +5,7 @@
 <aside class="sidebar">
     <div class="sb-brand">
         <div class="sb-brand-mark sb-brand-mark-logo">
-            @php
-                $dashboardLogo = asset('branding/dashboard_logo.png');
-                $fallbackDashboardLogo = asset('branding/nodesky_logo.png');
-            @endphp
-            <img src="{{ $dashboardLogo }}" alt="Mess Billing" onerror="this.onerror=null;this.src='{{ $fallbackDashboardLogo }}';">
+            <img src="{{ asset('branding/nodesky_logo.png') }}" alt="Mess Billing logo">
         </div>
         <div>
             <div class="sb-title">Mess Billing</div>

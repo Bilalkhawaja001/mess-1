@@ -18,11 +18,7 @@
     <aside class="auth-aside">
         <div>
             <div class="auth-brand">
-                @php
-                    $loginLogo = asset('branding/login_logo.png');
-                    $fallbackLogo = asset('branding/nodesky_logo.png');
-                @endphp
-                <img src="{{ $loginLogo }}" alt="Portal logo" onerror="this.onerror=null;this.src='{{ $fallbackLogo }}';">
+                <img src="{{ asset('branding/nodesky_logo.png') }}" alt="Mess Billing logo">
             </div>
             <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Premium Corporate Light</div>
             <h1 class="display-6 fw-bold mb-3">Mess Billing Portal</h1>

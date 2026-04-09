@@ -8,27 +8,28 @@
     .rates-toolbar {
         display: grid;
         grid-template-columns: 1.35fr 0.85fr 0.9fr 0.9fr auto;
-        gap: 14px;
+        gap: 12px;
         align-items: end;
     }
 
     .rates-toolbar label {
         display: block;
-        font-size: 0.9rem;
+        font-size: 0.82rem;
         font-weight: 700;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         color: #334155;
     }
 
     .rates-toolbar .form-control,
     .rates-toolbar .form-select {
-        min-height: 40px;
-        border-radius: 14px;
+        min-height: 38px;
+        border-radius: 12px;
+        font-size: 0.9rem;
     }
 
     .rates-toolbar .btn {
-        min-height: 40px;
-        padding: 0.6rem 1.1rem;
+        min-height: 38px;
+        padding: 0.52rem 0.95rem;
         white-space: nowrap;
     }
 
@@ -38,18 +39,18 @@
 
     .rates-table {
         min-width: 980px;
-        font-size: 0.95rem;
+        font-size: 0.88rem;
     }
 
     .rates-table thead th {
         white-space: nowrap;
-        padding: 0.8rem 0.85rem;
-        font-size: 0.78rem;
+        padding: 0.72rem 0.8rem;
+        font-size: 0.72rem;
     }
 
     .rates-table tbody td {
         white-space: nowrap;
-        padding: 0.72rem 0.85rem;
+        padding: 0.6rem 0.8rem;
         vertical-align: middle;
     }
 
@@ -65,9 +66,9 @@
     }
 
     .rates-action-group .btn {
-        padding: 0.42rem 0.78rem;
-        border-radius: 12px;
-        font-size: 0.86rem;
+        padding: 0.34rem 0.68rem;
+        border-radius: 10px;
+        font-size: 0.78rem;
         line-height: 1.1;
         min-width: auto;
         white-space: nowrap;
@@ -82,10 +83,10 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 72px;
-        padding: 0.38rem 0.72rem;
+        min-width: 64px;
+        padding: 0.3rem 0.62rem;
         border-radius: 999px;
-        font-size: 0.82rem;
+        font-size: 0.74rem;
         font-weight: 800;
     }
 

@@ -26,14 +26,30 @@ class ProcurementController extends Controller
             ->limit(50)
             ->get()
             ->map(function (PurchaseOrder $po) {
-                $line = $po->lines->first();
-                $ordered = (float) ($line->qty_ordered ?? 0);
-                $received = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
-                $pending = max($ordered - $received, 0);
+                $receivedByItem = $po->goodsReceipts
+                    ->flatMap->lines
+                    ->groupBy('item_id')
+                    ->map(fn ($lines) => (float) $lines->sum('qty_received'));
 
-                $po->setAttribute('primary_line', $line);
-                $po->setAttribute('received_qty', $received);
-                $po->setAttribute('pending_qty', $pending);
+                $totalOrdered = (float) $po->lines->sum('qty_ordered');
+                $totalReceived = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+                $totalPending = max($totalOrdered - $totalReceived, 0);
+
+                $po->lines->transform(function (PurchaseOrderLine $line) use ($receivedByItem) {
+                    $receivedQty = (float) ($receivedByItem[$line->item_id] ?? 0);
+                    $pendingQty = max((float) $line->qty_ordered - $receivedQty, 0);
+
+                    $line->setAttribute('received_qty', $receivedQty);
+                    $line->setAttribute('pending_qty', $pendingQty);
+
+                    return $line;
+                });
+
+                $po->setAttribute('total_lines', $po->lines->count());
+                $po->setAttribute('total_qty', $totalOrdered);
+                $po->setAttribute('total_amount', (float) $po->lines->sum(fn ($line) => ((float) $line->qty_ordered) * ((float) $line->unit_price)));
+                $po->setAttribute('received_qty', $totalReceived);
+                $po->setAttribute('pending_qty', $totalPending);
 
                 return $po;
             });
@@ -54,9 +70,30 @@ class ProcurementController extends Controller
         $d = $r->validate([
             'vendor_id' => 'required|exists:vendors,id',
             'po_date' => 'required|date',
-            'item_id' => 'required|exists:items,id',
-            'qty_ordered' => 'required|numeric|min:0.001',
+            'lines' => 'required|array|min:1',
+            'lines.*.item_id' => 'required|exists:items,id',
+            'lines.*.qty_ordered' => 'required|numeric|min:0.001',
+            'lines.*.unit_price' => 'nullable|numeric|min:0',
         ]);
+
+        $linePayloads = collect($d['lines'])
+            ->map(function (array $line) {
+                return [
+                    'item_id' => (int) $line['item_id'],
+                    'qty_ordered' => (float) $line['qty_ordered'],
+                    'unit_price' => (float) ($line['unit_price'] ?? 0),
+                ];
+            })
+            ->filter(fn (array $line) => $line['item_id'] > 0 && $line['qty_ordered'] > 0)
+            ->values();
+
+        if ($linePayloads->isEmpty()) {
+            return back()->withErrors(['lines' => 'At least one valid PO line is required.'])->withInput();
+        }
+
+        if ($linePayloads->pluck('item_id')->duplicates()->isNotEmpty()) {
+            return back()->withErrors(['lines' => 'Same item cannot be added twice in the same PO.'])->withInput();
+        }
 
         DB::transaction(function () use ($d, $r, &$po) {
             $po = PurchaseOrder::create([
@@ -66,12 +103,15 @@ class ProcurementController extends Controller
                 'status' => 'ISSUED',
                 'remarks' => $r->input('remarks'),
             ]);
-            PurchaseOrderLine::create([
-                'purchase_order_id' => $po->id,
-                'item_id' => $d['item_id'],
-                'qty_ordered' => $d['qty_ordered'],
-                'unit_price' => $r->input('unit_price', 0),
-            ]);
+
+            foreach ($linePayloads as $line) {
+                PurchaseOrderLine::create([
+                    'purchase_order_id' => $po->id,
+                    'item_id' => $line['item_id'],
+                    'qty_ordered' => $line['qty_ordered'],
+                    'unit_price' => $line['unit_price'],
+                ]);
+            }
         });
 
         return back()->with('success', 'PO created');
@@ -89,16 +129,17 @@ class ProcurementController extends Controller
     {
         $d = $r->validate([
             'purchase_order_id' => 'required|exists:purchase_orders,id',
+            'purchase_order_line_id' => 'required|exists:purchase_order_lines,id',
             'item_id' => 'required|exists:items,id',
             'received_date' => 'required|date',
             'qty_received' => 'required|numeric|min:0.001',
         ]);
 
         $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
-        $poLine = $po->lines->first();
+        $poLine = $po->lines->firstWhere('id', (int) $d['purchase_order_line_id']);
 
         if (! $poLine) {
-            return back()->withErrors(['purchase_order_id' => 'Selected PO has no item line.']);
+            return back()->withErrors(['purchase_order_line_id' => 'Selected PO line is invalid.']);
         }
 
         if ((int) $poLine->item_id !== (int) $d['item_id']) {

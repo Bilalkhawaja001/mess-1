@@ -1,4 +1,20 @@
 <?php
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
-class GoodsReceiptLine extends Model { protected $guarded=[]; }
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class GoodsReceiptLine extends Model
+{
+    protected $guarded = [];
+
+    public function goodsReceipt(): BelongsTo
+    {
+        return $this->belongsTo(GoodsReceipt::class);
+    }
+
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class);
+    }
+}

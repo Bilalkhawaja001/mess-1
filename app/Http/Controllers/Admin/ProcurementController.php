@@ -19,9 +19,25 @@ class ProcurementController extends Controller
     public function index()
     {
         $vendors = Vendor::all();
-        $items = Item::all();
-        $pos = PurchaseOrder::latest()->limit(50)->get();
-        $grns = GoodsReceipt::latest()->limit(50)->get();
+        $items = Item::query()->where('is_active', true)->orderBy('sku')->get();
+        $pos = PurchaseOrder::query()
+            ->with(['vendor', 'lines.item', 'goodsReceipts.lines'])
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(function (PurchaseOrder $po) {
+                $line = $po->lines->first();
+                $ordered = (float) ($line->qty_ordered ?? 0);
+                $received = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+                $pending = max($ordered - $received, 0);
+
+                $po->setAttribute('primary_line', $line);
+                $po->setAttribute('received_qty', $received);
+                $po->setAttribute('pending_qty', $pending);
+
+                return $po;
+            });
+        $grns = GoodsReceipt::query()->with(['purchaseOrder.vendor', 'lines.item'])->latest()->limit(50)->get();
 
         return view('admin.procurement.index', compact('vendors', 'items', 'pos', 'grns'));
     }
@@ -78,6 +94,29 @@ class ProcurementController extends Controller
             'qty_received' => 'required|numeric|min:0.001',
         ]);
 
+        $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
+        $poLine = $po->lines->first();
+
+        if (! $poLine) {
+            return back()->withErrors(['purchase_order_id' => 'Selected PO has no item line.']);
+        }
+
+        if ((int) $poLine->item_id !== (int) $d['item_id']) {
+            return back()->withErrors(['item_id' => 'Selected item does not match the PO item.'])->withInput();
+        }
+
+        $orderedQty = (float) $poLine->qty_ordered;
+        $receivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+        $pendingQty = max($orderedQty - $receivedQty, 0);
+
+        if ($pendingQty <= 0) {
+            return back()->withErrors(['qty_received' => 'This PO line is already fully received.'])->withInput();
+        }
+
+        if ((float) $d['qty_received'] > $pendingQty) {
+            return back()->withErrors(['qty_received' => 'Receive quantity cannot exceed pending quantity.'])->withInput();
+        }
+
         DB::transaction(function () use ($d, $r, &$grn) {
             $grn = GoodsReceipt::create([
                 'purchase_order_id' => $d['purchase_order_id'],
@@ -99,9 +138,16 @@ class ProcurementController extends Controller
                 'reference_type' => GoodsReceipt::class,
                 'reference_id' => $grn->id,
                 'txn_at' => $d['received_date'],
-                'remarks' => 'GRN posting',
+                'remarks' => 'GRN posting (stock posted on create)',
             ]);
-            PurchaseOrder::whereKey($d['purchase_order_id'])->update(['status' => 'RECEIVED']);
+
+            $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
+            $orderedQty = (float) optional($po->lines->first())->qty_ordered;
+            $receivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+
+            PurchaseOrder::whereKey($d['purchase_order_id'])->update([
+                'status' => $receivedQty < $orderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
+            ]);
         });
 
         return back()->with('success', 'GRN posted');

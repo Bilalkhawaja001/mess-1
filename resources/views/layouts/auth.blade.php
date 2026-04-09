@@ -17,7 +17,6 @@
 <div class="auth-shell">
     <aside class="auth-aside">
         <div>
-            <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Premium Corporate Light</div>
             <h1 class="display-6 fw-bold mb-3">Mess Billing Portal</h1>
             <p class="mb-4 text-white-50">Modern operations interface for billing, attendance, finance workflows, and member services with enterprise-grade clarity.</p>
             <div class="row g-3">

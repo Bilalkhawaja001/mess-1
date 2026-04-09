@@ -16,7 +16,7 @@
             @csrf
             <div class="col-md-6"><input type="file" name="file" class="form-control" accept=".csv,.txt" required></div>
             <div class="col-md-3"><button class="btn btn-outline-primary">Import CSV</button></div>
-            <div class="col-12 text-muted small">Headers: member_code,name,department_name,mess_code,mobile_number,join_date,leave_date,is_active</div>
+            <div class="col-12 text-muted small">Headers: member_code,name,department_name,mess_code,mobile_number,join_date,leave_date,username,is_active</div>
         </form>
     </div>
 </div>

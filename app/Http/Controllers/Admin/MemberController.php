@@ -112,8 +112,15 @@ class MemberController extends Controller
         foreach ($this->csvRows($request) as $row) {
             $messCode = $this->nullableText($row['mess_code'] ?? null);
             $messId = $this->resolveMessId($messCode);
+            $username = $this->nullableText($row['username'] ?? null);
+            $userId = $this->resolveUserId($username);
 
             if ($messCode !== null && $messId === null) {
+                $counts['failed']++;
+                continue;
+            }
+
+            if ($username !== null && $userId === null) {
                 $counts['failed']++;
                 continue;
             }
@@ -123,6 +130,7 @@ class MemberController extends Controller
                 'name' => trim((string) ($row['name'] ?? '')),
                 'department_name' => $this->nullableText($row['department_name'] ?? null),
                 'mess_id' => $messId,
+                'user_id' => $userId,
                 'mobile_number' => $this->nullableText($row['mobile_number'] ?? null),
                 'join_date' => $this->nullableText($row['join_date'] ?? null),
                 'leave_date' => $this->nullableText($row['leave_date'] ?? null),
@@ -134,6 +142,7 @@ class MemberController extends Controller
                 'name' => 'required|string|max:120',
                 'department_name' => 'nullable|string|max:120',
                 'mess_id' => 'nullable|exists:messes,id',
+                'user_id' => 'nullable|exists:users,id|unique:members,user_id',
                 'mobile_number' => 'nullable|string|max:40',
                 'join_date' => 'required|date',
                 'leave_date' => 'nullable|date',
@@ -160,8 +169,8 @@ class MemberController extends Controller
 
     public function sampleCsv()
     {
-        $headers = ['member_code', 'name', 'department_name', 'mess_code', 'mobile_number', 'join_date', 'leave_date', 'is_active'];
-        $sample = ['M-001', 'Ali Khan', 'Accounts', 'MAIN', '03001234567', now()->toDateString(), '', '1'];
+        $headers = ['member_code', 'name', 'department_name', 'mess_code', 'mobile_number', 'join_date', 'leave_date', 'username', 'is_active'];
+        $sample = ['M-001', 'Ali Khan', 'Accounts', 'MAIN', '03001234567', now()->toDateString(), '', '', '1'];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');
@@ -213,5 +222,16 @@ class MemberController extends Controller
         $mess = Mess::query()->whereRaw('UPPER(code) = ?', [$code])->first();
 
         return $mess?->id;
+    }
+
+    private function resolveUserId(?string $username): ?int
+    {
+        if ($username === null) {
+            return null;
+        }
+
+        $user = User::query()->where('username', $username)->first();
+
+        return $user?->id;
     }
 }

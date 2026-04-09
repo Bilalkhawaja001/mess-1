@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Member extends Model
 {
@@ -78,5 +79,41 @@ class Member extends Model
     public function ledgers(): HasMany
     {
         return $this->hasMany(MemberLedger::class);
+    }
+
+    public function extras(): HasMany
+    {
+        return $this->hasMany(Extra::class);
+    }
+
+    public function monthlyAttendances(): HasMany
+    {
+        return $this->hasMany(MonthlyAttendance::class);
+    }
+
+    public function registrationOtps(): HasMany
+    {
+        return $this->hasMany(MemberRegistrationOtp::class);
+    }
+
+    public function removalDependencies(): Collection
+    {
+        return collect([
+            'attendance' => $this->attendances()->exists(),
+            'monthly_attendance' => $this->monthlyAttendances()->exists(),
+            'billing' => $this->billings()->exists(),
+            'payments' => $this->payments()->exists(),
+            'payment_attempts' => $this->paymentAttempts()->exists(),
+            'payment_transactions' => $this->paymentTransactions()->exists(),
+            'ledger' => $this->ledgers()->exists(),
+            'extras' => $this->extras()->exists(),
+            'registration_otp' => $this->registrationOtps()->exists(),
+            'linked_user' => $this->user_id !== null || User::query()->where('member_id', $this->id)->exists(),
+        ])->filter();
+    }
+
+    public function canBePermanentlyDeleted(): bool
+    {
+        return $this->removalDependencies()->isEmpty();
     }
 }

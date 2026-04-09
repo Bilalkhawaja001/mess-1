@@ -83,6 +83,12 @@
                         <td class="d-flex gap-2 flex-wrap">
                             <form method="POST" action="{{ route('admin.members.toggle-active', $m->id) }}">@csrf<button class="btn btn-sm btn-outline-warning">Toggle</button></form>
                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-member-{{ $m->id }}">Edit</button>
+                            <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
+                                @csrf
+                                <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }}">
+                                    {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Delete' : 'Remove' }}
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     <tr class="collapse" id="edit-member-{{ $m->id }}">
@@ -114,6 +120,14 @@
                                 </div>
                                 <div class="col-md-1"><input type="checkbox" name="is_active" value="1" @checked($m->is_active)></div>
                                 <div class="col-md-1"><button class="btn btn-sm btn-success">Save</button></div>
+                                <div class="col-md-3">
+                                    <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
+                                        @csrf
+                                        <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }} w-100">
+                                            {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Permanently Delete Member' : 'Remove Member (Deactivate)' }}
+                                        </button>
+                                    </form>
+                                </div>
                             </form>
                         </td>
                     </tr>

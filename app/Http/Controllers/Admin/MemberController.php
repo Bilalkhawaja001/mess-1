@@ -21,7 +21,16 @@ class MemberController extends Controller
         $users = User::query()->where('is_active', true)->with('role')->orderBy('username')->get();
         $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.members.index', compact('rows', 'users', 'messes'));
+        $removalMeta = $rows->mapWithKeys(fn (Member $member) => [
+            $member->id => [
+                'can_delete' => $member->canBePermanentlyDeleted(),
+                'message' => $member->canBePermanentlyDeleted()
+                    ? 'This member has no linked history and will be permanently deleted.'
+                    : 'This member has linked history and cannot be permanently deleted. The member will be deactivated instead.',
+            ],
+        ]);
+
+        return view('admin.members.index', compact('rows', 'users', 'messes', 'removalMeta'));
     }
 
     public function store(StoreMemberRequest $request): RedirectResponse
@@ -96,9 +105,19 @@ class MemberController extends Controller
 
     public function remove(Member $member): RedirectResponse
     {
-        $member->delete();
+        if ($member->canBePermanentlyDeleted()) {
+            $member->delete();
 
-        return redirect()->route('admin.members.index')->with('success', 'Member removed.');
+            return redirect()->route('admin.members.index')->with('success', 'Member permanently deleted.');
+        }
+
+        if ($member->is_active) {
+            $member->is_active = false;
+            $member->leave_date = $member->leave_date ?: now()->toDateString();
+            $member->save();
+        }
+
+        return redirect()->route('admin.members.index')->with('success', 'Member has linked history, so the record was deactivated instead of permanently deleted.');
     }
 
     public function import(Request $request): RedirectResponse

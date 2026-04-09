@@ -444,12 +444,12 @@ a { text-decoration: none; }
 	border-radius: 24px;
 	background: #1D4ED8;
 	box-shadow: 0 26px 52px rgba(15,23,42,0.40);
-	padding: 20px;
+	padding: 0;
 }
 
 .auth-hero-logo img {
-	max-width: 100%;
-	max-height: 100%;
+	max-width: calc(100% - 24px);
+	max-height: calc(100% - 24px);
 	width: auto;
 	height: auto;
 	object-fit: contain;

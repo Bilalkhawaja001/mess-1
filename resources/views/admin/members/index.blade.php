@@ -3,6 +3,63 @@
 @section('title', 'Members')
 @section('page_title', 'Members Management')
 
+@push('styles')
+<style>
+    .members-table {
+        min-width: 1180px;
+        font-size: 12px;
+    }
+
+    .members-table thead th {
+        padding: 0.7rem 0.75rem;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .members-table tbody td {
+        padding: 0.55rem 0.75rem;
+        font-size: 12px;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+    }
+
+    .members-table tbody td:last-child {
+        overflow: visible;
+        text-overflow: clip;
+        max-width: none;
+    }
+
+    .members-actions {
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .members-actions .btn {
+        min-width: auto;
+        padding: 0.3rem 0.55rem;
+        font-size: 11px;
+        border-radius: 10px;
+        white-space: nowrap;
+    }
+
+    .members-edit-form .form-control,
+    .members-edit-form .form-select {
+        font-size: 12px;
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .members-table-wrap {
+            overflow-x: auto;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="mb-2 d-flex gap-2 flex-wrap">
     <a href="{{ route('admin.member-accounts.index') }}" class="btn btn-sm btn-outline-dark">Manage Member Portal Accounts</a>

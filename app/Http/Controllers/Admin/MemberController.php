@@ -183,13 +183,19 @@ class MemberController extends Controller
             }
         }
 
-        return back()->with('success', "Members import done. Inserted: {$counts['inserted']}, Updated: {$counts['updated']}, Failed: {$counts['failed']}");
+        $message = "Members import done. Inserted: {$counts['inserted']}, Updated: {$counts['updated']}, Failed: {$counts['failed']}";
+
+        if ($counts['failed'] > 0) {
+            $message .= ' — failed rows usually mean invalid mess_code, invalid username, duplicate linked user, or bad date format.';
+        }
+
+        return back()->with('success', $message);
     }
 
     public function sampleCsv()
     {
         $headers = ['member_code', 'name', 'department_name', 'mess_code', 'mobile_number', 'join_date', 'leave_date', 'username', 'is_active'];
-        $sample = ['M-001', 'Ali Khan', 'Accounts', 'MAIN', '03001234567', now()->toDateString(), '', '', '1'];
+        $sample = ['M-001', 'Ali Khan', 'Accounts', '', '03001234567', now()->toDateString(), '', '', '1'];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');

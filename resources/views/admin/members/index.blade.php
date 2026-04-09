@@ -59,10 +59,11 @@
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm members-page-card">
     <div class="card-header">Members List</div>
-    <div class="card-body table-responsive">
-        <table class="table table-sm align-middle">
+    <div class="card-body">
+        <div class="table-wrap members-table-wrap">
+        <table class="table table-sm align-middle members-table">
             <thead>
                 <tr>
                     <th>Code</th><th>Name</th><th>Department</th><th>Mess</th><th>Mobile</th><th>Join</th><th>Leave</th><th>User</th><th>Status</th><th>Actions</th>
@@ -80,20 +81,22 @@
                         <td>{{ optional($m->leave_date)->format('Y-m-d') }}</td>
                         <td>{{ $m->user->username ?? '-' }}</td>
                         <td><span class="badge {{ $m->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $m->is_active ? 'Active' : 'Inactive' }}</span></td>
-                        <td class="d-flex gap-2 flex-wrap">
-                            <form method="POST" action="{{ route('admin.members.toggle-active', $m->id) }}">@csrf<button class="btn btn-sm btn-outline-warning">Toggle</button></form>
-                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-member-{{ $m->id }}">Edit</button>
-                            <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
-                                @csrf
-                                <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }}">
-                                    {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Delete' : 'Remove' }}
-                                </button>
-                            </form>
+                        <td>
+                            <div class="members-actions">
+                                <form method="POST" action="{{ route('admin.members.toggle-active', $m->id) }}">@csrf<button class="btn btn-sm btn-outline-warning">Toggle</button></form>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-member-{{ $m->id }}">Edit</button>
+                                <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
+                                    @csrf
+                                    <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }}">
+                                        {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Delete' : 'Remove' }}
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     <tr class="collapse" id="edit-member-{{ $m->id }}">
                         <td colspan="10">
-                            <form method="POST" action="{{ route('admin.members.update', $m->id) }}" class="row g-2">
+                            <form method="POST" action="{{ route('admin.members.update', $m->id) }}" class="row g-2 members-edit-form">
                                 @csrf
                                 @method('PUT')
                                 <div class="col-md-2"><input name="member_code" class="form-control form-control-sm" value="{{ $m->member_code }}" required></div>
@@ -120,20 +123,21 @@
                                 </div>
                                 <div class="col-md-1"><input type="checkbox" name="is_active" value="1" @checked($m->is_active)></div>
                                 <div class="col-md-1"><button class="btn btn-sm btn-success">Save</button></div>
-                                <div class="col-md-3">
-                                    <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
-                                        @csrf
-                                        <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }} w-100">
-                                            {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Permanently Delete Member' : 'Remove Member (Deactivate)' }}
-                                        </button>
-                                    </form>
-                                </div>
                             </form>
+                            <div class="mt-3 pt-2 border-top">
+                                <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
+                                    @csrf
+                                    <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }}">
+                                        {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Permanently Delete Member' : 'Remove Member (Deactivate)' }}
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 @endsection

@@ -302,6 +302,34 @@ a { text-decoration: none; }
 
 .table tbody tr:hover { background: rgba(248,250,252,0.96); }
 
+.members-table-wrap {
+    overflow-x: auto;
+}
+
+.members-table {
+    min-width: 1180px;
+}
+
+.members-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.members-actions form {
+    margin: 0;
+}
+
+.members-actions .btn {
+    min-width: 92px;
+}
+
+.members-edit-form {
+    align-items: end;
+}
+
 .btn {
     border-radius: 14px;
     font-weight: 700;

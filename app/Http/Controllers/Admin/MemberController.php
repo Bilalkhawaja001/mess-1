@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Members\StoreMemberRequest;
 use App\Http\Requests\Members\UpdateMemberRequest;
 use App\Models\Member;
+use App\Models\Mess;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,10 +17,11 @@ class MemberController extends Controller
 {
     public function index(): View
     {
-        $rows = Member::query()->with('user')->orderBy('member_code')->get();
+        $rows = Member::query()->with(['user', 'mess'])->orderBy('member_code')->get();
         $users = User::query()->where('is_active', true)->with('role')->orderBy('username')->get();
+        $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.members.index', compact('rows', 'users'));
+        return view('admin.members.index', compact('rows', 'users', 'messes'));
     }
 
     public function store(StoreMemberRequest $request): RedirectResponse
@@ -29,6 +31,7 @@ class MemberController extends Controller
             'member_code' => $request->string('member_code')->toString(),
             'name' => $request->string('name')->toString(),
             'department_name' => $request->input('department_name') ?: null,
+            'mess_id' => $request->input('mess_id') ?: null,
             'mobile_number' => $request->input('mobile_number') ?: null,
             'join_date' => $request->input('join_date'),
             'leave_date' => $request->input('leave_date') ?: null,
@@ -45,6 +48,7 @@ class MemberController extends Controller
             'member_code' => $request->string('member_code')->toString(),
             'name' => $request->string('name')->toString(),
             'department_name' => $request->input('department_name') ?: null,
+            'mess_id' => $request->input('mess_id') ?: null,
             'mobile_number' => $request->input('mobile_number') ?: null,
             'join_date' => $request->input('join_date'),
             'leave_date' => $request->input('leave_date') ?: null,
@@ -106,10 +110,19 @@ class MemberController extends Controller
         $counts = ['inserted' => 0, 'updated' => 0, 'failed' => 0];
 
         foreach ($this->csvRows($request) as $row) {
+            $messCode = $this->nullableText($row['mess_code'] ?? null);
+            $messId = $this->resolveMessId($messCode);
+
+            if ($messCode !== null && $messId === null) {
+                $counts['failed']++;
+                continue;
+            }
+
             $payload = [
                 'member_code' => trim((string) ($row['member_code'] ?? '')),
                 'name' => trim((string) ($row['name'] ?? '')),
                 'department_name' => $this->nullableText($row['department_name'] ?? null),
+                'mess_id' => $messId,
                 'mobile_number' => $this->nullableText($row['mobile_number'] ?? null),
                 'join_date' => $this->nullableText($row['join_date'] ?? null),
                 'leave_date' => $this->nullableText($row['leave_date'] ?? null),
@@ -120,6 +133,7 @@ class MemberController extends Controller
                 'member_code' => 'required|string|max:50',
                 'name' => 'required|string|max:120',
                 'department_name' => 'nullable|string|max:120',
+                'mess_id' => 'nullable|exists:messes,id',
                 'mobile_number' => 'nullable|string|max:40',
                 'join_date' => 'required|date',
                 'leave_date' => 'nullable|date',
@@ -146,8 +160,8 @@ class MemberController extends Controller
 
     public function sampleCsv()
     {
-        $headers = ['member_code', 'name', 'department_name', 'mobile_number', 'join_date', 'leave_date', 'is_active'];
-        $sample = ['M-001', 'Ali Khan', 'Accounts', '03001234567', now()->toDateString(), '', '1'];
+        $headers = ['member_code', 'name', 'department_name', 'mess_code', 'mobile_number', 'join_date', 'leave_date', 'is_active'];
+        $sample = ['M-001', 'Ali Khan', 'Accounts', 'MAIN', '03001234567', now()->toDateString(), '', '1'];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');
@@ -186,5 +200,18 @@ class MemberController extends Controller
     private function toBoolean(mixed $value): bool
     {
         return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'y'], true);
+    }
+
+    private function resolveMessId(mixed $messCode): ?int
+    {
+        $code = strtoupper(trim((string) ($messCode ?? '')));
+
+        if ($code === '') {
+            return null;
+        }
+
+        $mess = Mess::query()->whereRaw('UPPER(code) = ?', [$code])->first();
+
+        return $mess?->id;
     }
 }

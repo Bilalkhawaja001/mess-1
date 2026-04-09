@@ -16,6 +16,7 @@ class Member extends Model
         'member_code',
         'name',
         'department_name',
+        'mess_id',
         'mobile_number',
         'join_date',
         'leave_date',
@@ -37,6 +38,11 @@ class Member extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function mess(): BelongsTo
+    {
+        return $this->belongsTo(Mess::class);
     }
 
     public function attendances(): HasMany

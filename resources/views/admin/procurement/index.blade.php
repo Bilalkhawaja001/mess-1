@@ -441,7 +441,7 @@
                     units.forEach((u) => {
                         const opt = document.createElement('option');
                         opt.value = u.code;
-                        opt.textContent = `${u.code} (x${u.factor.toFixed(3)} ${item?.base_uom ?? ''})`;
+                        opt.textContent = `${u.code} (x${u.factor.toFixed(3)} ${item && item.base_uom ? item.base_uom : ''})`;
                         if (defaultUnit && defaultUnit.code === u.code) {
                             opt.selected = true;
                         }

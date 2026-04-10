@@ -82,7 +82,10 @@
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Items List</h5>
-                <span class="badge bg-secondary">{{ $items->count() }} items</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-danger">{{ count($lowStockItems ?? []) }} low stock</span>
+                    <span class="badge bg-secondary">{{ $items->count() }} items</span>
+                </div>
             </div>
             <div class="card-body table-responsive">
                 <table class="table table-sm table-striped align-middle">
@@ -98,6 +101,9 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php
+                            $lowIds = collect($lowStockItems ?? [])->pluck('item.id')->all();
+                        @endphp
                         @forelse($items as $item)
                             <tr>
                                 <td>{{ $item->id }}</td>
@@ -105,7 +111,17 @@
                                 <td>{{ $item->name }}</td>
                                 <td>{{ $item->category ?? 'Uncategorized' }}</td>
                                 <td>{{ $item->uom }}</td>
-                                <td>{{ number_format((float) $item->reorder_level, 3) }}</td>
+                                <td>
+                                    @php
+                                        $isLow = in_array($item->id, $lowIds, true);
+                                    @endphp
+                                    <span class="badge {{ $isLow ? 'bg-danger' : 'bg-light text-muted' }}">
+                                        {{ number_format((float) $item->reorder_level, 3) }}
+                                        @if($isLow)
+                                            <span class="ms-1">Low</span>
+                                        @endif
+                                    </span>
+                                </td>
                                 <td>
                                     @if($item->is_active)
                                         <span class="badge bg-success">Active</span>
@@ -124,5 +140,38 @@
             </div>
         </div>
     </div>
+
+    @if(!empty($lowStockItems))
+        <div class="col-12 mt-3">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Low Stock Items</h5>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>ItemCode</th>
+                                <th>ItemName</th>
+                                <th>Balance</th>
+                                <th>Reorder Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($lowStockItems as $row)
+                                @php($item = $row['item'])
+                                <tr>
+                                    <td>{{ $item->sku }}</td>
+                                    <td>{{ $item->name }}</td>
+                                    <td>{{ number_format((float) $row['balance'], 3) }} {{ $item->uom }}</td>
+                                    <td>{{ number_format((float) $item->reorder_level, 3) }} {{ $item->uom }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
 @endsection

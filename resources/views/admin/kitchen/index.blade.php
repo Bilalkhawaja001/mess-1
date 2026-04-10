@@ -75,14 +75,30 @@
         <div class="card shadow-sm mb-3"><div class="card-header">Post Kitchen Issue</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.issues.store') }}" class="row g-2">@csrf
                 <div class="col-md-3"><input name="issue_date" type="date" class="form-control" required></div>
-                <div class="col-md-4"><select name="item_id" class="form-select" required>@foreach($items as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
+                <div class="col-md-3"><select name="item_id" class="form-select" required>@foreach($items as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
                 <div class="col-md-2"><input name="quantity" type="number" step="0.001" min="0.001" class="form-control" required></div>
-                <div class="col-md-3"><input name="remarks" class="form-control" placeholder="remarks"></div>
+                <div class="col-md-2">
+                    <select name="issue_type" class="form-select" required>
+                        <option value="CONSUMPTION">Consumption</option>
+                        <option value="WASTAGE">Wastage</option>
+                        <option value="DAMAGE">Damage</option>
+                        <option value="EXPIRED">Expired</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><input name="remarks" class="form-control" placeholder="remarks"></div>
                 <div class="col-12"><button class="btn btn-primary">Post Issue</button></div>
             </form>
         </div></div>
-        <div class="card shadow-sm"><div class="card-header">Kitchen Issues</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Item</th><th>Qty</th><th>Remarks</th><th></th></tr></thead><tbody>
-            @foreach($issues as $i)<tr><td>{{ $i->issue_date }}</td><td>{{ $items->firstWhere('id',$i->item_id)?->name ?? $i->item_id }}</td><td>{{ $i->quantity }}</td><td>{{ $i->remarks }}</td><td><form method="POST" action="{{ route('admin.kitchen.issues.approve.legacy',$i) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form></td></tr>@endforeach
+        <div class="card shadow-sm"><div class="card-header">Kitchen Issues</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Item</th><th>Qty (Base)</th><th>Type</th><th>Mess</th><th>Remarks</th><th></th></tr></thead><tbody>
+            @foreach($issues as $i)<tr>
+                <td>{{ $i->issue_date }}</td>
+                <td>{{ $items->firstWhere('id',$i->item_id)?->name ?? $i->item_id }}</td>
+                <td>{{ $i->quantity }}</td>
+                <td>{{ $i->issue_type ?? 'CONSUMPTION' }}</td>
+                <td>{{ $i->mess->name ?? '—' }}</td>
+                <td>{{ $i->remarks }}</td>
+                <td><form method="POST" action="{{ route('admin.kitchen.issues.approve.legacy',$i) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form></td>
+            </tr>@endforeach
         </tbody></table></div></div>
     </div>
 </div>

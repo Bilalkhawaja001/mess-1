@@ -134,6 +134,7 @@ class ProcurementController extends Controller
             'received_date' => 'required|date',
             'qty_received' => 'required|numeric|gt:0',
             'unit_cost' => 'required|numeric|gt:0',
+            'unit_code' => 'nullable|string|max:20',
         ]);
 
         $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
@@ -203,11 +204,31 @@ class ProcurementController extends Controller
                 'unit_cost' => $d['unit_cost'],
             ]);
 
+            $item = Item::query()->findOrFail($d['item_id']);
+            $unitCode = $d['unit_code'] ?? null;
+            $transQty = (float) $d['qty_received'];
+            $baseQty = $transQty;
+            $transUnitCode = null;
+            $transQuantity = null;
+
+            if ($unitCode !== null && $unitCode !== '') {
+                $unit = $item->units()->where('unit_code', $unitCode)->first();
+                if (! $unit) {
+                    throw new \RuntimeException('Invalid unit for item');
+                }
+
+                $baseQty = $transQty * (float) $unit->factor_to_base;
+                $transUnitCode = $unit->unit_code;
+                $transQuantity = $transQty;
+            }
+
             StockTransaction::create([
                 'item_id' => $d['item_id'],
                 'txn_type' => 'GRN',
-                'quantity' => $d['qty_received'],
+                'quantity' => $baseQty,
                 'unit_cost' => $d['unit_cost'],
+                'trans_unit_code' => $transUnitCode,
+                'trans_quantity' => $transQuantity,
                 'reference_type' => GoodsReceipt::class,
                 'reference_id' => $grn->id,
                 'txn_at' => $d['received_date'],

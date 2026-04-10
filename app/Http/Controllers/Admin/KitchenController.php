@@ -126,19 +126,56 @@ class KitchenController extends Controller
             'issue_date' => 'required|date',
             'item_id' => 'required|exists:items,id',
             'quantity' => 'required|numeric|min:0.001',
+            'unit_code' => 'nullable|string|max:20',
+            'issue_type' => 'required|string|in:CONSUMPTION,WASTAGE,DAMAGE,EXPIRED',
+            'mess_id' => 'nullable|exists:messes,id',
         ]);
 
-        $issue = KitchenIssue::query()->create($d + ['remarks' => $request->input('remarks')]);
+        $item = Item::query()->findOrFail($d['item_id']);
+        $unitCode = $d['unit_code'] ?? null;
+        $transQuantity = (float) $d['quantity'];
+
+        $baseQuantity = $transQuantity;
+        $transUnitCode = null;
+        $transQty = null;
+
+        if ($unitCode !== null && $unitCode !== '') {
+            $unit = $item->units()->where('unit_code', $unitCode)->first();
+            if (! $unit) {
+                return back()
+                    ->withErrors(['unit_code' => 'Invalid unit for item'])
+                    ->withInput();
+            }
+
+            $baseQuantity = $transQuantity * (float) $unit->factor_to_base;
+            $transUnitCode = $unit->unit_code;
+            $transQty = $transQuantity;
+        }
+
+        $issue = KitchenIssue::query()->create([
+            'issue_date' => $d['issue_date'],
+            'item_id' => $item->id,
+            'quantity' => $baseQuantity,
+            'mess_id' => $d['mess_id'] ?? null,
+            'issue_type' => $d['issue_type'],
+            'remarks' => $request->input('remarks'),
+        ]);
 
         StockTransaction::query()->create([
-            'item_id' => $d['item_id'],
+            'item_id' => $item->id,
             'txn_type' => 'KITCHEN_ISSUE',
-            'quantity' => $d['quantity'],
+            'quantity' => $baseQuantity,
             'unit_cost' => 0,
+            'trans_unit_code' => $transUnitCode,
+            'trans_quantity' => $transQty,
             'reference_type' => KitchenIssue::class,
             'reference_id' => $issue->id,
             'txn_at' => $d['issue_date'],
-            'remarks' => $request->input('remarks', 'Kitchen issue'),
+            'remarks' => $request->input('remarks', 'Kitchen issue') ?: sprintf(
+                'Kitchen issue (%s%s)',
+                $d['issue_type'],
+                $d['mess_id'] ? ', Mess: '.$issue->mess?->name : ''
+            ),
         ]);
 
         return back()->with('success', 'Kitchen issue posted');

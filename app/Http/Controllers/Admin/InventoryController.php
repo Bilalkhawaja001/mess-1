@@ -22,8 +22,9 @@ class InventoryController extends Controller
         $items = Item::query()->orderBy('name')->get();
         $ledger = StockTransaction::query()->latest('txn_at')->limit(100)->get();
         $balances = $this->inventoryService->stockBalances();
+        $lowStockItems = $this->inventoryService->lowStockItems();
 
-        return view('admin.inventory.index', compact('items', 'ledger', 'balances'));
+        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems'));
     }
 
     public function storeItem(Request $request): RedirectResponse
@@ -149,11 +150,39 @@ class InventoryController extends Controller
             'txn_type' => 'required|in:OPENING,IN,OUT,ADJUSTMENT',
             'quantity' => 'required|numeric|min:0.001',
             'txn_at' => 'required|date',
+            'unit_code' => 'nullable|string|max:20',
         ]);
 
-        StockTransaction::query()->create($data + [
+        $item = Item::query()->findOrFail($data['item_id']);
+        $unitCode = $data['unit_code'] ?? null;
+        $transQuantity = (float) $data['quantity'];
+
+        $baseQuantity = $transQuantity;
+        $transUnitCode = null;
+        $transQty = null;
+
+        if ($unitCode !== null && $unitCode !== '') {
+            $unit = $item->units()->where('unit_code', $unitCode)->first();
+            if (! $unit) {
+                return back()
+                    ->withErrors(['unit_code' => 'Invalid unit for item'])
+                    ->withInput();
+            }
+
+            $baseQuantity = $transQuantity * (float) $unit->factor_to_base;
+            $transUnitCode = $unit->unit_code;
+            $transQty = $transQuantity;
+        }
+
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => $data['txn_type'],
+            'quantity' => $baseQuantity,
             'unit_cost' => $request->input('unit_cost', 0),
+            'trans_unit_code' => $transUnitCode,
+            'trans_quantity' => $transQty,
             'remarks' => $request->input('remarks'),
+            'txn_at' => $data['txn_at'],
         ]);
 
         return back()->with('success', 'Stock transaction posted.');
@@ -199,6 +228,17 @@ class InventoryController extends Controller
         }
 
         return back()->with('success', "Items import done. Inserted: {$counts['inserted']}, Updated: {$counts['updated']}, Failed: {$counts['failed']}");
+    }
+
+    public function trail(Item $item)
+    {
+        $trail = app(\App\Services\InventoryService::class)->procurementToConsumptionTrail($item->id);
+
+        return view('admin.inventory.trail', [
+            'item' => $item,
+            'inward' => $trail['inward'] ?? [],
+            'outward' => $trail['outward'] ?? [],
+        ]);
     }
 
     private function csvRows(Request $request): array

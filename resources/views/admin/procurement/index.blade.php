@@ -169,9 +169,13 @@
                 </div>
             </div>
             <div class="col-6"><input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}"></div>
-            <div class="col-6"><input type="number" step="0.001" min="0.001" name="qty_received" id="grn-qty-input" class="form-control @error('qty_received') is-invalid @enderror" required value="{{ old('qty_received') }}"></div>
+            <div class="col-3"><input type="number" step="0.001" min="0.001" name="qty_received" id="grn-qty-input" class="form-control @error('qty_received') is-invalid @enderror" required value="{{ old('qty_received') }}"></div>
+            <div class="col-3">
+                <input type="text" name="unit_code" class="form-control @error('unit_code') is-invalid @enderror" placeholder="Unit (e.g. bag)" value="{{ old('unit_code') }}">
+            </div>
             @error('received_date')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
             @error('qty_received')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('unit_code')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
             <div class="col-12"><input type="number" step="0.01" min="0.01" name="unit_cost" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}"></div>
             @error('unit_cost')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
             <div class="col-12"><button class="btn btn-primary" id="grn-submit-btn">Create GRN</button></div>

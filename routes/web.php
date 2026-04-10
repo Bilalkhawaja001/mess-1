@@ -156,6 +156,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/inventory/items/bulk-upload', [InventoryController::class, 'bulkUploadItems'])->name('inventory.items.bulk-upload');
         Route::post('/inventory/transactions', [InventoryController::class, 'storeTxn'])->name('inventory.txns.store');
         Route::post('/inventory/items/import', [InventoryController::class, 'importItems'])->name('inventory.items.import');
+        Route::get('/inventory/items/{item}/trail', [InventoryController::class, 'trail'])->name('inventory.items.trail');
     });
 
     Route::middleware('permission:procurement.manage')->group(function () {

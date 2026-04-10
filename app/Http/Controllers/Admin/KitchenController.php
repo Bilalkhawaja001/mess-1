@@ -5,26 +5,33 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
 use App\Models\KitchenIssue;
+use App\Models\Mess;
 use App\Models\MealPlan;
 use App\Models\Menu;
 use App\Models\Recipe;
 use App\Models\StockTransaction;
+use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class KitchenController extends Controller
 {
+    public function __construct(private readonly InventoryService $inventoryService)
+    {
+    }
+
     public function index()
     {
-        $items = Item::query()->orderBy('name')->get();
+        $items = Item::query()->with('units')->orderBy('name')->get();
         $menus = Menu::query()->latest()->get();
         $recipes = Recipe::query()->latest()->limit(200)->get();
         $plans = MealPlan::query()->latest('plan_date')->limit(200)->get();
         $issues = KitchenIssue::query()->latest('issue_date')->limit(200)->get();
         $consumption = KitchenIssue::query()->selectRaw('item_id, sum(quantity) total_qty')->groupBy('item_id')->get();
+        $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.kitchen.index', compact('items', 'menus', 'recipes', 'plans', 'issues', 'consumption'));
+        return view('admin.kitchen.index', compact('items', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes'));
     }
 
     public function apiMenus(): JsonResponse
@@ -131,7 +138,7 @@ class KitchenController extends Controller
             'mess_id' => 'nullable|exists:messes,id',
         ]);
 
-        $item = Item::query()->findOrFail($d['item_id']);
+        $item = Item::query()->with('units')->findOrFail($d['item_id']);
         $unitCode = $d['unit_code'] ?? null;
         $transQuantity = (float) $d['quantity'];
 
@@ -140,7 +147,7 @@ class KitchenController extends Controller
         $transQty = null;
 
         if ($unitCode !== null && $unitCode !== '') {
-            $unit = $item->units()->where('unit_code', $unitCode)->first();
+            $unit = $item->units->firstWhere('unit_code', $unitCode);
             if (! $unit) {
                 return back()
                     ->withErrors(['unit_code' => 'Invalid unit for item'])
@@ -150,6 +157,29 @@ class KitchenController extends Controller
             $baseQuantity = $transQuantity * (float) $unit->factor_to_base;
             $transUnitCode = $unit->unit_code;
             $transQty = $transQuantity;
+        }
+
+        // Prevent negative stock before posting any outward transaction.
+        $currentBalance = $this->inventoryService->balanceForItem($item->id);
+        if ($baseQuantity > $currentBalance) {
+            return back()
+                ->withErrors(['quantity' => 'Not enough stock to post this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])
+                ->withInput();
+        }
+
+        // Lightweight duplicate guard: block very recent identical issues from being posted twice.
+        $recentDuplicate = KitchenIssue::query()
+            ->where('item_id', $item->id)
+            ->where('issue_date', $d['issue_date'])
+            ->where('quantity', $baseQuantity)
+            ->where('issue_type', $d['issue_type'])
+            ->where('mess_id', $d['mess_id'] ?? null)
+            ->where('remarks', $request->input('remarks'))
+            ->where('created_at', '>=', now()->subMinutes(2))
+            ->exists();
+
+        if ($recentDuplicate) {
+            return back()->with('info', 'Similar kitchen issue was just posted. Duplicate posting has been skipped.');
         }
 
         $issue = KitchenIssue::query()->create([

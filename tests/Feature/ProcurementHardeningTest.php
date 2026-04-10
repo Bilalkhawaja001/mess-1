@@ -89,6 +89,7 @@ class ProcurementHardeningTest extends TestCase
             'received_date' => '2026-04-10',
             'qty_received' => '4',
             'unit_cost' => '95',
+            'unit_code' => 'kg',
         ]);
 
         $response->assertRedirect();
@@ -109,6 +110,7 @@ class ProcurementHardeningTest extends TestCase
             'received_date' => '2026-04-10',
             'qty_received' => '6',
             'unit_cost' => '95',
+            'unit_code' => 'kg',
         ]);
 
         $response->assertRedirect('/admin/procurement');
@@ -130,6 +132,7 @@ class ProcurementHardeningTest extends TestCase
             'received_date' => '2026-04-11',
             'qty_received' => '1',
             'unit_cost' => '100',
+            'unit_code' => 'kg',
         ]);
 
         $response->assertRedirect('/admin/procurement');

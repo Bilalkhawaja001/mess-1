@@ -133,11 +133,26 @@ class InventoryController extends Controller
         }
 
         DB::transaction(function () use ($rows) {
-            Item::query()->upsert(
-                $rows,
-                ['sku'],
-                ['name', 'category', 'uom', 'is_active', 'updated_at']
-            );
+            foreach ($rows as $payload) {
+                $existing = Item::query()->where('sku', $payload['sku'])->first();
+
+                if ($existing) {
+                    // Block UoM change if stock already exists for this item.
+                    if ($existing->uom !== $payload['uom'] && StockTransaction::query()->where('item_id', $existing->id)->exists()) {
+                        $payload['uom'] = $existing->uom;
+                    }
+
+                    $existing->update([
+                        'name' => $payload['name'],
+                        'category' => $payload['category'],
+                        'uom' => $payload['uom'],
+                        'is_active' => $payload['is_active'],
+                        'updated_at' => $payload['updated_at'],
+                    ]);
+                } else {
+                    Item::query()->create($payload);
+                }
+            }
         });
 
         return back()->with('success', 'Bulk items upload completed.');
@@ -153,7 +168,7 @@ class InventoryController extends Controller
             'unit_code' => 'nullable|string|max:20',
         ]);
 
-        $item = Item::query()->findOrFail($data['item_id']);
+        $item = Item::query()->with('units')->findOrFail($data['item_id']);
         $unitCode = $data['unit_code'] ?? null;
         $transQuantity = (float) $data['quantity'];
 
@@ -162,7 +177,7 @@ class InventoryController extends Controller
         $transQty = null;
 
         if ($unitCode !== null && $unitCode !== '') {
-            $unit = $item->units()->where('unit_code', $unitCode)->first();
+            $unit = $item->units->firstWhere('unit_code', $unitCode);
             if (! $unit) {
                 return back()
                     ->withErrors(['unit_code' => 'Invalid unit for item'])
@@ -172,6 +187,16 @@ class InventoryController extends Controller
             $baseQuantity = $transQuantity * (float) $unit->factor_to_base;
             $transUnitCode = $unit->unit_code;
             $transQty = $transQuantity;
+        }
+
+        // Prevent negative stock for OUT transactions.
+        if (in_array($data['txn_type'], ['OUT'], true)) {
+            $currentBalance = $this->inventoryService->balanceForItem($item->id);
+            if ($baseQuantity > $currentBalance) {
+                return back()
+                    ->withErrors(['quantity' => 'Not enough stock to post this transaction. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])
+                    ->withInput();
+            }
         }
 
         StockTransaction::query()->create([
@@ -219,6 +244,11 @@ class InventoryController extends Controller
 
             $existing = Item::query()->where('sku', $payload['sku'])->first();
             if ($existing) {
+                // Block UoM change if stock already exists for this item.
+                if ($existing->uom !== $payload['uom'] && StockTransaction::query()->where('item_id', $existing->id)->exists()) {
+                    $payload['uom'] = $existing->uom;
+                }
+
                 $existing->update($payload);
                 $counts['updated']++;
             } else {

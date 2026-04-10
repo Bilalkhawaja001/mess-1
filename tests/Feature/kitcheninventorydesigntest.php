@@ -63,6 +63,15 @@ class KitchenInventoryDesignTest extends TestCase
             'is_default_for_kitchen' => true,
         ]);
 
+        // Seed some opening stock so that kitchen issue does not drive stock negative.
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 150,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-09',
+        ]);
+
         $this->actingAs($admin);
         $response = $this->post('/admin/kitchen/issues', [
             'issue_date' => '2026-04-10',
@@ -172,4 +181,3 @@ class KitchenInventoryDesignTest extends TestCase
         $trail->assertSee('Oil');
     }
 }
-

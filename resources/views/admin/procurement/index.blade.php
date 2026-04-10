@@ -109,6 +109,23 @@
             })->values()->all(),
         ];
     })->all();
+
+    $procurementItemsJson = $items->map(function ($i) {
+        return [
+            'id' => $i->id,
+            'label' => trim(($i->sku ? $i->sku.' — ' : '').$i->name.($i->uom ? ' ('.$i->uom.')' : '').($i->category ? ' · '.$i->category : '')),
+            'search' => strtolower(trim(($i->sku ?? '').' '.$i->name.' '.($i->category ?? '').' '.($i->uom ?? ''))),
+            'base_uom' => $i->uom,
+            'units' => $i->units->map(function ($u) {
+                return [
+                    'code' => $u->unit_code,
+                    'factor' => (float) $u->factor_to_base,
+                    'is_default_for_grn' => (bool) $u->is_default_for_grn,
+                    'is_default_for_kitchen' => (bool) $u->is_default_for_kitchen,
+                ];
+            })->values()->all(),
+        ];
+    })->values()->all();
 @endphp
 <div class="row g-3">
     <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create Vendor</div><div class="card-body">
@@ -171,7 +188,10 @@
             <div class="col-6"><input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}"></div>
             <div class="col-3"><input type="number" step="0.001" min="0.001" name="qty_received" id="grn-qty-input" class="form-control @error('qty_received') is-invalid @enderror" required value="{{ old('qty_received') }}"></div>
             <div class="col-3">
-                <input type="text" name="unit_code" class="form-control @error('unit_code') is-invalid @enderror" placeholder="Unit (e.g. bag)" value="{{ old('unit_code') }}">
+                <select name="unit_code" id="grn-unit-select" class="form-select @error('unit_code') is-invalid @enderror" required>
+                    <option value="">Select unit</option>
+                </select>
+                <div class="procurement-mini-result" id="grn-conversion-preview"></div>
             </div>
             @error('received_date')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
             @error('qty_received')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
@@ -233,20 +253,17 @@
 </datalist>
 @endsection
 
-@php
-    $procurementItemsJson = $items->map(function ($i) {
-        return [
-            'id' => $i->id,
-            'label' => trim(($i->sku ? $i->sku.' — ' : '').$i->name.($i->uom ? ' ('.$i->uom.')' : '').($i->category ? ' · '.$i->category : '')),
-            'search' => strtolower(trim(($i->sku ?? '').' '.$i->name.' '.($i->category ?? '').' '.($i->uom ?? ''))),
-        ];
-    })->values()->all();
-@endphp
-
 @push('scripts')
 <script>
     (() => {
         const items = @json($procurementItemsJson);
+        const unitsByItemId = {};
+        const itemsById = {};
+
+        items.forEach((item) => {
+            unitsByItemId[item.id] = item.units || [];
+            itemsById[item.id] = item;
+        });
 
         const poLinesWrap = document.getElementById('po-lines');
         const addPoLineBtn = document.getElementById('add-po-line');
@@ -347,6 +364,8 @@
         const grnPending = document.getElementById('grn-pending');
         const grnQtyInput = document.getElementById('grn-qty-input');
         const grnBlockMessage = document.getElementById('grn-block-message');
+        const grnUnitSelect = document.getElementById('grn-unit-select');
+        const grnConversionPreview = document.getElementById('grn-conversion-preview');
 
         const syncPo = () => {
             const option = poSelect?.selectedOptions?.[0];
@@ -388,6 +407,12 @@
                 grnReceived.textContent = '0.000';
                 grnPending.textContent = '0.000';
                 grnQtyInput.removeAttribute('max');
+                if (grnUnitSelect) {
+                    grnUnitSelect.innerHTML = '<option value="">Select unit</option>';
+                }
+                if (grnConversionPreview) {
+                    grnConversionPreview.textContent = '';
+                }
                 return;
             }
 
@@ -398,6 +423,59 @@
             grnReceived.textContent = line.dataset.received || '0.000';
             grnPending.textContent = line.dataset.pending || '0.000';
             grnQtyInput.max = line.dataset.pending || '';
+
+            if (grnUnitSelect) {
+                const itemId = Number(line.dataset.itemId || 0);
+                const units = unitsByItemId[itemId] || [];
+                const item = itemsById[itemId];
+
+                grnUnitSelect.innerHTML = '';
+
+                if (units.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = item && item.base_uom ? `Base unit (${item.base_uom})` : 'Base unit';
+                    grnUnitSelect.appendChild(opt);
+                } else {
+                    const defaultUnit = units.find(u => u.is_default_for_grn) || units.find(u => u.factor === 1) || units[0];
+                    units.forEach((u) => {
+                        const opt = document.createElement('option');
+                        opt.value = u.code;
+                        opt.textContent = `${u.code} (x${u.factor.toFixed(3)} ${item?.base_uom ?? ''})`;
+                        if (defaultUnit && defaultUnit.code === u.code) {
+                            opt.selected = true;
+                        }
+                        grnUnitSelect.appendChild(opt);
+                    });
+                }
+
+                syncGrnConversion();
+            }
+        };
+
+        const syncGrnConversion = () => {
+            if (!grnConversionPreview || !grnUnitSelect) return;
+
+            const qty = Number(grnQtyInput.value || 0);
+            const line = grnLineSelect?.selectedOptions?.[0];
+            if (!line || !line.value || !qty) {
+                grnConversionPreview.textContent = '';
+                return;
+            }
+
+            const itemId = Number(line.dataset.itemId || 0);
+            const units = unitsByItemId[itemId] || [];
+            const item = itemsById[itemId];
+            const selectedCode = grnUnitSelect.value;
+            const unit = units.find(u => u.code === selectedCode);
+
+            if (!unit || !item) {
+                grnConversionPreview.textContent = '';
+                return;
+            }
+
+            const baseQty = qty * unit.factor;
+            grnConversionPreview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.base_uom}`;
         };
 
         const syncGrnQtyGuard = () => {
@@ -425,7 +503,11 @@
             syncPoLine();
             syncGrnQtyGuard();
         });
-        grnQtyInput?.addEventListener('input', syncGrnQtyGuard);
+        grnQtyInput?.addEventListener('input', () => {
+            syncGrnQtyGuard();
+            syncGrnConversion();
+        });
+        grnUnitSelect?.addEventListener('change', syncGrnConversion);
 
         document.getElementById('po-form')?.addEventListener('submit', () => {
             if (poSubmitBtn) {

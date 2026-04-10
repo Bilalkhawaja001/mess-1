@@ -173,5 +173,167 @@
             </div>
         </div>
     @endif
+
+    <div class="col-12 mt-3">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Manual Inventory Transaction</h5>
+                <span class="text-muted small">Use for opening balance, adjustments and ad-hoc IN/OUT</span>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('admin.inventory.txns.store') }}" class="row g-2">
+                    @csrf
+                    <div class="col-md-3">
+                        <label class="form-label">Item</label>
+                        <select name="item_id" id="inv-item-select" class="form-select" required>
+                            <option value="">Select item</option>
+                            @foreach($items as $item)
+                                <option value="{{ $item->id }}">{{ $item->sku }} — {{ $item->name }}</option>
+                            @endforeach
+                        </select>
+                        <div class="small mt-1" id="inv-balance-indicator"></div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Txn Type</label>
+                        <select name="txn_type" class="form-select" required>
+                            <option value="OPENING">OPENING</option>
+                            <option value="IN">IN</option>
+                            <option value="OUT">OUT</option>
+                            <option value="ADJUSTMENT">ADJUSTMENT</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Date</label>
+                        <input type="date" name="txn_at" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" step="0.001" min="0.001" name="quantity" id="inv-qty-input" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Unit</label>
+                        <select name="unit_code" id="inv-unit-select" class="form-select">
+                            <option value="">Base unit</option>
+                        </select>
+                        <div class="small text-muted" id="inv-conversion-preview"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Unit Cost</label>
+                        <input type="number" step="0.01" min="0" name="unit_cost" class="form-control" placeholder="optional for OUT/ADJ">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Remarks</label>
+                        <input type="text" name="remarks" class="form-control" placeholder="optional reference">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary w-100">Post Transaction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
+
+@php
+    $inventoryItemsJson = $items->map(function ($item) use ($balances) {
+        $balanceRow = collect($balances ?? [])->firstWhere('item.id', $item->id) ?? null;
+        $balance = $balanceRow['balance'] ?? 0;
+
+        return [
+            'id' => $item->id,
+            'sku' => $item->sku,
+            'name' => $item->name,
+            'uom' => $item->uom,
+            'balance' => (float) $balance,
+            'units' => $item->units->map(function ($u) {
+                return [
+                    'code' => $u->unit_code,
+                    'factor' => (float) $u->factor_to_base,
+                ];
+            })->values()->all(),
+        ];
+    })->values()->all();
+@endphp
+
+@push('scripts')
+<script>
+    (() => {
+        const items = @json($inventoryItemsJson);
+        const itemsById = {};
+        items.forEach((i) => { itemsById[i.id] = i; });
+
+        const itemSelect = document.getElementById('inv-item-select');
+        const unitSelect = document.getElementById('inv-unit-select');
+        const qtyInput = document.getElementById('inv-qty-input');
+        const balanceIndicator = document.getElementById('inv-balance-indicator');
+        const preview = document.getElementById('inv-conversion-preview');
+
+        const syncBalanceAndUnits = () => {
+            const itemId = Number(itemSelect?.value || 0);
+            const item = itemsById[itemId];
+            if (!item) {
+                if (balanceIndicator) balanceIndicator.textContent = '';
+                if (unitSelect) unitSelect.innerHTML = '<option value="">Base unit</option>';
+                if (preview) preview.textContent = '';
+                return;
+            }
+
+            if (balanceIndicator) {
+                const balance = item.balance || 0;
+                let color = 'text-success';
+                if (balance <= 0) {
+                    color = 'text-danger';
+                }
+                balanceIndicator.className = 'small ' + color;
+                balanceIndicator.textContent = `Current balance: ${balance.toFixed(3)} ${item.uom}`;
+            }
+
+            if (!unitSelect) return;
+            const units = item.units || [];
+            unitSelect.innerHTML = '';
+            const baseOpt = document.createElement('option');
+            baseOpt.value = '';
+            baseOpt.textContent = item.uom ? `Base unit (${item.uom})` : 'Base unit';
+            unitSelect.appendChild(baseOpt);
+
+            units.forEach((u) => {
+                const opt = document.createElement('option');
+                opt.value = u.code;
+                opt.textContent = `${u.code} (x${u.factor.toFixed(3)} ${item.uom})`;
+                unitSelect.appendChild(opt);
+            });
+
+            syncPreview();
+        };
+
+        const syncPreview = () => {
+            if (!preview) return;
+            const itemId = Number(itemSelect?.value || 0);
+            const item = itemsById[itemId];
+            const qty = Number(qtyInput?.value || 0);
+            const unitCode = unitSelect?.value || '';
+
+            if (!item || !qty || !unitCode) {
+                preview.textContent = '';
+                return;
+            }
+
+            const unit = (item.units || []).find(u => u.code === unitCode);
+            if (!unit) {
+                preview.textContent = '';
+                return;
+            }
+
+            const baseQty = qty * unit.factor;
+            preview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.uom}`;
+        };
+
+        itemSelect?.addEventListener('change', syncBalanceAndUnits);
+        unitSelect?.addEventListener('change', syncPreview);
+        qtyInput?.addEventListener('input', syncPreview);
+
+        syncBalanceAndUnits();
+    })();
+</script>
+@endpush

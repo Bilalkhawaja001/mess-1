@@ -75,8 +75,8 @@
         <div class="card shadow-sm mb-3"><div class="card-header">Post Kitchen Issue</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.issues.store') }}" class="row g-2">@csrf
                 <div class="col-md-3"><input name="issue_date" type="date" class="form-control" required></div>
-                <div class="col-md-3"><select name="item_id" class="form-select" required>@foreach($items as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
-                <div class="col-md-2"><input name="quantity" type="number" step="0.001" min="0.001" class="form-control" required></div>
+                <div class="col-md-3"><select name="item_id" id="kitchen-item-select" class="form-select" required>@foreach($items as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
+                <div class="col-md-2"><input name="quantity" id="kitchen-qty-input" type="number" step="0.001" min="0.001" class="form-control" required></div>
                 <div class="col-md-2">
                     <select name="issue_type" class="form-select" required>
                         <option value="CONSUMPTION">Consumption</option>
@@ -85,7 +85,21 @@
                         <option value="EXPIRED">Expired</option>
                     </select>
                 </div>
-                <div class="col-md-2"><input name="remarks" class="form-control" placeholder="remarks"></div>
+                <div class="col-md-2">
+                    <select name="mess_id" class="form-select">
+                        <option value="">Mess (optional)</option>
+                        @foreach($messes as $mess)
+                            <option value="{{ $mess->id }}">{{ $mess->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="unit_code" id="kitchen-unit-select" class="form-select">
+                        <option value="">Base unit</option>
+                    </select>
+                    <div class="small text-muted" id="kitchen-conversion-preview"></div>
+                </div>
+                <div class="col-md-3"><input name="remarks" class="form-control" placeholder="remarks"></div>
                 <div class="col-12"><button class="btn btn-primary">Post Issue</button></div>
             </form>
         </div></div>
@@ -103,3 +117,100 @@
     </div>
 </div>
 @endsection
+
+@php
+    $kitchenItemsJson = $items->map(function ($i) {
+        return [
+            'id' => $i->id,
+            'name' => $i->name,
+            'base_uom' => $i->uom,
+            'units' => $i->units->map(function ($u) {
+                return [
+                    'code' => $u->unit_code,
+                    'factor' => (float) $u->factor_to_base,
+                    'is_default_for_kitchen' => (bool) $u->is_default_for_kitchen,
+                    'is_default_for_grn' => (bool) $u->is_default_for_grn,
+                ];
+            })->values()->all(),
+        ];
+    })->values()->all();
+@endphp
+
+@push('scripts')
+<script>
+    (() => {
+        const items = @json($kitchenItemsJson);
+        const itemsById = {};
+        items.forEach((i) => { itemsById[i.id] = i; });
+
+        const itemSelect = document.getElementById('kitchen-item-select');
+        const unitSelect = document.getElementById('kitchen-unit-select');
+        const qtyInput = document.getElementById('kitchen-qty-input');
+        const preview = document.getElementById('kitchen-conversion-preview');
+
+        const syncUnits = () => {
+            const itemId = Number(itemSelect?.value || 0);
+            const item = itemsById[itemId];
+            if (!unitSelect || !item) {
+                return;
+            }
+
+            const units = item.units || [];
+            unitSelect.innerHTML = '';
+
+            if (units.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = item.base_uom ? `Base unit (${item.base_uom})` : 'Base unit';
+                unitSelect.appendChild(opt);
+            } else {
+                const defaultUnit = units.find(u => u.is_default_for_kitchen) || units.find(u => u.factor === 1) || units[0];
+                const baseOpt = document.createElement('option');
+                baseOpt.value = '';
+                baseOpt.textContent = item.base_uom ? `Base unit (${item.base_uom})` : 'Base unit';
+                unitSelect.appendChild(baseOpt);
+
+                units.forEach((u) => {
+                    const opt = document.createElement('option');
+                    opt.value = u.code;
+                    opt.textContent = `${u.code} (x${u.factor.toFixed(3)} ${item.base_uom})`;
+                    if (defaultUnit && defaultUnit.code === u.code) {
+                        opt.selected = true;
+                    }
+                    unitSelect.appendChild(opt);
+                });
+            }
+
+            syncPreview();
+        };
+
+        const syncPreview = () => {
+            if (!preview) return;
+            const itemId = Number(itemSelect?.value || 0);
+            const item = itemsById[itemId];
+            const qty = Number(qtyInput?.value || 0);
+            const unitCode = unitSelect?.value || '';
+
+            if (!item || !qty || !unitCode) {
+                preview.textContent = '';
+                return;
+            }
+
+            const unit = (item.units || []).find(u => u.code === unitCode);
+            if (!unit) {
+                preview.textContent = '';
+                return;
+            }
+
+            const baseQty = qty * unit.factor;
+            preview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.base_uom}`;
+        };
+
+        itemSelect?.addEventListener('change', syncUnits);
+        unitSelect?.addEventListener('change', syncPreview);
+        qtyInput?.addEventListener('input', syncPreview);
+
+        syncUnits();
+    })();
+</script>
+@endpush

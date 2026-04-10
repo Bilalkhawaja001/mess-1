@@ -7,6 +7,7 @@ use App\Models\GoodsReceiptLine;
 use App\Models\Item;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
+use App\Models\Role;
 use App\Models\StockTransaction;
 use App\Models\Vendor;
 use App\Models\User;
@@ -27,19 +28,18 @@ class ProcurementHardeningTest extends TestCase
 
     private function adminUser(): User
     {
-        $user = User::query()->create([
+        $role = Role::query()->where('code', 'SUPER_ADMIN')->first()
+            ?? Role::query()->create(['code' => 'SUPER_ADMIN', 'name' => 'Super Admin', 'is_active' => true]);
+
+        return User::query()->create([
+            'username' => 'procurement-admin',
             'name' => 'Procurement Admin',
             'email' => 'procurement-admin@example.com',
             'password' => bcrypt('password'),
-            'role' => 'ADMIN',
+            'role_id' => $role->id,
             'is_active' => true,
+            'must_change_password' => false,
         ]);
-
-        $user->permissions()->syncWithoutDetaching(
-            \App\Models\Permission::query()->whereIn('name', ['procurement.manage'])->pluck('id')->all()
-        );
-
-        return $user;
     }
 
     public function test_valid_po_creation(): void

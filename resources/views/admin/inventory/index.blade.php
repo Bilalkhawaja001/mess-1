@@ -159,7 +159,9 @@
                         </thead>
                         <tbody>
                             @foreach($lowStockItems as $row)
-                                @php($item = $row['item'])
+                                @php
+                                    $item = $row['item'];
+                                @endphp
                                 <tr>
                                     <td>{{ $item->sku }}</td>
                                     <td>{{ $item->name }}</td>
@@ -270,7 +272,7 @@
         const preview = document.getElementById('inv-conversion-preview');
 
         const syncBalanceAndUnits = () => {
-            const itemId = Number(itemSelect?.value || 0);
+            const itemId = Number((itemSelect && itemSelect.value) || 0);
             const item = itemsById[itemId];
             if (!item) {
                 if (balanceIndicator) balanceIndicator.textContent = '';
@@ -309,17 +311,17 @@
 
         const syncPreview = () => {
             if (!preview) return;
-            const itemId = Number(itemSelect?.value || 0);
+            const itemId = Number((itemSelect && itemSelect.value) || 0);
             const item = itemsById[itemId];
-            const qty = Number(qtyInput?.value || 0);
-            const unitCode = unitSelect?.value || '';
+            const qty = Number((qtyInput && qtyInput.value) || 0);
+            const unitCode = (unitSelect && unitSelect.value) || '';
 
             if (!item || !qty || !unitCode) {
                 preview.textContent = '';
                 return;
             }
 
-            const unit = (item.units || []).find(u => u.code === unitCode);
+            const unit = (item.units || []).find(function (u) { return u.code === unitCode; });
             if (!unit) {
                 preview.textContent = '';
                 return;
@@ -329,9 +331,9 @@
             preview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.uom}`;
         };
 
-        itemSelect?.addEventListener('change', syncBalanceAndUnits);
-        unitSelect?.addEventListener('change', syncPreview);
-        qtyInput?.addEventListener('input', syncPreview);
+        if (itemSelect) itemSelect.addEventListener('change', syncBalanceAndUnits);
+        if (unitSelect) unitSelect.addEventListener('change', syncPreview);
+        if (qtyInput) qtyInput.addEventListener('input', syncPreview);
 
         syncBalanceAndUnits();
     })();

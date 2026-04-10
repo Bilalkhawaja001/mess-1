@@ -94,56 +94,72 @@
 @endpush
 
 @section('content')
+@php
+    $procurementPoLinesJson = $pos->mapWithKeys(function ($po) {
+        return [
+            $po->id => $po->lines->map(function ($line) {
+                return [
+                    'id' => $line->id,
+                    'item_id' => $line->item_id,
+                    'item_label' => trim(($line->item?->sku ? $line->item->sku.' — ' : '').($line->item?->name ?? 'Unknown Item').($line->item?->uom ? ' ('.$line->item->uom.')' : '')),
+                    'ordered' => number_format((float) $line->qty_ordered, 3, '.', ''),
+                    'received' => number_format((float) ($line->received_qty ?? 0), 3, '.', ''),
+                    'pending' => number_format((float) ($line->pending_qty ?? 0), 3, '.', ''),
+                ];
+            })->values()->all(),
+        ];
+    })->all();
+@endphp
 <div class="row g-3">
     <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create Vendor</div><div class="card-body">
         <form method="POST" action="{{ route('admin.procurement.vendors.store') }}" class="row g-2">@csrf
-            <div class="col-12"><input name="name" class="form-control" placeholder="Vendor name" required></div>
+            <div class="col-12"><input name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Vendor name" required value="{{ old('name') }}"></div>
+            @error('name')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
             <div class="col-12"><button class="btn btn-primary">Create Vendor</button></div>
         </form>
     </div></div></div>
 
     <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create PO</div><div class="card-body">
         <form method="POST" action="{{ route('admin.procurement.po.store') }}" class="row g-2" id="po-form">@csrf
-            <div class="col-12"><select name="vendor_id" class="form-select" required>@foreach($vendors as $v)<option value="{{ $v->id }}">{{ $v->name }}</option>@endforeach</select></div>
+            <div class="col-12"><select name="vendor_id" class="form-select @error('vendor_id') is-invalid @enderror" required><option value="">Select vendor</option>@foreach($vendors as $v)<option value="{{ $v->id }}" @selected((string) old('vendor_id') === (string) $v->id)>{{ $v->name }}</option>@endforeach</select></div>
+            @error('vendor_id')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
             <div class="col-12">
                 <div class="po-lines" id="po-lines"></div>
                 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-po-line">Add Line</button>
             </div>
-            <div class="col-6"><input type="date" name="po_date" class="form-control" required></div>
-            <div class="col-12"><button class="btn btn-primary">Create PO</button></div>
+            <div class="col-6"><input type="date" name="po_date" class="form-control @error('po_date') is-invalid @enderror" required value="{{ old('po_date') }}"></div>
+            @error('po_date')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('lines')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            <div class="col-12"><button class="btn btn-primary" id="po-submit-btn">Create PO</button></div>
         </form>
     </div></div></div>
 
     <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create GRN</div><div class="card-body">
-        <form method="POST" action="{{ route('admin.procurement.grn.store') }}" class="row g-2">@csrf
+        <form method="POST" action="{{ route('admin.procurement.grn.store') }}" class="row g-2" id="grn-form">@csrf
             <div class="col-12">
                 <label class="form-label">Purchase Order</label>
-                <select name="purchase_order_id" id="grn-po-select" class="form-select" required>
+                <select name="purchase_order_id" id="grn-po-select" class="form-select @error('purchase_order_id') is-invalid @enderror" required>
                     <option value="">Select PO</option>
                     @foreach($pos as $po)
-                        <option value="{{ $po->id }}"
-                                data-lines='@json($po->lines->map(fn($line) => [
-                                    "id" => $line->id,
-                                    "item_id" => $line->item_id,
-                                    "item_label" => trim(($line->item?->sku ? $line->item->sku." — " : "").($line->item?->name ?? "Unknown Item").($line->item?->uom ? " (".$line->item->uom.")" : "")),
-                                    "ordered" => number_format((float) $line->qty_ordered, 3, ".", ""),
-                                    "received" => number_format((float) ($line->received_qty ?? 0), 3, ".", ""),
-                                    "pending" => number_format((float) ($line->pending_qty ?? 0), 3, ".", ""),
-                                ]))'>
+                        <option value="{{ $po->id }}" data-lines='@json($procurementPoLinesJson[$po->id] ?? [])' @selected((string) old('purchase_order_id') === (string) $po->id)>
                             {{ $po->po_number }} — {{ $po->vendor->name ?? 'Vendor' }}
                         </option>
                     @endforeach
                 </select>
+                @error('purchase_order_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
             </div>
             <div class="col-12">
                 <label class="form-label">PO Line / Item</label>
-                <select id="grn-line-select" class="form-select" required>
+                <select id="grn-line-select" class="form-select @error('purchase_order_line_id') is-invalid @enderror" required>
                     <option value="">Select PO first</option>
                 </select>
-                <input type="hidden" name="purchase_order_line_id" id="grn-line-id" required>
+                @error('purchase_order_line_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                <input type="hidden" name="purchase_order_line_id" id="grn-line-id" required value="{{ old('purchase_order_line_id') }}">
                 <input type="text" id="grn-item-display" class="form-control mt-2" readonly placeholder="Select PO line first">
-                <input type="hidden" name="item_id" id="grn-item-id" required>
+                <input type="hidden" name="item_id" id="grn-item-id" required value="{{ old('item_id') }}">
+                @error('item_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                 <div class="procurement-note mt-2">Stock is posted immediately when GRN is created. Approval does not post stock again.</div>
+                <div class="text-danger small mt-1 d-none" id="grn-block-message">Receive quantity cannot exceed pending quantity.</div>
             </div>
             <div class="col-12">
                 <div class="procurement-kpi">
@@ -152,10 +168,13 @@
                     <div>Pending Qty<strong id="grn-pending">0.000</strong></div>
                 </div>
             </div>
-            <div class="col-6"><input type="date" name="received_date" class="form-control" required></div>
-            <div class="col-6"><input type="number" step="0.001" min="0.001" name="qty_received" id="grn-qty-input" class="form-control" required></div>
-            <div class="col-12"><input type="number" step="0.01" min="0" name="unit_cost" class="form-control" placeholder="unit cost"></div>
-            <div class="col-12"><button class="btn btn-primary">Create GRN</button></div>
+            <div class="col-6"><input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}"></div>
+            <div class="col-6"><input type="number" step="0.001" min="0.001" name="qty_received" id="grn-qty-input" class="form-control @error('qty_received') is-invalid @enderror" required value="{{ old('qty_received') }}"></div>
+            @error('received_date')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('qty_received')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            <div class="col-12"><input type="number" step="0.01" min="0.01" name="unit_cost" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}"></div>
+            @error('unit_cost')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            <div class="col-12"><button class="btn btn-primary" id="grn-submit-btn">Create GRN</button></div>
         </form>
     </div></div></div>
 
@@ -185,7 +204,9 @@
 
     <div class="col-lg-6"><div class="card shadow-sm"><div class="card-header">GRNs</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         @foreach($grns as $grn)
-            @php($grnLine = $grn->lines->first())
+            @php
+                $grnLine = $grn->lines->first();
+            @endphp
             <tr>
                 <td>{{ $grn->grn_number }}</td>
                 <td>{{ $grn->received_date }}</td>
@@ -208,17 +229,25 @@
 </datalist>
 @endsection
 
-@push('scripts')
-<script>
-    (() => {
-        const items = @json($items->map(fn($i) => [
+@php
+    $procurementItemsJson = $items->map(function ($i) {
+        return [
             'id' => $i->id,
             'label' => trim(($i->sku ? $i->sku.' — ' : '').$i->name.($i->uom ? ' ('.$i->uom.')' : '').($i->category ? ' · '.$i->category : '')),
             'search' => strtolower(trim(($i->sku ?? '').' '.$i->name.' '.($i->category ?? '').' '.($i->uom ?? ''))),
-        ]));
+        ];
+    })->values()->all();
+@endphp
+
+@push('scripts')
+<script>
+    (() => {
+        const items = @json($procurementItemsJson);
 
         const poLinesWrap = document.getElementById('po-lines');
         const addPoLineBtn = document.getElementById('add-po-line');
+        const poSubmitBtn = document.getElementById('po-submit-btn');
+        const grnSubmitBtn = document.getElementById('grn-submit-btn');
         let poLineIndex = 0;
 
         const resolveItem = (raw) => {
@@ -263,7 +292,7 @@
                     </div>
                     <div>
                         <label class="form-label">Unit Price</label>
-                        <input type="number" step="0.01" min="0" name="lines[${poLineIndex}][unit_price]" class="form-control">
+                        <input type="number" step="0.01" min="0.01" name="lines[${poLineIndex}][unit_price]" class="form-control" required>
                     </div>
                     <div></div>
                 </div>
@@ -313,6 +342,7 @@
         const grnReceived = document.getElementById('grn-received');
         const grnPending = document.getElementById('grn-pending');
         const grnQtyInput = document.getElementById('grn-qty-input');
+        const grnBlockMessage = document.getElementById('grn-block-message');
 
         const syncPo = () => {
             const option = poSelect?.selectedOptions?.[0];
@@ -366,9 +396,50 @@
             grnQtyInput.max = line.dataset.pending || '';
         };
 
+        const syncGrnQtyGuard = () => {
+            const pending = Number(grnPending.textContent || 0);
+            const qty = Number(grnQtyInput.value || 0);
+            const blocked = !grnLineId.value || pending <= 0 || (qty > 0 && qty > pending);
+
+            if (pending <= 0 && grnLineId.value) {
+                grnBlockMessage.textContent = 'This PO line is already fully received.';
+                grnBlockMessage.classList.remove('d-none');
+            } else if (qty > pending && qty > 0) {
+                grnBlockMessage.textContent = 'Receive quantity cannot exceed pending quantity.';
+                grnBlockMessage.classList.remove('d-none');
+            } else {
+                grnBlockMessage.classList.add('d-none');
+            }
+
+            if (grnSubmitBtn) {
+                grnSubmitBtn.disabled = blocked;
+            }
+        };
+
         poSelect?.addEventListener('change', syncPo);
-        grnLineSelect?.addEventListener('change', syncPoLine);
+        grnLineSelect?.addEventListener('change', () => {
+            syncPoLine();
+            syncGrnQtyGuard();
+        });
+        grnQtyInput?.addEventListener('input', syncGrnQtyGuard);
+
+        document.getElementById('po-form')?.addEventListener('submit', () => {
+            if (poSubmitBtn) {
+                poSubmitBtn.disabled = true;
+            }
+        });
+
+        document.getElementById('grn-form')?.addEventListener('submit', (event) => {
+            syncGrnQtyGuard();
+            if (grnSubmitBtn?.disabled) {
+                event.preventDefault();
+                return;
+            }
+            grnSubmitBtn.disabled = true;
+        });
+
         syncPo();
+        syncGrnQtyGuard();
     })();
 </script>
 @endpush

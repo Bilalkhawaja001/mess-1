@@ -72,8 +72,8 @@ class ProcurementController extends Controller
             'po_date' => 'required|date',
             'lines' => 'required|array|min:1',
             'lines.*.item_id' => 'required|exists:items,id',
-            'lines.*.qty_ordered' => 'required|numeric|min:0.001',
-            'lines.*.unit_price' => 'nullable|numeric|min:0',
+            'lines.*.qty_ordered' => 'required|numeric|gt:0',
+            'lines.*.unit_price' => 'required|numeric|gt:0',
         ]);
 
         $linePayloads = collect($d['lines'])
@@ -95,7 +95,7 @@ class ProcurementController extends Controller
             return back()->withErrors(['lines' => 'Same item cannot be added twice in the same PO.'])->withInput();
         }
 
-        DB::transaction(function () use ($d, $r, &$po) {
+        DB::transaction(function () use ($d, $r, $linePayloads, &$po) {
             $po = PurchaseOrder::create([
                 'vendor_id' => $d['vendor_id'],
                 'po_number' => 'PO-'.now()->format('YmdHis'),
@@ -132,23 +132,27 @@ class ProcurementController extends Controller
             'purchase_order_line_id' => 'required|exists:purchase_order_lines,id',
             'item_id' => 'required|exists:items,id',
             'received_date' => 'required|date',
-            'qty_received' => 'required|numeric|min:0.001',
+            'qty_received' => 'required|numeric|gt:0',
+            'unit_cost' => 'required|numeric|gt:0',
         ]);
 
         $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
         $poLine = $po->lines->firstWhere('id', (int) $d['purchase_order_line_id']);
 
         if (! $poLine) {
-            return back()->withErrors(['purchase_order_line_id' => 'Selected PO line is invalid.']);
+            return back()->withErrors(['purchase_order_line_id' => 'Selected PO line is invalid.'])->withInput();
         }
 
         if ((int) $poLine->item_id !== (int) $d['item_id']) {
             return back()->withErrors(['item_id' => 'Selected item does not match the PO item.'])->withInput();
         }
 
+        $lineReceivedQty = (float) $po->goodsReceipts
+            ->flatMap->lines
+            ->where('item_id', (int) $poLine->item_id)
+            ->sum('qty_received');
         $orderedQty = (float) $poLine->qty_ordered;
-        $receivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
-        $pendingQty = max($orderedQty - $receivedQty, 0);
+        $pendingQty = max($orderedQty - $lineReceivedQty, 0);
 
         if ($pendingQty <= 0) {
             return back()->withErrors(['qty_received' => 'This PO line is already fully received.'])->withInput();
@@ -159,35 +163,63 @@ class ProcurementController extends Controller
         }
 
         DB::transaction(function () use ($d, $r, &$grn) {
+            $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->lockForUpdate()->findOrFail($d['purchase_order_id']);
+            $poLine = $po->lines->firstWhere('id', (int) $d['purchase_order_line_id']);
+
+            if (! $poLine) {
+                throw new \RuntimeException('Selected PO line is invalid.');
+            }
+
+            if ((int) $poLine->item_id !== (int) $d['item_id']) {
+                throw new \RuntimeException('Selected item does not match the PO item.');
+            }
+
+            $lineReceivedQty = (float) $po->goodsReceipts
+                ->flatMap->lines
+                ->where('item_id', (int) $poLine->item_id)
+                ->sum('qty_received');
+            $orderedQty = (float) $poLine->qty_ordered;
+            $pendingQty = max($orderedQty - $lineReceivedQty, 0);
+
+            if ($pendingQty <= 0) {
+                throw new \RuntimeException('This PO line is already fully received.');
+            }
+
+            if ((float) $d['qty_received'] > $pendingQty) {
+                throw new \RuntimeException('Receive quantity cannot exceed pending quantity.');
+            }
+
             $grn = GoodsReceipt::create([
                 'purchase_order_id' => $d['purchase_order_id'],
                 'grn_number' => 'GRN-'.now()->format('YmdHis'),
                 'received_date' => $d['received_date'],
                 'remarks' => $r->input('remarks'),
             ]);
+
             GoodsReceiptLine::create([
                 'goods_receipt_id' => $grn->id,
                 'item_id' => $d['item_id'],
                 'qty_received' => $d['qty_received'],
-                'unit_cost' => $r->input('unit_cost', 0),
+                'unit_cost' => $d['unit_cost'],
             ]);
+
             StockTransaction::create([
                 'item_id' => $d['item_id'],
                 'txn_type' => 'GRN',
                 'quantity' => $d['qty_received'],
-                'unit_cost' => $r->input('unit_cost', 0),
+                'unit_cost' => $d['unit_cost'],
                 'reference_type' => GoodsReceipt::class,
                 'reference_id' => $grn->id,
                 'txn_at' => $d['received_date'],
                 'remarks' => 'GRN posting (stock posted on create)',
             ]);
 
-            $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
-            $orderedQty = (float) optional($po->lines->first())->qty_ordered;
-            $receivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+            $po->load(['lines', 'goodsReceipts.lines']);
+            $totalOrderedQty = (float) $po->lines->sum('qty_ordered');
+            $totalReceivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
 
             PurchaseOrder::whereKey($d['purchase_order_id'])->update([
-                'status' => $receivedQty < $orderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
+                'status' => $totalReceivedQty < $totalOrderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
             ]);
         });
 
@@ -196,7 +228,13 @@ class ProcurementController extends Controller
 
     public function approveGrn(GoodsReceipt $grn): RedirectResponse
     {
-        PurchaseOrder::whereKey($grn->purchase_order_id)->update(['status' => 'RECEIVED']);
+        $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($grn->purchase_order_id);
+        $totalOrderedQty = (float) $po->lines->sum('qty_ordered');
+        $totalReceivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+
+        PurchaseOrder::whereKey($grn->purchase_order_id)->update([
+            'status' => $totalReceivedQty < $totalOrderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
+        ]);
         $grn->touch();
 
         return back()->with('success', 'GRN approval acknowledged. Stock was already posted on GRN create; no extra approval side-effect exists in current schema.');

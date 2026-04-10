@@ -3,7 +3,27 @@
 @section('title', 'Inventory')
 @section('page_title', 'Inventory')
 
+@push('styles')
+<style>
+    .inventory-page-wrap {
+        position: relative;
+        z-index: 1;
+        overflow: visible;
+    }
+
+    .inventory-page-wrap .card,
+    .inventory-page-wrap .table-responsive,
+    .inventory-page-wrap .card-body,
+    .inventory-page-wrap .card-header {
+        position: relative;
+        z-index: 1;
+        background-image: none !important;
+    }
+</style>
+@endpush
+
 @section('content')
+<div class="inventory-page-wrap">
 <div class="card shadow-sm mb-3">
     <div class="card-header">Legacy Bulk Import (name,sku,uom,reorder_level,is_active,category)</div>
     <div class="card-body">
@@ -234,6 +254,7 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 @endsection
 

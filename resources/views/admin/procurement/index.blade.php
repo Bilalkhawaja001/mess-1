@@ -131,7 +131,9 @@
     <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create Vendor</div><div class="card-body">
         <form method="POST" action="{{ route('admin.procurement.vendors.store') }}" class="row g-2">@csrf
             <div class="col-12"><input name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Vendor name" required value="{{ old('name') }}"></div>
-            @error('name')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('name')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
             <div class="col-12"><button class="btn btn-primary">Create Vendor</button></div>
         </form>
     </div></div></div>
@@ -139,14 +141,20 @@
     <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create PO</div><div class="card-body">
         <form method="POST" action="{{ route('admin.procurement.po.store') }}" class="row g-2" id="po-form">@csrf
             <div class="col-12"><select name="vendor_id" class="form-select @error('vendor_id') is-invalid @enderror" required><option value="">Select vendor</option>@foreach($vendors as $v)<option value="{{ $v->id }}" @selected((string) old('vendor_id') === (string) $v->id)>{{ $v->name }}</option>@endforeach</select></div>
-            @error('vendor_id')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('vendor_id')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
             <div class="col-12">
                 <div class="po-lines" id="po-lines"></div>
                 <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-po-line">Add Line</button>
             </div>
             <div class="col-6"><input type="date" name="po_date" class="form-control @error('po_date') is-invalid @enderror" required value="{{ old('po_date') }}"></div>
-            @error('po_date')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
-            @error('lines')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('po_date')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
+            @error('lines')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
             <div class="col-12"><button class="btn btn-primary" id="po-submit-btn">Create PO</button></div>
         </form>
     </div></div></div>
@@ -163,18 +171,24 @@
                         </option>
                     @endforeach
                 </select>
-                @error('purchase_order_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                @error('purchase_order_id')
+                    <div class="text-danger small mt-1">{{ $message }}</div>
+                @enderror
             </div>
             <div class="col-12">
                 <label class="form-label">PO Line / Item</label>
                 <select id="grn-line-select" class="form-select @error('purchase_order_line_id') is-invalid @enderror" required>
                     <option value="">Select PO first</option>
                 </select>
-                @error('purchase_order_line_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                @error('purchase_order_line_id')
+                    <div class="text-danger small mt-1">{{ $message }}</div>
+                @enderror
                 <input type="hidden" name="purchase_order_line_id" id="grn-line-id" required value="{{ old('purchase_order_line_id') }}">
                 <input type="text" id="grn-item-display" class="form-control mt-2" readonly placeholder="Select PO line first">
                 <input type="hidden" name="item_id" id="grn-item-id" required value="{{ old('item_id') }}">
-                @error('item_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                @error('item_id')
+                    <div class="text-danger small mt-1">{{ $message }}</div>
+                @enderror
                 <div class="procurement-note mt-2">Stock is posted immediately when GRN is created. Approval does not post stock again.</div>
                 <div class="text-danger small mt-1 d-none" id="grn-block-message">Receive quantity cannot exceed pending quantity.</div>
             </div>
@@ -193,11 +207,19 @@
                 </select>
                 <div class="procurement-mini-result" id="grn-conversion-preview"></div>
             </div>
-            @error('received_date')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
-            @error('qty_received')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
-            @error('unit_code')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('received_date')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
+            @error('qty_received')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
+            @error('unit_code')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
             <div class="col-12"><input type="number" step="0.01" min="0.01" name="unit_cost" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}"></div>
-            @error('unit_cost')<div class="col-12"><div class="text-danger small">{{ $message }}</div></div>@enderror
+            @error('unit_cost')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
             <div class="col-12"><button class="btn btn-primary" id="grn-submit-btn">Create GRN</button></div>
         </form>
     </div></div></div>

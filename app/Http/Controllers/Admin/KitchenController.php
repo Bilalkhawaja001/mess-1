@@ -14,6 +14,7 @@ use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class KitchenController extends Controller
 {
@@ -100,11 +101,16 @@ class KitchenController extends Controller
 
     public function storePlan(Request $request): RedirectResponse
     {
-        MealPlan::query()->create($request->validate([
+        $data = $request->validate([
             'plan_date' => 'required|date',
             'menu_id' => 'required|exists:menus,id',
             'planned_servings' => 'required|integer|min:1',
-        ]));
+        ]);
+
+        MealPlan::query()->create($data + [
+            'status' => MealPlan::STATUS_DRAFT,
+            'approved_at' => null,
+        ]);
 
         return back()->with('success', 'Meal plan created');
     }
@@ -122,9 +128,16 @@ class KitchenController extends Controller
 
     public function approvePlan(MealPlan $plan): RedirectResponse
     {
-        $plan->touch();
+        if ($plan->isApproved()) {
+            return back()->with('success', 'Meal plan already approved');
+        }
 
-        return back()->with('success', 'Meal plan approval acknowledged. No inventory/accounting side-effect exists in current schema.');
+        $plan->update([
+            'status' => MealPlan::STATUS_APPROVED,
+            'approved_at' => now(),
+        ]);
+
+        return back()->with('success', 'Meal plan approved');
     }
 
     public function issue(Request $request): RedirectResponse
@@ -159,14 +172,6 @@ class KitchenController extends Controller
             $transQty = $transQuantity;
         }
 
-        // Prevent negative stock before posting any outward transaction.
-        $currentBalance = $this->inventoryService->balanceForItem($item->id);
-        if ($baseQuantity > $currentBalance) {
-            return back()
-                ->withErrors(['quantity' => 'Not enough stock to post this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])
-                ->withInput();
-        }
-
         // Lightweight duplicate guard: block very recent identical issues from being posted twice.
         $recentDuplicate = KitchenIssue::query()
             ->where('item_id', $item->id)
@@ -179,42 +184,67 @@ class KitchenController extends Controller
             ->exists();
 
         if ($recentDuplicate) {
-            return back()->with('info', 'Similar kitchen issue was just posted. Duplicate posting has been skipped.');
+            return back()->with('info', 'Similar kitchen issue was just created. Duplicate posting has been skipped.');
         }
 
-        $issue = KitchenIssue::query()->create([
+        KitchenIssue::query()->create([
             'issue_date' => $d['issue_date'],
             'item_id' => $item->id,
             'quantity' => $baseQuantity,
             'mess_id' => $d['mess_id'] ?? null,
             'issue_type' => $d['issue_type'],
             'remarks' => $request->input('remarks'),
+            'status' => KitchenIssue::STATUS_DRAFT,
+            'approved_at' => null,
+            'approved_stock_txn_id' => null,
         ]);
 
-        StockTransaction::query()->create([
-            'item_id' => $item->id,
-            'txn_type' => 'KITCHEN_ISSUE',
-            'quantity' => $baseQuantity,
-            'unit_cost' => 0,
-            'trans_unit_code' => $transUnitCode,
-            'trans_quantity' => $transQty,
-            'reference_type' => KitchenIssue::class,
-            'reference_id' => $issue->id,
-            'txn_at' => $d['issue_date'],
-            'remarks' => $request->input('remarks', 'Kitchen issue') ?: sprintf(
-                'Kitchen issue (%s%s)',
-                $d['issue_type'],
-                $d['mess_id'] ? ', Mess: '.$issue->mess?->name : ''
-            ),
-        ]);
-
-        return back()->with('success', 'Kitchen issue posted');
+        return back()->with('success', 'Kitchen issue created');
     }
 
     public function approveIssue(KitchenIssue $issue): RedirectResponse
     {
-        $issue->touch();
+        if ($issue->isApproved()) {
+            return back()->with('success', 'Kitchen issue already approved');
+        }
 
-        return back()->with('success', 'Kitchen issue approval acknowledged. Stock was already posted on issue create; no extra approval side-effect exists in current schema.');
+        DB::transaction(function () use ($issue): void {
+            $issue->refresh();
+
+            if ($issue->isApproved()) {
+                return;
+            }
+
+            $item = Item::query()->findOrFail($issue->item_id);
+            $currentBalance = $this->inventoryService->balanceForItem($item->id);
+            if ((float) $issue->quantity > $currentBalance) {
+                throw new \RuntimeException('Not enough stock to approve this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom);
+            }
+
+            $txn = StockTransaction::query()->create([
+                'item_id' => $item->id,
+                'txn_type' => StockTransaction::TXN_TYPE_KITCHEN_ISSUE,
+                'quantity' => $issue->quantity,
+                'unit_cost' => 0,
+                'trans_unit_code' => null,
+                'trans_quantity' => null,
+                'reference_type' => KitchenIssue::class,
+                'reference_id' => $issue->id,
+                'txn_at' => $issue->issue_date,
+                'remarks' => $issue->remarks ?: sprintf(
+                    'Kitchen issue (%s%s)',
+                    $issue->issue_type ?? 'CONSUMPTION',
+                    $issue->mess_id ? ', Mess: '.$issue->mess?->name : ''
+                ),
+            ]);
+
+            $issue->update([
+                'status' => KitchenIssue::STATUS_APPROVED,
+                'approved_at' => now(),
+                'approved_stock_txn_id' => $txn->id,
+            ]);
+        });
+
+        return back()->with('success', 'Kitchen issue approved');
     }
 }

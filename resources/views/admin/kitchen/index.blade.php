@@ -66,8 +66,8 @@
                 <div class="col-md-2"><button class="btn btn-primary w-100">Add</button></div>
             </form>
         </div></div>
-        <div class="card shadow-sm"><div class="card-header">Meal Plans</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Menu</th><th>Servings</th><th></th></tr></thead><tbody>
-            @foreach($plans as $p)<tr><td>{{ $p->plan_date }}</td><td>{{ $menus->firstWhere('id',$p->menu_id)?->name ?? $p->menu_id }}</td><td>{{ $p->planned_servings }}</td><td class="d-flex gap-1"><form method="POST" action="{{ route('admin.kitchen.plans.approve.legacy',$p) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form><form method="POST" action="{{ route('admin.kitchen.plans.edit.legacy',$p) }}">@csrf<input type="hidden" name="plan_date" value="{{ $p->plan_date }}"><input type="hidden" name="menu_id" value="{{ $p->menu_id }}"><input type="hidden" name="planned_servings" value="{{ $p->planned_servings }}"><button class="btn btn-sm btn-outline-secondary">Save</button></form></td></tr>@endforeach
+        <div class="card shadow-sm"><div class="card-header">Meal Plans</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Menu</th><th>Servings</th><th>Status</th><th></th></tr></thead><tbody>
+            @foreach($plans as $p)<tr><td>{{ $p->plan_date }}</td><td>{{ $menus->firstWhere('id',$p->menu_id)?->name ?? $p->menu_id }}</td><td>{{ $p->planned_servings }}</td><td>@if($p->status === \App\Models\MealPlan::STATUS_APPROVED)<span class="badge bg-success">Approved</span>@if($p->approved_at)<div class="small text-muted">{{ $p->approved_at }}</div>@endif @else <span class="badge bg-secondary">Draft</span> @endif</td><td class="d-flex gap-1">@if($p->status !== \App\Models\MealPlan::STATUS_APPROVED)<form method="POST" action="{{ route('admin.kitchen.plans.approve.legacy',$p) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form>@else<span class="text-success small align-self-center">Approved</span>@endif<form method="POST" action="{{ route('admin.kitchen.plans.edit.legacy',$p) }}">@csrf<input type="hidden" name="plan_date" value="{{ $p->plan_date }}"><input type="hidden" name="menu_id" value="{{ $p->menu_id }}"><input type="hidden" name="planned_servings" value="{{ $p->planned_servings }}"><button class="btn btn-sm btn-outline-secondary">Save</button></form></td></tr>@endforeach
         </tbody></table></div></div>
     </div>
 
@@ -103,7 +103,7 @@
                 <div class="col-12"><button class="btn btn-primary">Post Issue</button></div>
             </form>
         </div></div>
-        <div class="card shadow-sm"><div class="card-header">Kitchen Issues</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Item</th><th>Qty (Base)</th><th>Type</th><th>Mess</th><th>Remarks</th><th></th></tr></thead><tbody>
+        <div class="card shadow-sm"><div class="card-header">Kitchen Issues</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Item</th><th>Qty (Base)</th><th>Type</th><th>Mess</th><th>Remarks</th><th>Status</th><th></th></tr></thead><tbody>
             @foreach($issues as $i)<tr>
                 <td>{{ $i->issue_date }}</td>
                 <td>{{ $items->firstWhere('id',$i->item_id)?->name ?? $i->item_id }}</td>
@@ -111,7 +111,8 @@
                 <td>{{ $i->issue_type ?? 'CONSUMPTION' }}</td>
                 <td>{{ $i->mess->name ?? '—' }}</td>
                 <td>{{ $i->remarks }}</td>
-                <td><form method="POST" action="{{ route('admin.kitchen.issues.approve.legacy',$i) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form></td>
+                <td>@if($i->status === \App\Models\KitchenIssue::STATUS_APPROVED)<span class="badge bg-success">Approved</span>@if($i->approved_at)<div class="small text-muted">{{ $i->approved_at }}</div>@endif @else <span class="badge bg-secondary">Draft</span> @endif</td>
+                <td>@if($i->status !== \App\Models\KitchenIssue::STATUS_APPROVED)<form method="POST" action="{{ route('admin.kitchen.issues.approve.legacy',$i) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form>@else<span class="text-success small">Approved</span>@endif</td>
             </tr>@endforeach
         </tbody></table></div></div>
     </div>

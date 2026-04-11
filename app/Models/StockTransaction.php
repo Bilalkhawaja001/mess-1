@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class StockTransaction extends Model
 {
+    public const TXN_TYPE_KITCHEN_ISSUE = 'KITCHEN_ISSUE';
+
     protected $fillable = [
         'item_id',
         'txn_type',

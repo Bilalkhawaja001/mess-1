@@ -357,11 +357,12 @@
     .procurement-po-actions,
     .procurement-grn-actions {
         display: flex;
+        width: 100%;
         justify-content: flex-start;
         align-items: center;
-        min-width: 176px;
+        min-width: 0;
         padding-left: 0;
-        padding-right: 0.4rem;
+        padding-right: 0;
     }
 
     .procurement-po-actions .btn,
@@ -647,7 +648,7 @@
     </div>
 
     <div class="procurement-bottom-grid">
-        <div class="card shadow-sm procurement-card procurement-table-card procurement-po-review-card"><div class="card-header"><div class="procurement-header-title"><strong>Purchase Orders</strong><span>Core PO fields stay visible on desktop, with vendor and item summary cleanly separated.</span></div></div><div class="card-body procurement-po-table-wrap"><table class="table table-sm procurement-po-table"><thead><tr><th>PO Number</th><th>Date</th><th>Vendor</th><th>Items</th><th class="text-end">Total Qty</th><th class="text-end">Total Amount</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody>
+        <div class="card shadow-sm procurement-card procurement-table-card procurement-po-review-card"><div class="card-header"><div class="procurement-header-title"><strong>Purchase Orders</strong><span>Core PO fields stay visible on desktop, with vendor and item summary cleanly separated.</span></div></div><div class="card-body procurement-po-table-wrap"><table class="table table-sm procurement-po-table"><thead><tr><th>PO Number</th><th>Date</th><th>Vendor</th><th>Items</th><th class="text-end">Total Qty</th><th class="text-end">Total Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         @foreach($pos as $po)
             <tr>
                 <td><div class="procurement-po-number">{{ $po->po_number }}</div></td>
@@ -676,7 +677,7 @@
         @endforeach
     </tbody></table></div></div>
 
-        <div class="card shadow-sm procurement-card procurement-table-card procurement-grn-review-card"><div class="card-header"><div class="procurement-header-title"><strong>GRNs</strong><span>Recent goods receipts with received quantity and stored unit rate.</span></div></div><div class="card-body procurement-po-table-wrap"><table class="table table-sm procurement-grn-table"><thead><tr><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th class="text-end">Qty Received</th><th class="text-end">Unit Cost</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody>
+        <div class="card shadow-sm procurement-card procurement-table-card procurement-grn-review-card"><div class="card-header"><div class="procurement-header-title"><strong>GRNs</strong><span>Recent goods receipts with received quantity and stored unit rate.</span></div></div><div class="card-body procurement-po-table-wrap"><table class="table table-sm procurement-grn-table"><thead><tr><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th class="text-end">Qty Received</th><th class="text-end">Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         @foreach($grns as $grn)
             @php
                 $grnLine = $grn->lines->first();

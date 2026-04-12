@@ -85,6 +85,19 @@
         font-size: 0.8rem;
     }
 
+    .procurement-rate-box {
+        border: 1px solid rgba(148,163,184,0.16);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(248,250,252,0.72);
+        font-size: 0.84rem;
+        color: #475569;
+    }
+
+    .procurement-rate-box strong {
+        color: #0f172a;
+    }
+
     @media (max-width: 991.98px) {
         .procurement-line-grid {
             grid-template-columns: 1fr;
@@ -110,12 +123,17 @@
         ];
     })->all();
 
-    $procurementItemsJson = $items->map(function ($i) {
+    $procurementItemsJson = $items->map(function ($i) use ($poRateHistory, $grnRateHistory) {
+        $poHistory = $poRateHistory[$i->id] ?? ['last_po_rate' => null, 'last_po_date' => null];
+        $grnHistory = $grnRateHistory[$i->id] ?? ['last_grn_rate' => null, 'last_grn_date' => null, 'recent_grn_rates' => [], 'avg_grn_rate' => null];
+
         return [
             'id' => $i->id,
             'label' => trim(($i->sku ? $i->sku.' — ' : '').$i->name.($i->uom ? ' ('.$i->uom.')' : '').($i->category ? ' · '.$i->category : '')),
             'search' => strtolower(trim(($i->sku ?? '').' '.$i->name.' '.($i->category ?? '').' '.($i->uom ?? ''))),
             'base_uom' => $i->uom,
+            'po_history' => $poHistory,
+            'grn_history' => $grnHistory,
             'units' => $i->units->map(function ($u) {
                 return [
                     'code' => $u->unit_code,
@@ -216,10 +234,12 @@
             @error('unit_code')
                 <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
             @enderror
-            <div class="col-12"><input type="number" step="0.01" min="0.01" name="unit_cost" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}"></div>
+            <div class="col-6"><input type="number" step="0.01" min="0.01" name="unit_cost" id="grn-unit-cost-input" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}"></div>
+            <div class="col-6"><input type="text" id="grn-total-amount" class="form-control" value="0.00" readonly></div>
             @error('unit_cost')
                 <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
             @enderror
+            <div class="col-12"><div class="procurement-rate-box" id="grn-rate-history-box">PO Rate: <strong>—</strong><br>Last GRN Rate: <strong>—</strong><br>Last 3 GRN Rates: <strong>—</strong><br>Average GRN Rate: <strong>—</strong></div></div>
             <div class="col-12"><button class="btn btn-primary" id="grn-submit-btn">Create GRN</button></div>
         </form>
     </div></div></div>
@@ -331,19 +351,44 @@
                     </div>
                     <div>
                         <label class="form-label">Qty</label>
-                        <input type="number" step="0.001" min="0.001" name="lines[${poLineIndex}][qty_ordered]" class="form-control" required>
+                        <input type="number" step="0.001" min="0.001" name="lines[${poLineIndex}][qty_ordered]" class="form-control po-line-qty" required>
                     </div>
                     <div>
                         <label class="form-label">Unit Price</label>
-                        <input type="number" step="0.01" min="0.01" name="lines[${poLineIndex}][unit_price]" class="form-control" required>
+                        <input type="number" step="0.01" min="0.01" name="lines[${poLineIndex}][unit_price]" class="form-control po-line-rate" required>
                     </div>
-                    <div></div>
+                    <div>
+                        <label class="form-label">Total Amount</label>
+                        <input type="text" class="form-control po-line-total" value="0.00" readonly>
+                    </div>
+                </div>
+                <div class="procurement-rate-box mt-2 po-history-box">Last PO Rate: <strong>—</strong><br>Last GRN Rate: <strong>—</strong><br>Last 3 GRN Rates: <strong>—</strong><br>Average GRN Rate: <strong>—</strong></div>
                 </div>
             `;
 
             const searchInput = line.querySelector('.po-line-search');
             const hiddenInput = line.querySelector('.po-line-item-id');
             const result = line.querySelector('.procurement-mini-result');
+            const qtyInput = line.querySelector('.po-line-qty');
+            const rateInput = line.querySelector('.po-line-rate');
+            const totalInput = line.querySelector('.po-line-total');
+            const historyBox = line.querySelector('.po-history-box');
+
+            const syncTotal = () => {
+                const qty = Number(qtyInput.value || 0);
+                const rate = Number(rateInput.value || 0);
+                totalInput.value = (qty * rate).toFixed(2);
+            };
+
+            const syncHistory = (match) => {
+                const poRate = match?.po_history?.last_po_rate;
+                const poDate = match?.po_history?.last_po_date;
+                const grnRate = match?.grn_history?.last_grn_rate;
+                const grnDate = match?.grn_history?.last_grn_date;
+                const recent = (match?.grn_history?.recent_grn_rates || []).map(entry => `${entry.received_date}: ${Number(entry.unit_cost).toFixed(2)}`).join(', ') || '—';
+                const avg = match?.grn_history?.avg_grn_rate;
+                historyBox.innerHTML = `Last PO Rate: <strong>${poRate !== null ? Number(poRate).toFixed(2)+' ('+poDate+')' : '—'}</strong><br>Last GRN Rate: <strong>${grnRate !== null ? Number(grnRate).toFixed(2)+' ('+grnDate+')' : '—'}</strong><br>Last 3 GRN Rates: <strong>${recent}</strong><br>Average GRN Rate: <strong>${avg !== null ? Number(avg).toFixed(2) : '—'}</strong>`;
+            };
 
             const sync = () => {
                 const match = resolveItem(searchInput.value);
@@ -352,7 +397,9 @@
                     searchInput.value = match.label;
                     result.textContent = match.label;
                     result.style.color = '#64748b';
+                    syncHistory(match);
                 } else {
+                    syncHistory(null);
                     hiddenInput.value = '';
                     result.textContent = searchInput.value.trim() ? 'Pick an exact item from the search list.' : 'Pick an item from the searchable list.';
                     result.style.color = '#64748b';
@@ -362,6 +409,8 @@
 
             searchInput.addEventListener('change', sync);
             searchInput.addEventListener('blur', sync);
+            qtyInput.addEventListener('input', syncTotal);
+            rateInput.addEventListener('input', syncTotal);
             line.querySelector('.remove-po-line').addEventListener('click', () => {
                 if (document.querySelectorAll('.po-line-card').length > 1) {
                     line.remove();
@@ -388,6 +437,9 @@
         const grnBlockMessage = document.getElementById('grn-block-message');
         const grnUnitSelect = document.getElementById('grn-unit-select');
         const grnConversionPreview = document.getElementById('grn-conversion-preview');
+        const grnUnitCostInput = document.getElementById('grn-unit-cost-input');
+        const grnTotalAmount = document.getElementById('grn-total-amount');
+        const grnRateHistoryBox = document.getElementById('grn-rate-history-box');
 
         const syncPo = () => {
             const option = poSelect?.selectedOptions?.[0];
@@ -425,6 +477,9 @@
                 grnLineId.value = '';
                 grnItemDisplay.value = '';
                 grnItemId.value = '';
+                grnUnitCostInput.value = '';
+                grnTotalAmount.value = '0.00';
+                grnRateHistoryBox.innerHTML = 'PO Rate: <strong>—</strong><br>Last GRN Rate: <strong>—</strong><br>Last 3 GRN Rates: <strong>—</strong><br>Average GRN Rate: <strong>—</strong>';
                 grnOrdered.textContent = '0.000';
                 grnReceived.textContent = '0.000';
                 grnPending.textContent = '0.000';
@@ -441,6 +496,15 @@
             grnLineId.value = line.value;
             grnItemDisplay.value = line.dataset.itemLabel || '';
             grnItemId.value = line.dataset.itemId || '';
+            const item = itemsById[Number(line.dataset.itemId || 0)] || null;
+            const poRate = item?.po_history?.last_po_rate;
+            const grnRate = item?.grn_history?.last_grn_rate;
+            const recent = (item?.grn_history?.recent_grn_rates || []).map(entry => `${entry.received_date}: ${Number(entry.unit_cost).toFixed(2)}`).join(', ') || '—';
+            const avg = item?.grn_history?.avg_grn_rate;
+            grnRateHistoryBox.innerHTML = `PO Rate: <strong>${poRate !== null ? Number(poRate).toFixed(2) : '—'}</strong><br>Last GRN Rate: <strong>${grnRate !== null ? Number(grnRate).toFixed(2) : '—'}</strong><br>Last 3 GRN Rates: <strong>${recent}</strong><br>Average GRN Rate: <strong>${avg !== null ? Number(avg).toFixed(2) : '—'}</strong>`;
+            if (poRate !== null) {
+                grnUnitCostInput.value = Number(poRate).toFixed(2);
+            }
             grnOrdered.textContent = line.dataset.ordered || '0.000';
             grnReceived.textContent = line.dataset.received || '0.000';
             grnPending.textContent = line.dataset.pending || '0.000';
@@ -473,6 +537,14 @@
 
                 syncGrnConversion();
             }
+            syncGrnTotal();
+        };
+
+        const syncGrnTotal = () => {
+            if (!grnTotalAmount) return;
+            const qty = Number(grnQtyInput.value || 0);
+            const rate = Number(grnUnitCostInput.value || 0);
+            grnTotalAmount.value = (qty * rate).toFixed(2);
         };
 
         const syncGrnConversion = () => {
@@ -528,8 +600,10 @@
         grnQtyInput?.addEventListener('input', () => {
             syncGrnQtyGuard();
             syncGrnConversion();
+            syncGrnTotal();
         });
         grnUnitSelect?.addEventListener('change', syncGrnConversion);
+        grnUnitCostInput?.addEventListener('input', syncGrnTotal);
 
         document.getElementById('po-form')?.addEventListener('submit', () => {
             if (poSubmitBtn) {

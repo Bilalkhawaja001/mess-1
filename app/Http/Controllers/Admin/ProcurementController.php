@@ -59,7 +59,45 @@ class ProcurementController extends Controller
             });
         $grns = GoodsReceipt::query()->with(['purchaseOrder.vendor', 'lines.item'])->latest()->limit(50)->get();
 
-        return view('admin.procurement.index', compact('vendors', 'items', 'pos', 'grns'));
+        $poRateHistory = PurchaseOrderLine::query()
+            ->select('purchase_order_lines.item_id', 'purchase_order_lines.unit_price', 'purchase_orders.po_date')
+            ->join('purchase_orders', 'purchase_orders.id', '=', 'purchase_order_lines.purchase_order_id')
+            ->orderByDesc('purchase_orders.po_date')
+            ->orderByDesc('purchase_order_lines.id')
+            ->get()
+            ->groupBy('item_id')
+            ->map(function ($lines) {
+                $last = $lines->first();
+
+                return [
+                    'last_po_rate' => $last ? round((float) $last->unit_price, 2) : null,
+                    'last_po_date' => $last?->po_date,
+                ];
+            });
+
+        $grnRateHistory = GoodsReceiptLine::query()
+            ->select('goods_receipt_lines.item_id', 'goods_receipt_lines.unit_cost', 'goods_receipts.received_date')
+            ->join('goods_receipts', 'goods_receipts.id', '=', 'goods_receipt_lines.goods_receipt_id')
+            ->orderByDesc('goods_receipts.received_date')
+            ->orderByDesc('goods_receipt_lines.id')
+            ->get()
+            ->groupBy('item_id')
+            ->map(function ($lines) {
+                $recent = $lines->take(3)->map(fn ($line) => [
+                    'unit_cost' => round((float) $line->unit_cost, 2),
+                    'received_date' => $line->received_date,
+                ])->values()->all();
+                $last = $lines->first();
+
+                return [
+                    'last_grn_rate' => $last ? round((float) $last->unit_cost, 2) : null,
+                    'last_grn_date' => $last?->received_date,
+                    'recent_grn_rates' => $recent,
+                    'avg_grn_rate' => $lines->count() > 0 ? round((float) $lines->avg('unit_cost'), 2) : null,
+                ];
+            });
+
+        return view('admin.procurement.index', compact('vendors', 'items', 'pos', 'grns', 'poRateHistory', 'grnRateHistory'));
     }
 
     public function storeVendor(Request $r): RedirectResponse
@@ -167,6 +205,13 @@ class ProcurementController extends Controller
             return back()->withErrors(['qty_received' => 'Receive quantity cannot exceed pending quantity.'])->withInput();
         }
 
+        $enteredQty = (float) $d['qty_received'];
+        $enteredUnitRate = round((float) $d['unit_cost'], 2);
+
+        if ($enteredQty > 0 && abs($enteredUnitRate - (((float) $poLine->unit_price) * $enteredQty)) < 0.0001 && abs($enteredUnitRate - (float) $poLine->unit_price) > 0.0001) {
+            return back()->withErrors(['unit_cost' => 'GRN unit cost must be a unit rate, not total line amount.'])->withInput();
+        }
+
         $item = Item::query()->with('units')->findOrFail($d['item_id']);
         $unitCode = trim($d['unit_code']);
         $unit = $item->units->firstWhere('unit_code', $unitCode);
@@ -209,20 +254,27 @@ class ProcurementController extends Controller
                 'remarks' => $r->input('remarks'),
             ]);
 
+            $receivedQty = (float) $d['qty_received'];
+            $unitRate = round((float) $d['unit_cost'], 2);
+
+            if ($receivedQty > 0 && $unitRate > ((float) $poLine->unit_price * $receivedQty) && abs($unitRate - ((float) $poLine->unit_price * $receivedQty)) < 0.0001) {
+                throw new \RuntimeException('GRN unit cost must be a unit rate, not total line amount.');
+            }
+
             GoodsReceiptLine::create([
                 'goods_receipt_id' => $grn->id,
                 'item_id' => $d['item_id'],
-                'qty_received' => $d['qty_received'],
-                'unit_cost' => $d['unit_cost'],
+                'qty_received' => $receivedQty,
+                'unit_cost' => $unitRate,
             ]);
-            $transQty = (float) $d['qty_received'];
+            $transQty = $receivedQty;
             $baseQty = $transQty * (float) $unit->factor_to_base;
 
             StockTransaction::create([
                 'item_id' => $d['item_id'],
                 'txn_type' => 'GRN',
                 'quantity' => $baseQty,
-                'unit_cost' => $d['unit_cost'],
+                'unit_cost' => $unitRate,
                 'trans_unit_code' => $unit->unit_code,
                 'trans_quantity' => $transQty,
                 'reference_type' => GoodsReceipt::class,

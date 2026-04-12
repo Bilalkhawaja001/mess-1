@@ -96,6 +96,8 @@ class ProcurementHardeningTest extends TestCase
         $this->assertDatabaseCount('goods_receipts', 1);
         $this->assertDatabaseCount('goods_receipt_lines', 1);
         $this->assertDatabaseCount('stock_transactions', 1);
+        $this->assertDatabaseHas('goods_receipt_lines', ['qty_received' => 4, 'unit_cost' => 95]);
+        $this->assertDatabaseHas('stock_transactions', ['txn_type' => 'GRN', 'quantity' => 4, 'unit_cost' => 95]);
     }
 
     public function test_grn_blocked_when_qty_exceeds_pending(): void
@@ -185,6 +187,45 @@ class ProcurementHardeningTest extends TestCase
         $admin = $this->adminUser();
 
         $this->actingAs($admin)->get('/admin/procurement')->assertOk();
+    }
+
+    public function test_procurement_page_shows_auto_calc_fields_and_rate_history(): void
+    {
+        $admin = $this->adminUser();
+        [$po, $line] = $this->makePurchaseOrderWithLine(35);
+        $line->update(['unit_price' => 180]);
+        $this->createGrn($po, $line, 35, 180);
+
+        $response = $this->actingAs($admin)->get('/admin/procurement');
+
+        $response->assertOk();
+        $response->assertSee('Total Amount');
+        $response->assertSee('Last PO Rate');
+        $response->assertSee('Last GRN Rate');
+        $response->assertSee('Average GRN Rate');
+        $response->assertSee('180.00');
+    }
+
+    public function test_grn_rejects_line_total_passed_as_unit_cost(): void
+    {
+        $admin = $this->adminUser();
+        [$po, $line] = $this->makePurchaseOrderWithLine(35);
+        $line->update(['unit_price' => 180]);
+
+        $response = $this->actingAs($admin)->from('/admin/procurement')->post('/admin/procurement/grn', [
+            'purchase_order_id' => $po->id,
+            'purchase_order_line_id' => $line->id,
+            'item_id' => $line->item_id,
+            'received_date' => '2026-04-10',
+            'qty_received' => '35',
+            'unit_cost' => '6300',
+            'unit_code' => 'kg',
+        ]);
+
+        $response->assertRedirect('/admin/procurement');
+        $response->assertSessionHasErrors();
+        $this->assertDatabaseMissing('goods_receipt_lines', ['qty_received' => 35, 'unit_cost' => 6300]);
+        $this->assertDatabaseMissing('stock_transactions', ['txn_type' => 'GRN', 'quantity' => 35, 'unit_cost' => 6300]);
     }
 
     public function test_existing_approval_flows_do_not_break(): void

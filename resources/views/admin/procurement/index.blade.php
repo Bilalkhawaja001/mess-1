@@ -228,6 +228,10 @@
         font-size: 0.8rem;
     }
 
+    .procurement-po-review-card {
+        grid-column: 1 / -1;
+    }
+
     .procurement-table-card .card-body {
         padding-top: 12px;
     }
@@ -239,6 +243,94 @@
 
     .procurement-table-card .table td {
         vertical-align: top;
+    }
+
+    .procurement-po-table-wrap {
+        overflow-x: visible;
+    }
+
+    .procurement-po-table {
+        table-layout: fixed;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    .procurement-po-table th,
+    .procurement-po-table td {
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
+    }
+
+    .procurement-po-table th:nth-child(1) { width: 12%; }
+    .procurement-po-table th:nth-child(2) { width: 10%; }
+    .procurement-po-table th:nth-child(3) { width: 20%; }
+    .procurement-po-table th:nth-child(4) { width: 24%; }
+    .procurement-po-table th:nth-child(5) { width: 9%; }
+    .procurement-po-table th:nth-child(6) { width: 11%; }
+    .procurement-po-table th:nth-child(7) { width: 8%; }
+    .procurement-po-table th:nth-child(8) { width: 6%; }
+
+    .procurement-po-number {
+        font-weight: 700;
+        color: #0f172a;
+        white-space: nowrap;
+    }
+
+    .procurement-po-date {
+        white-space: nowrap;
+        color: #475569;
+    }
+
+    .procurement-vendor-name {
+        font-weight: 600;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .procurement-vendor-meta {
+        font-size: 0.76rem;
+        color: #64748b;
+        margin-top: 2px;
+        white-space: nowrap;
+    }
+
+    .procurement-item-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .procurement-item-stack span {
+        color: #64748b;
+        font-size: 0.78rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .procurement-num {
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .procurement-status-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: rgba(15,23,42,0.06);
+        color: #334155;
+        white-space: nowrap;
+    }
+
+    .procurement-po-actions {
+        display: flex;
+        justify-content: flex-end;
     }
 
     @media (max-width: 1199.98px) {
@@ -460,29 +552,34 @@
     </div>
 
     <div class="procurement-bottom-grid">
-        <div class="card shadow-sm procurement-card procurement-table-card"><div class="card-header"><div class="procurement-header-title"><strong>Purchase Orders</strong><span>Recent PO activity with quantities, totals, and receipt status.</span></div></div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <div class="card shadow-sm procurement-card procurement-table-card procurement-po-review-card"><div class="card-header"><div class="procurement-header-title"><strong>Purchase Orders</strong><span>Core PO fields stay visible on desktop, with vendor and item summary cleanly separated.</span></div></div><div class="card-body procurement-po-table-wrap"><table class="table table-sm procurement-po-table"><thead><tr><th>PO Number</th><th>Date</th><th>Vendor</th><th>Items</th><th class="text-end">Total Qty</th><th class="text-end">Total Amount</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody>
         @foreach($pos as $po)
             <tr>
-                <td>{{ $po->po_number }}</td>
-                <td>{{ $po->po_date }}</td>
+                <td><div class="procurement-po-number">{{ $po->po_number }}</div></td>
+                <td><div class="procurement-po-date">{{ $po->po_date }}</div></td>
                 <td>
-                    <div>{{ $po->vendor->name ?? '-' }}</div>
-                    <div class="po-summary-list">
+                    <div class="procurement-vendor-name">{{ $po->vendor->name ?? '-' }}</div>
+                    <div class="procurement-vendor-meta">{{ $po->total_lines }} line{{ $po->total_lines === 1 ? '' : 's' }}</div>
+                </td>
+                <td>
+                    <div class="procurement-item-stack">
                         @foreach($po->lines->take(3) as $line)
-                            <span>{{ $line->item?->sku }} {{ $line->item?->name ? '— '.$line->item->name : '' }}</span>
+                            <span>{{ $line->item?->sku }}{{ $line->item?->name ? ' — '.$line->item->name : '' }}</span>
                         @endforeach
+                        @if($po->lines->count() > 3)
+                            <span>+{{ $po->lines->count() - 3 }} more</span>
+                        @endif
                     </div>
                 </td>
-                <td>{{ $po->total_lines }}</td>
-                <td>{{ number_format((float) ($po->total_qty ?? 0), 3) }}</td>
-                <td>{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
-                <td>{{ number_format((float) ($po->received_qty ?? 0), 3) }}</td>
-                <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
-                <td>{{ $po->status }}</td>
-                <td><form method="POST" action="{{ route('admin.procurement.po.approve',$po) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form></td>
+                <td class="procurement-num">{{ number_format((float) ($po->total_qty ?? 0), 3) }}</td>
+                <td class="procurement-num">{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
+                <td><span class="procurement-status-chip">{{ $po->status }}</span></td>
+                <td>
+                    <div class="procurement-po-actions"><form method="POST" action="{{ route('admin.procurement.po.approve',$po) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form></div>
+                </td>
             </tr>
         @endforeach
-    </tbody></table></div></div></div>
+    </tbody></table></div></div>
 
         <div class="card shadow-sm procurement-card procurement-table-card"><div class="card-header"><div class="procurement-header-title"><strong>GRNs</strong><span>Recent goods receipts with received quantity and stored unit rate.</span></div></div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
         @foreach($grns as $grn)

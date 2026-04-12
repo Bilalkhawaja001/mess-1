@@ -185,6 +185,21 @@ class KitchenIssueReportTest extends TestCase
             ->assertSee('1,400.00');
     }
 
+    public function test_avg_rate_uses_unit_cost_not_inbound_line_total(): void
+    {
+        $admin = $this->adminUser();
+        $item = $this->item('Fresh Milk', 'MILK-5421', 'ltr');
+        $this->postInbound($item, '2026-04-01', 35, 180);
+        $this->approvedIssue($item, '2026-04-02', 35);
+
+        $this->actingAs($admin)
+            ->get('/admin/kitchen/reports/issues?from_date=2026-04-01&to_date=2026-04-30&item_id='.$item->id)
+            ->assertOk()
+            ->assertSee('180.00')
+            ->assertSee('6,300.00')
+            ->assertDontSee('220,500.00');
+    }
+
     public function test_missing_rate_history_returns_zero_safely(): void
     {
         $admin = $this->adminUser();

@@ -228,7 +228,8 @@
         font-size: 0.8rem;
     }
 
-    .procurement-po-review-card {
+    .procurement-po-review-card,
+    .procurement-grn-review-card {
         grid-column: 1 / -1;
     }
 
@@ -256,29 +257,37 @@
     }
 
     .procurement-po-table th,
-    .procurement-po-table td {
-        padding-top: 0.7rem;
-        padding-bottom: 0.7rem;
+    .procurement-po-table td,
+    .procurement-grn-table th,
+    .procurement-grn-table td {
+        padding-top: 0.88rem;
+        padding-bottom: 0.88rem;
+        padding-left: 0.72rem;
+        padding-right: 0.72rem;
     }
 
-    .procurement-po-table th:nth-child(1) { width: 12%; }
-    .procurement-po-table th:nth-child(2) { width: 10%; }
-    .procurement-po-table th:nth-child(3) { width: 20%; }
-    .procurement-po-table th:nth-child(4) { width: 24%; }
-    .procurement-po-table th:nth-child(5) { width: 9%; }
-    .procurement-po-table th:nth-child(6) { width: 11%; }
-    .procurement-po-table th:nth-child(7) { width: 8%; }
-    .procurement-po-table th:nth-child(8) { width: 6%; }
+    .procurement-po-table th:nth-child(1), .procurement-po-table td:nth-child(1) { width: 14%; min-width: 140px; }
+    .procurement-po-table th:nth-child(2), .procurement-po-table td:nth-child(2) { width: 10%; min-width: 110px; }
+    .procurement-po-table th:nth-child(3), .procurement-po-table td:nth-child(3) { width: 18%; min-width: 180px; }
+    .procurement-po-table th:nth-child(4), .procurement-po-table td:nth-child(4) { width: 26%; min-width: 240px; }
+    .procurement-po-table th:nth-child(5), .procurement-po-table td:nth-child(5) { width: 10%; min-width: 110px; }
+    .procurement-po-table th:nth-child(6), .procurement-po-table td:nth-child(6) { width: 12%; min-width: 130px; }
+    .procurement-po-table th:nth-child(7), .procurement-po-table td:nth-child(7) { width: 10%; min-width: 110px; }
+    .procurement-po-table th:nth-child(8), .procurement-po-table td:nth-child(8) { width: 10%; min-width: 130px; }
 
     .procurement-po-number {
         font-weight: 700;
         color: #0f172a;
         white-space: nowrap;
+        display: inline-block;
+        min-width: 120px;
     }
 
     .procurement-po-date {
         white-space: nowrap;
         color: #475569;
+        display: inline-block;
+        min-width: 96px;
     }
 
     .procurement-vendor-name {
@@ -319,18 +328,47 @@
     .procurement-status-chip {
         display: inline-flex;
         align-items: center;
-        padding: 0.3rem 0.55rem;
+        justify-content: center;
+        padding: 0.34rem 0.62rem;
         border-radius: 999px;
         font-size: 0.72rem;
         font-weight: 700;
         background: rgba(15,23,42,0.06);
         color: #334155;
         white-space: nowrap;
+        min-width: 92px;
     }
 
-    .procurement-po-actions {
+    .procurement-po-actions,
+    .procurement-grn-actions {
         display: flex;
         justify-content: flex-end;
+        min-width: 120px;
+    }
+
+    .procurement-grn-table {
+        table-layout: fixed;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    .procurement-grn-table th:nth-child(1), .procurement-grn-table td:nth-child(1) { width: 13%; min-width: 130px; }
+    .procurement-grn-table th:nth-child(2), .procurement-grn-table td:nth-child(2) { width: 10%; min-width: 105px; }
+    .procurement-grn-table th:nth-child(3), .procurement-grn-table td:nth-child(3) { width: 14%; min-width: 140px; }
+    .procurement-grn-table th:nth-child(4), .procurement-grn-table td:nth-child(4) { width: 15%; min-width: 150px; }
+    .procurement-grn-table th:nth-child(5), .procurement-grn-table td:nth-child(5) { width: 20%; min-width: 220px; }
+    .procurement-grn-table th:nth-child(6), .procurement-grn-table td:nth-child(6) { width: 10%; min-width: 110px; }
+    .procurement-grn-table th:nth-child(7), .procurement-grn-table td:nth-child(7) { width: 9%; min-width: 105px; }
+    .procurement-grn-table th:nth-child(8), .procurement-grn-table td:nth-child(8) { width: 10%; min-width: 115px; }
+    .procurement-grn-table th:nth-child(9), .procurement-grn-table td:nth-child(9) { width: 9%; min-width: 130px; }
+
+    .procurement-grn-text,
+    .procurement-grn-vendor,
+    .procurement-grn-po {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
     }
 
     @media (max-width: 1199.98px) {
@@ -581,21 +619,21 @@
         @endforeach
     </tbody></table></div></div>
 
-        <div class="card shadow-sm procurement-card procurement-table-card"><div class="card-header"><div class="procurement-header-title"><strong>GRNs</strong><span>Recent goods receipts with received quantity and stored unit rate.</span></div></div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <div class="card shadow-sm procurement-card procurement-table-card procurement-grn-review-card"><div class="card-header"><div class="procurement-header-title"><strong>GRNs</strong><span>Recent goods receipts with received quantity and stored unit rate.</span></div></div><div class="card-body procurement-po-table-wrap"><table class="table table-sm procurement-grn-table"><thead><tr><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th class="text-end">Qty Received</th><th class="text-end">Unit Cost</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody>
         @foreach($grns as $grn)
             @php
                 $grnLine = $grn->lines->first();
             @endphp
             <tr>
-                <td>{{ $grn->grn_number }}</td>
-                <td>{{ $grn->received_date }}</td>
-                <td>{{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}</td>
-                <td>{{ $grn->purchaseOrder->vendor->name ?? '-' }}</td>
-                <td>{{ $grnLine?->item?->sku }} {{ $grnLine?->item?->name ? '— '.$grnLine->item->name : '' }}</td>
-                <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
-                <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
-                <td>Posted on Create</td>
-                <td><form method="POST" action="{{ route('admin.procurement.grn.approve',$grn) }}">@csrf<button class="btn btn-sm btn-outline-success">Acknowledge</button></form></td>
+                <td><span class="procurement-po-number">{{ $grn->grn_number }}</span></td>
+                <td><span class="procurement-po-date">{{ $grn->received_date }}</span></td>
+                <td><span class="procurement-grn-po">{{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}</span></td>
+                <td><span class="procurement-grn-vendor">{{ $grn->purchaseOrder->vendor->name ?? '-' }}</span></td>
+                <td><span class="procurement-grn-text">{{ $grnLine?->item?->sku }} {{ $grnLine?->item?->name ? '— '.$grnLine->item->name : '' }}</span></td>
+                <td class="procurement-num">{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
+                <td class="procurement-num">{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
+                <td><span class="procurement-status-chip">Posted</span></td>
+                <td><div class="procurement-grn-actions"><form method="POST" action="{{ route('admin.procurement.grn.approve',$grn) }}">@csrf<button class="btn btn-sm btn-outline-success">Acknowledge</button></form></div></td>
             </tr>
         @endforeach
     </tbody></table></div></div>

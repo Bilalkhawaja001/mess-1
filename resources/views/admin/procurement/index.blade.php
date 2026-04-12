@@ -235,6 +235,8 @@
 
     .procurement-table-card .card-body {
         padding-top: 12px;
+        padding-right: 18px;
+        overflow: visible;
     }
 
     .procurement-table-card .table th {
@@ -253,6 +255,8 @@
 
     .procurement-po-table-wrap {
         overflow-x: visible;
+        overflow-y: visible;
+        padding-right: 8px;
     }
 
     .procurement-po-table {
@@ -278,7 +282,7 @@
     .procurement-po-table th:nth-child(5), .procurement-po-table td:nth-child(5) { width: 10%; min-width: 110px; }
     .procurement-po-table th:nth-child(6), .procurement-po-table td:nth-child(6) { width: 12%; min-width: 130px; }
     .procurement-po-table th:nth-child(7), .procurement-po-table td:nth-child(7) { width: 10%; min-width: 110px; }
-    .procurement-po-table th:nth-child(8), .procurement-po-table td:nth-child(8) { width: 10%; min-width: 130px; }
+    .procurement-po-table th:nth-child(8), .procurement-po-table td:nth-child(8) { width: 11%; min-width: 156px; }
 
     .procurement-po-number {
         font-weight: 700;
@@ -353,15 +357,17 @@
     .procurement-grn-actions {
         display: flex;
         justify-content: flex-end;
-        min-width: 132px;
-        padding-left: 0.35rem;
+        min-width: 148px;
+        padding-left: 0.45rem;
+        padding-right: 0.4rem;
     }
 
     .procurement-po-actions .btn,
     .procurement-grn-actions .btn {
         font-size: 0.74rem;
-        padding: 0.28rem 0.62rem;
+        padding: 0.30rem 0.72rem;
         line-height: 1.2;
+        min-width: 108px;
         white-space: nowrap;
     }
 
@@ -379,7 +385,7 @@
     .procurement-grn-table th:nth-child(6), .procurement-grn-table td:nth-child(6) { width: 10%; min-width: 110px; }
     .procurement-grn-table th:nth-child(7), .procurement-grn-table td:nth-child(7) { width: 9%; min-width: 105px; }
     .procurement-grn-table th:nth-child(8), .procurement-grn-table td:nth-child(8) { width: 10%; min-width: 115px; }
-    .procurement-grn-table th:nth-child(9), .procurement-grn-table td:nth-child(9) { width: 9%; min-width: 130px; }
+    .procurement-grn-table th:nth-child(9), .procurement-grn-table td:nth-child(9) { width: 11%; min-width: 168px; }
 
     .procurement-grn-text,
     .procurement-grn-vendor,

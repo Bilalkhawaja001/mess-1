@@ -282,7 +282,7 @@
     .procurement-po-table th:nth-child(5), .procurement-po-table td:nth-child(5) { width: 10%; min-width: 110px; }
     .procurement-po-table th:nth-child(6), .procurement-po-table td:nth-child(6) { width: 12%; min-width: 130px; }
     .procurement-po-table th:nth-child(7), .procurement-po-table td:nth-child(7) { width: 10%; min-width: 110px; }
-    .procurement-po-table th:nth-child(8), .procurement-po-table td:nth-child(8) { width: 12%; min-width: 176px; }
+    .procurement-po-table th:nth-child(8), .procurement-po-table td:nth-child(8) { width: 12%; min-width: 176px; text-align: left; }
 
     .procurement-po-number {
         font-weight: 700;
@@ -343,7 +343,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.28rem 0.56rem;
+        padding: 0.30rem 0.6rem;
         border-radius: 999px;
         font-size: 0.68rem;
         font-weight: 700;
@@ -351,15 +351,17 @@
         color: #334155;
         white-space: nowrap;
         min-width: 86px;
+        vertical-align: middle;
     }
 
     .procurement-po-actions,
     .procurement-grn-actions {
         display: flex;
-        justify-content: flex-end;
+        justify-content: flex-start;
+        align-items: center;
         min-width: 176px;
-        padding-left: 0.55rem;
-        padding-right: 1rem;
+        padding-left: 0;
+        padding-right: 0.4rem;
     }
 
     .procurement-po-actions .btn,
@@ -385,7 +387,7 @@
     .procurement-grn-table th:nth-child(6), .procurement-grn-table td:nth-child(6) { width: 9%; min-width: 104px; }
     .procurement-grn-table th:nth-child(7), .procurement-grn-table td:nth-child(7) { width: 8%; min-width: 96px; }
     .procurement-grn-table th:nth-child(8), .procurement-grn-table td:nth-child(8) { width: 8%; min-width: 108px; }
-    .procurement-grn-table th:nth-child(9), .procurement-grn-table td:nth-child(9) { width: 15%; min-width: 208px; }
+    .procurement-grn-table th:nth-child(9), .procurement-grn-table td:nth-child(9) { width: 15%; min-width: 208px; text-align: left; }
 
     .procurement-grn-text,
     .procurement-grn-vendor,
@@ -409,6 +411,21 @@
     .procurement-grn-table th:nth-child(9) {
         padding-left: 1rem;
         padding-right: 1rem;
+    }
+
+    .procurement-po-table tbody tr,
+    .procurement-grn-table tbody tr {
+        border-bottom: 1px solid rgba(148,163,184,0.12);
+    }
+
+    .procurement-po-table tbody tr:last-child,
+    .procurement-grn-table tbody tr:last-child {
+        border-bottom: 0;
+    }
+
+    .procurement-po-table td,
+    .procurement-grn-table td {
+        vertical-align: middle;
     }
 
     @media (max-width: 1199.98px) {

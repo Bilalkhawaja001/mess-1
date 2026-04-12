@@ -4,6 +4,7 @@
 @section('page_title','Meal Planning / Kitchen')
 
 @section('content')
+<div class="card shadow-sm mb-3"><div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2"><div><strong>Approved Kitchen Issue Report</strong><div class="text-muted small">Issue / stock-out report with estimated rate and amount based on approved kitchen issues only.</div></div><a href="{{ route('admin.kitchen.reports.issues', ['from_date' => now()->startOfMonth()->toDateString(), 'to_date' => now()->toDateString()]) }}" class="btn btn-outline-primary">Open Report</a></div></div>
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card shadow-sm mb-3"><div class="card-header">Create Menu</div><div class="card-body">

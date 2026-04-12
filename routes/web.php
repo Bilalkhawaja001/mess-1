@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ExtraController;
 use App\Http\Controllers\Admin\GuestController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\KitchenController;
+use App\Http\Controllers\Admin\KitchenIssueReportController;
 use App\Http\Controllers\Admin\LedgerController;
 use App\Http\Controllers\Admin\LedgerToolchainController;
 use App\Http\Controllers\Admin\MemberController;
@@ -181,6 +182,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/kitchen/plans/{plan}/approve', [KitchenController::class, 'approvePlan'])->name('kitchen.plans.approve.legacy');
         Route::post('/kitchen/issues', [KitchenController::class, 'issue'])->name('kitchen.issues.store');
         Route::post('/kitchen/issues/{issue}/approve', [KitchenController::class, 'approveIssue'])->name('kitchen.issues.approve.legacy');
+        Route::get('/kitchen/reports/issues', [KitchenIssueReportController::class, 'index'])->name('kitchen.reports.issues');
+        Route::get('/kitchen/reports/issues/export', [KitchenIssueReportController::class, 'export'])->name('kitchen.reports.issues.export');
     });
 
     Route::middleware('permission:guest.manage')->group(function () {

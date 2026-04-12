@@ -55,14 +55,6 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-3">
-    <div class="card-body small text-muted">
-        <div><strong>Meaning:</strong> This is an issue / stock-out report based on approved kitchen issues only. It is not an actual consumption or wastage report.</div>
-        <div><strong>Rate Source:</strong> {{ $rateSource }}</div>
-        <div><strong>Formula:</strong> {{ $rateFormula }}</div>
-    </div>
-</div>
-
 <div class="card shadow-sm">
     <div class="card-header">Approved Kitchen Issue Report</div>
     <div class="card-body table-responsive">

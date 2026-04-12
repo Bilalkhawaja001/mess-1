@@ -357,9 +357,9 @@
     .procurement-grn-actions {
         display: flex;
         justify-content: flex-end;
-        min-width: 148px;
-        padding-left: 0.45rem;
-        padding-right: 0.4rem;
+        min-width: 164px;
+        padding-left: 0.55rem;
+        padding-right: 0.7rem;
     }
 
     .procurement-po-actions .btn,
@@ -367,7 +367,7 @@
         font-size: 0.74rem;
         padding: 0.30rem 0.72rem;
         line-height: 1.2;
-        min-width: 108px;
+        min-width: 118px;
         white-space: nowrap;
     }
 
@@ -377,15 +377,15 @@
         margin-bottom: 0;
     }
 
-    .procurement-grn-table th:nth-child(1), .procurement-grn-table td:nth-child(1) { width: 13%; min-width: 150px; }
-    .procurement-grn-table th:nth-child(2), .procurement-grn-table td:nth-child(2) { width: 10%; min-width: 118px; }
-    .procurement-grn-table th:nth-child(3), .procurement-grn-table td:nth-child(3) { width: 14%; min-width: 140px; }
-    .procurement-grn-table th:nth-child(4), .procurement-grn-table td:nth-child(4) { width: 15%; min-width: 150px; }
-    .procurement-grn-table th:nth-child(5), .procurement-grn-table td:nth-child(5) { width: 20%; min-width: 220px; }
-    .procurement-grn-table th:nth-child(6), .procurement-grn-table td:nth-child(6) { width: 10%; min-width: 110px; }
-    .procurement-grn-table th:nth-child(7), .procurement-grn-table td:nth-child(7) { width: 9%; min-width: 105px; }
-    .procurement-grn-table th:nth-child(8), .procurement-grn-table td:nth-child(8) { width: 10%; min-width: 115px; }
-    .procurement-grn-table th:nth-child(9), .procurement-grn-table td:nth-child(9) { width: 11%; min-width: 168px; }
+    .procurement-grn-table th:nth-child(1), .procurement-grn-table td:nth-child(1) { width: 15%; min-width: 176px; }
+    .procurement-grn-table th:nth-child(2), .procurement-grn-table td:nth-child(2) { width: 11%; min-width: 132px; }
+    .procurement-grn-table th:nth-child(3), .procurement-grn-table td:nth-child(3) { width: 13%; min-width: 138px; }
+    .procurement-grn-table th:nth-child(4), .procurement-grn-table td:nth-child(4) { width: 13%; min-width: 138px; }
+    .procurement-grn-table th:nth-child(5), .procurement-grn-table td:nth-child(5) { width: 16%; min-width: 170px; }
+    .procurement-grn-table th:nth-child(6), .procurement-grn-table td:nth-child(6) { width: 9%; min-width: 104px; }
+    .procurement-grn-table th:nth-child(7), .procurement-grn-table td:nth-child(7) { width: 8%; min-width: 96px; }
+    .procurement-grn-table th:nth-child(8), .procurement-grn-table td:nth-child(8) { width: 8%; min-width: 108px; }
+    .procurement-grn-table th:nth-child(9), .procurement-grn-table td:nth-child(9) { width: 14%; min-width: 192px; }
 
     .procurement-grn-text,
     .procurement-grn-vendor,
@@ -396,6 +396,19 @@
         display: block;
         font-size: 0.76rem;
         line-height: 1.25;
+        max-width: 100%;
+    }
+
+    .procurement-grn-table td:nth-child(1),
+    .procurement-grn-table td:nth-child(2),
+    .procurement-grn-table td:nth-child(8),
+    .procurement-grn-table td:nth-child(9),
+    .procurement-grn-table th:nth-child(1),
+    .procurement-grn-table th:nth-child(2),
+    .procurement-grn-table th:nth-child(8),
+    .procurement-grn-table th:nth-child(9) {
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 
     @media (max-width: 1199.98px) {

@@ -13,9 +13,7 @@
                     </div>
                 </div>
                 <div class="sb-project-copy">
-                    <div class="sb-project-kicker">Project Navigation</div>
                     <div class="sb-project-title">Workspace Panel</div>
-                    <div class="sb-project-sub">Soft compact rail for admin flow</div>
                 </div>
             </div>
         </div>
@@ -82,9 +80,6 @@
 
         <div class="sidebar-bottom">
             <div class="sb-powered-card">
-                <div class="sb-powered-logo">
-                    <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
-                </div>
                 <div class="sb-powered-text">
                     <span>Powerd by</span>
                     <span>NodeSky(smc-Private)Limited</span>

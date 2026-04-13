@@ -75,7 +75,7 @@
         <div class="card shadow-sm mb-3"><div class="card-header">Post Kitchen Issue</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.issues.store') }}" class="row g-2">@csrf
                 <div class="col-md-3"><input name="issue_date" type="date" class="form-control" required></div>
-                <div class="col-md-3"><select name="item_id" id="kitchen-item-select" class="form-select" required>@foreach($items as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
+                <div class="col-md-3"><select name="item_id" id="kitchen-item-select" class="form-select" required>@foreach($issueItems as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
                 <div class="col-md-2"><input name="quantity" id="kitchen-qty-input" type="number" step="0.001" min="0.001" class="form-control" required></div>
                 <div class="col-md-2">
                     <select name="issue_type" class="form-select" required>
@@ -120,7 +120,7 @@
 @endsection
 
 @php
-    $kitchenItemsJson = $items->map(function ($i) {
+    $kitchenItemsJson = $issueItems->map(function ($i) {
         return [
             'id' => $i->id,
             'name' => $i->name,

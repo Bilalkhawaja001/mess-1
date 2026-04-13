@@ -25,6 +25,10 @@ class KitchenController extends Controller
     public function index()
     {
         $items = Item::query()->with('units')->orderBy('name')->get();
+        $issueItems = $items
+            ->where('is_active', true)
+            ->filter(fn (Item $item) => $this->inventoryService->balanceForItem($item->id) > 0)
+            ->values();
         $menus = Menu::query()->latest()->get();
         $recipes = Recipe::query()->latest()->limit(200)->get();
         $plans = MealPlan::query()->latest('plan_date')->limit(200)->get();
@@ -32,7 +36,7 @@ class KitchenController extends Controller
         $consumption = KitchenIssue::query()->selectRaw('item_id, sum(quantity) total_qty')->groupBy('item_id')->get();
         $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.kitchen.index', compact('items', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes'));
+        return view('admin.kitchen.index', compact('items', 'issueItems', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes'));
     }
 
     public function apiMenus(): JsonResponse

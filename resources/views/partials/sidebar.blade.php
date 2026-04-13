@@ -1,17 +1,21 @@
 @php
     $isMember = auth()->check() && auth()->user()->isMemberRole();
-    $path = request()->path();
 @endphp
 <aside class="sidebar">
     <div class="sidebar-inner">
         <div class="sidebar-top">
-            <div class="sb-brand-card">
-                <div class="sb-brand-mark sb-brand-mark-logo">
-                    <img src="{{ asset('branding/dashboard_logo.png') }}" alt="Mess Billing logo">
+            <div class="sb-project-card">
+                <div class="sb-project-symbol-wrap" aria-hidden="true">
+                    <div class="sb-project-symbol">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
                 </div>
-                <div class="sb-brand-copy">
-                    <div class="sb-title">Mess Billing</div>
-                    <div class="sb-sub">Corporate Operations Suite</div>
+                <div class="sb-project-copy">
+                    <div class="sb-project-kicker">Project Navigation</div>
+                    <div class="sb-project-title">Workspace Panel</div>
+                    <div class="sb-project-sub">Soft compact rail for admin flow</div>
                 </div>
             </div>
         </div>

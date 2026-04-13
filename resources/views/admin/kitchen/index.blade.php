@@ -74,23 +74,28 @@
     <div class="col-lg-6">
         <div class="card shadow-sm mb-3"><div class="card-header">Post Kitchen Issue</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.issues.store') }}" class="row g-2">@csrf
-                <div class="col-md-3"><input name="issue_date" type="date" class="form-control" required></div>
-                <div class="col-md-3"><select name="item_id" id="kitchen-item-select" class="form-select" required>@foreach($issueItems as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
-                <div class="col-md-2"><input name="quantity" id="kitchen-qty-input" type="number" step="0.001" min="0.001" class="form-control" required></div>
+                <div class="col-md-3"><input name="issue_date" id="kitchen-issue-date" type="date" class="form-control" value="{{ old('issue_date') }}" required></div>
                 <div class="col-md-2">
-                    <select name="issue_type" class="form-select" required>
-                        <option value="CONSUMPTION">Consumption</option>
-                        <option value="WASTAGE">Wastage</option>
-                        <option value="DAMAGE">Damage</option>
-                        <option value="EXPIRED">Expired</option>
+                    <select name="mess_id" id="kitchen-mess-select" class="form-select" required>
+                        <option value="">Select mess</option>
+                        @foreach($messes as $mess)
+                            <option value="{{ $mess->id }}" @selected((string) old('mess_id') === (string) $mess->id)>{{ $mess->name }}</option>
+                        @endforeach
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <select name="item_id" id="kitchen-item-select" class="form-select" required>
+                        <option value="">Select date and mess first</option>
+                    </select>
+                    <div class="small text-muted" id="kitchen-target-status">Only items with stock and pending target quantity will appear.</div>
+                </div>
+                <div class="col-md-1"><input name="quantity" id="kitchen-qty-input" type="number" step="0.001" min="0.001" class="form-control" value="{{ old('quantity') }}" required></div>
                 <div class="col-md-2">
-                    <select name="mess_id" class="form-select">
-                        <option value="">Mess (optional)</option>
-                        @foreach($messes as $mess)
-                            <option value="{{ $mess->id }}">{{ $mess->name }}</option>
-                        @endforeach
+                    <select name="issue_type" class="form-select" required>
+                        <option value="CONSUMPTION" @selected(old('issue_type') === 'CONSUMPTION')>Consumption</option>
+                        <option value="WASTAGE" @selected(old('issue_type') === 'WASTAGE')>Wastage</option>
+                        <option value="DAMAGE" @selected(old('issue_type') === 'DAMAGE')>Damage</option>
+                        <option value="EXPIRED" @selected(old('issue_type') === 'EXPIRED')>Expired</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -99,7 +104,7 @@
                     </select>
                     <div class="small text-muted" id="kitchen-conversion-preview"></div>
                 </div>
-                <div class="col-md-3"><input name="remarks" class="form-control" placeholder="remarks"></div>
+                <div class="col-md-3"><input name="remarks" class="form-control" placeholder="remarks" value="{{ old('remarks') }}"></div>
                 <div class="col-12"><button class="btn btn-primary">Post Issue</button></div>
             </form>
         </div></div>
@@ -135,29 +140,113 @@
             })->values()->all(),
         ];
     })->values()->all();
+
+    $kitchenTargetsJson = $issueTargets->values()->all();
 @endphp
 
 @push('scripts')
 <script>
     (() => {
         const items = @json($kitchenItemsJson);
+        const targets = @json($kitchenTargetsJson);
+        const oldItemId = @json(old('item_id'));
         const itemsById = {};
-        items.forEach((i) => { itemsById[i.id] = i; });
+        const targetsByContext = {};
 
+        items.forEach((i) => { itemsById[i.id] = i; });
+        targets.forEach((target) => {
+            const key = `${target.target_date}|${target.mess_id}|${target.item_id}`;
+            targetsByContext[key] = target;
+        });
+
+        const issueDateInput = document.getElementById('kitchen-issue-date');
+        const messSelect = document.getElementById('kitchen-mess-select');
         const itemSelect = document.getElementById('kitchen-item-select');
         const unitSelect = document.getElementById('kitchen-unit-select');
         const qtyInput = document.getElementById('kitchen-qty-input');
         const preview = document.getElementById('kitchen-conversion-preview');
+        const targetStatus = document.getElementById('kitchen-target-status');
+
+        const selectedContextItems = () => {
+            const issueDate = issueDateInput?.value || '';
+            const messId = Number(messSelect?.value || 0);
+
+            if (!issueDate || !messId) {
+                return [];
+            }
+
+            return items.filter((item) => {
+                const target = targetsByContext[`${issueDate}|${messId}|${item.id}`];
+                return !!target && Number(target.pending_qty || 0) > 0;
+            });
+        };
+
+        const syncItems = () => {
+            if (!itemSelect) {
+                return;
+            }
+
+            const options = selectedContextItems();
+            const previousValue = itemSelect.value || oldItemId || '';
+            itemSelect.innerHTML = '';
+
+            if (options.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'No pending target items for selected date and mess';
+                itemSelect.appendChild(opt);
+                itemSelect.value = '';
+                if (targetStatus) {
+                    targetStatus.textContent = 'No item is eligible until a matching kitchen issue target exists with pending quantity and positive stock.';
+                }
+                syncUnits();
+                return;
+            }
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select item';
+            itemSelect.appendChild(placeholder);
+
+            options.forEach((item) => {
+                const issueDate = issueDateInput?.value || '';
+                const messId = Number(messSelect?.value || 0);
+                const target = targetsByContext[`${issueDate}|${messId}|${item.id}`];
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = `${item.name} (pending ${Number(target?.pending_qty || 0).toFixed(3)} ${item.base_uom})`;
+                if (String(previousValue) === String(item.id)) {
+                    opt.selected = true;
+                }
+                itemSelect.appendChild(opt);
+            });
+
+            if (targetStatus) {
+                targetStatus.textContent = 'Dropdown shows only stock-positive items with a pending kitchen target for the selected date and mess.';
+            }
+
+            syncUnits();
+        };
 
         const syncUnits = () => {
             const itemId = Number(itemSelect?.value || 0);
             const item = itemsById[itemId];
-            if (!unitSelect || !item) {
+            if (!unitSelect) {
+                return;
+            }
+
+            unitSelect.innerHTML = '';
+
+            if (!item) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'Base unit';
+                unitSelect.appendChild(opt);
+                syncPreview();
                 return;
             }
 
             const units = item.units || [];
-            unitSelect.innerHTML = '';
 
             if (units.length === 0) {
                 const opt = document.createElement('option');
@@ -207,11 +296,13 @@
             preview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.base_uom}`;
         };
 
+        issueDateInput?.addEventListener('change', syncItems);
+        messSelect?.addEventListener('change', syncItems);
         itemSelect?.addEventListener('change', syncUnits);
         unitSelect?.addEventListener('change', syncPreview);
         qtyInput?.addEventListener('input', syncPreview);
 
-        syncUnits();
+        syncItems();
     })();
 </script>
 @endpush

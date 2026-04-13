@@ -95,7 +95,7 @@
 
 @section('content')
 @php
-    $procurementPoLinesJson = $pos->mapWithKeys(function ($po) {
+    $procurementPoLinesJson = $grnEligiblePos->mapWithKeys(function ($po) {
         return [
             $po->id => $po->lines->map(function ($line) {
                 return [
@@ -166,7 +166,7 @@
                 <label class="form-label">Purchase Order</label>
                 <select name="purchase_order_id" id="grn-po-select" class="form-select @error('purchase_order_id') is-invalid @enderror" required>
                     <option value="">Select PO</option>
-                    @foreach($pos as $po)
+                    @foreach($grnEligiblePos as $po)
                         <option value="{{ $po->id }}" data-lines='@json($procurementPoLinesJson[$po->id] ?? [])' @selected((string) old('purchase_order_id') === (string) $po->id)>
                             {{ $po->po_number }} — {{ $po->vendor->name ?? 'Vendor' }}
                         </option>

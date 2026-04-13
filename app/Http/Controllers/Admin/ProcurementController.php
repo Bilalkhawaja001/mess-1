@@ -57,9 +57,12 @@ class ProcurementController extends Controller
 
                 return $po;
             });
+        $grnEligiblePos = $pos
+            ->filter(fn (PurchaseOrder $po) => $po->lines->contains(fn ($line) => (float) ($line->pending_qty ?? 0) > 0))
+            ->values();
         $grns = GoodsReceipt::query()->with(['purchaseOrder.vendor', 'lines.item'])->latest()->limit(50)->get();
 
-        return view('admin.procurement.index', compact('vendors', 'items', 'pos', 'grns'));
+        return view('admin.procurement.index', compact('vendors', 'items', 'pos', 'grnEligiblePos', 'grns'));
     }
 
     public function storeVendor(Request $r): RedirectResponse
@@ -166,6 +169,19 @@ class ProcurementController extends Controller
             return back()->withErrors(['item_id' => 'Selected item does not match the PO item.'])->withInput();
         }
 
+        $poHasPendingLines = $po->lines->contains(function (PurchaseOrderLine $line) use ($po): bool {
+            $receivedQty = (float) $po->goodsReceipts
+                ->flatMap->lines
+                ->where('item_id', (int) $line->item_id)
+                ->sum('qty_received');
+
+            return max((float) $line->qty_ordered - $receivedQty, 0) > 0;
+        });
+
+        if (! $poHasPendingLines) {
+            return back()->withErrors(['purchase_order_id' => 'Selected PO is already fully received.'])->withInput();
+        }
+
         $lineReceivedQty = (float) $po->goodsReceipts
             ->flatMap->lines
             ->where('item_id', (int) $poLine->item_id)
@@ -195,6 +211,19 @@ class ProcurementController extends Controller
 
             if (! $poLine) {
                 throw new \RuntimeException('Selected PO line is invalid.');
+            }
+
+            $poHasPendingLines = $po->lines->contains(function (PurchaseOrderLine $line) use ($po): bool {
+                $receivedQty = (float) $po->goodsReceipts
+                    ->flatMap->lines
+                    ->where('item_id', (int) $line->item_id)
+                    ->sum('qty_received');
+
+                return max((float) $line->qty_ordered - $receivedQty, 0) > 0;
+            });
+
+            if (! $poHasPendingLines) {
+                throw new \RuntimeException('Selected PO is already fully received.');
             }
 
             $lockedPoUnitPrice = round((float) $poLine->unit_price, 2);

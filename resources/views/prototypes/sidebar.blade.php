@@ -15,8 +15,8 @@
         body.sidebar-prototype-page {
             min-height: 100vh;
             font-family: 'Inter', system-ui, sans-serif;
-            background: linear-gradient(180deg, #f8efe9 0%, #f3e3dc 100%);
-            color: #694842;
+            background: linear-gradient(180deg, #fbf4ef 0%, #f6e8e1 100%);
+            color: #7a5952;
         }
         .sidebar-prototype-page a { text-decoration: none; }
         .proto-shell { min-height: 100vh; }
@@ -34,9 +34,9 @@
             gap: 12px;
             padding: 12px 10px;
             border-radius: 30px;
-            background: linear-gradient(180deg, #c78f87 0%, #b97d77 100%);
-            border: 1px solid rgba(255,255,255,0.22);
-            box-shadow: 0 24px 48px rgba(139, 84, 71, 0.18), inset 0 1px 0 rgba(255,255,255,0.14);
+            background: linear-gradient(180deg, #cda29b 0%, #bf8d86 100%);
+            border: 1px solid rgba(255,255,255,0.28);
+            box-shadow: 0 24px 48px rgba(158, 110, 98, 0.14), inset 0 1px 0 rgba(255,255,255,0.18);
             overflow: hidden;
         }
         .proto-sidebar-top, .proto-sidebar-bottom { flex-shrink: 0; }
@@ -47,18 +47,18 @@
             gap: 10px;
             padding: 12px 10px;
             border-radius: 18px;
-            background: linear-gradient(180deg, rgba(249,233,224,0.32), rgba(244,217,206,0.14));
-            border: 1px solid rgba(255,255,255,0.18);
+            background: linear-gradient(180deg, rgba(250,239,232,0.34), rgba(246,226,216,0.16));
+            border: 1px solid rgba(255,255,255,0.22);
         }
         .proto-brand-logo {
             width: 42px;
             height: 42px;
             border-radius: 13px;
             padding: 6px;
-            background: linear-gradient(180deg, rgba(255,250,247,0.98), rgba(248,232,224,0.92));
+            background: linear-gradient(180deg, rgba(255,252,249,0.98), rgba(249,235,227,0.94));
             display: grid;
             place-items: center;
-            box-shadow: 0 10px 20px rgba(132,80,68,0.10);
+            box-shadow: 0 10px 20px rgba(154,104,92,0.08);
             flex-shrink: 0;
         }
         .proto-brand-logo img, .proto-footer-logo img {
@@ -71,14 +71,14 @@
             font-size: 0.84rem;
             font-weight: 700;
             line-height: 1.1;
-            color: #fff8f3;
+            color: #fffaf6;
         }
         .proto-brand-sub {
             margin-top: 2px;
             font-size: 0.56rem;
             text-transform: uppercase;
             letter-spacing: 0.09em;
-            color: rgba(255,241,233,0.84);
+            color: rgba(255,246,240,0.84);
         }
         .proto-nav-scroll {
             height: 100%;
@@ -88,18 +88,18 @@
         }
         .proto-nav-scroll::-webkit-scrollbar { width: 5px; }
         .proto-nav-scroll::-webkit-scrollbar-thumb {
-            background: rgba(136,82,71,0.34);
+            background: rgba(159,113,101,0.28);
             border-radius: 999px;
         }
         .proto-nav-group {
             padding: 10px 8px 8px;
             border-radius: 18px;
-            background: linear-gradient(180deg, rgba(249,232,223,0.16), rgba(255,255,255,0.04));
-            border: 1px solid rgba(255,255,255,0.10);
+            background: linear-gradient(180deg, rgba(250,238,231,0.16), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255,255,255,0.11);
         }
         .proto-nav-group + .proto-nav-group { margin-top: 10px; }
         .proto-nav-group-soft {
-            background: linear-gradient(180deg, rgba(243,218,206,0.20), rgba(255,255,255,0.04));
+            background: linear-gradient(180deg, rgba(247,227,216,0.22), rgba(255,255,255,0.05));
         }
         .proto-nav-group-head {
             display: flex;
@@ -112,12 +112,12 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.18em;
-            color: rgba(255,241,232,0.88);
+            color: rgba(255,247,241,0.88);
         }
         .proto-nav-group-line {
             flex: 1;
             height: 1px;
-            background: rgba(255,242,236,0.24);
+            background: rgba(255,245,239,0.24);
         }
         .proto-nav-list {
             display: flex;
@@ -131,21 +131,21 @@
             min-height: 36px;
             padding: 6px 9px;
             border-radius: 14px;
-            background: rgba(255,255,255,0.04);
-            color: rgba(102,63,58,0.96);
+            background: rgba(255,250,247,0.08);
+            color: #785550;
             font-size: 0.69rem;
             font-weight: 500;
             transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
         }
         .proto-nav-item:hover {
-            background: rgba(249, 234, 224, 0.58);
-            color: #6a4541;
-            box-shadow: 0 8px 18px rgba(146,92,80,0.07);
+            background: rgba(251, 240, 233, 0.62);
+            color: #704b46;
+            box-shadow: 0 8px 18px rgba(165,113,100,0.06);
         }
         .proto-nav-item.active {
-            background: linear-gradient(180deg, rgba(251,236,226,0.95), rgba(244,220,208,0.92));
-            color: #6b4640;
-            box-shadow: 0 10px 24px rgba(143,88,76,0.13), inset 0 1px 0 rgba(255,255,255,0.78);
+            background: linear-gradient(180deg, rgba(255,245,238,0.98), rgba(246,226,215,0.94));
+            color: #6f4a44;
+            box-shadow: 0 10px 24px rgba(177,125,111,0.10), inset 0 1px 0 rgba(255,255,255,0.84);
         }
         .proto-nav-icon {
             width: 22px;
@@ -155,12 +155,12 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            background: rgba(255,248,243,0.26);
-            color: rgba(126,82,74,0.85);
+            background: rgba(255,249,245,0.28);
+            color: rgba(141,96,87,0.82);
         }
         .proto-nav-item.active .proto-nav-icon {
-            background: rgba(255,255,255,0.46);
-            color: #a16459;
+            background: rgba(255,255,255,0.62);
+            color: #b07b70;
         }
         .proto-nav-text {
             flex: 1;
@@ -169,10 +169,10 @@
         .proto-footer-card {
             padding: 12px 10px 11px;
             border-radius: 18px;
-            background: linear-gradient(180deg, rgba(248,232,223,0.92), rgba(240,214,203,0.82));
-            border: 1px solid rgba(255,255,255,0.30);
+            background: linear-gradient(180deg, rgba(251,241,235,0.94), rgba(243,223,213,0.84));
+            border: 1px solid rgba(255,255,255,0.34);
             text-align: center;
-            box-shadow: 0 12px 24px rgba(136,84,72,0.10);
+            box-shadow: 0 12px 24px rgba(168,116,103,0.08);
         }
         .proto-footer-logo {
             width: 42px;
@@ -180,10 +180,10 @@
             margin: 0 auto 8px;
             padding: 7px;
             border-radius: 12px;
-            background: linear-gradient(180deg, rgba(255,251,248,0.98), rgba(247,230,222,0.92));
+            background: linear-gradient(180deg, rgba(255,252,249,0.98), rgba(249,236,229,0.94));
             display: grid;
             place-items: center;
-            box-shadow: 0 8px 18px rgba(139,88,76,0.10);
+            box-shadow: 0 8px 18px rgba(170,118,105,0.08);
         }
         .proto-footer-text {
             display: flex;
@@ -191,20 +191,20 @@
             gap: 2px;
             align-items: center;
             line-height: 1.18;
-            color: #7f544d;
+            color: #87615a;
             font-weight: 600;
         }
         .proto-footer-text span:first-child {
             font-size: 0.60rem;
             letter-spacing: 0.05em;
-            color: #966259;
+            color: #a2766c;
         }
         .proto-footer-text span:last-child {
             display: block;
             white-space: nowrap;
             font-size: 0.54rem;
             letter-spacing: 0.01em;
-            color: #7d5049;
+            color: #865f58;
         }
         .proto-content {
             margin-left: 230px;
@@ -215,16 +215,16 @@
             min-height: calc(100vh - 56px);
             padding: 28px;
             border-radius: 30px;
-            background: rgba(255,255,255,0.52);
-            border: 1px solid rgba(255,255,255,0.44);
-            box-shadow: 0 20px 44px rgba(161,112,99,0.10);
+            background: rgba(255,255,255,0.60);
+            border: 1px solid rgba(255,255,255,0.48);
+            box-shadow: 0 20px 44px rgba(177,128,114,0.08);
         }
         .proto-kicker {
             display: inline-flex;
             padding: 0.4rem 0.7rem;
             border-radius: 999px;
-            background: rgba(190,126,112,0.10);
-            color: #a1675d;
+            background: rgba(201,145,130,0.10);
+            color: #b07b70;
             font-size: 0.68rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -234,11 +234,11 @@
             margin: 16px 0 10px;
             font-size: 2rem;
             font-weight: 800;
-            color: #5e3f3a;
+            color: #6c4a44;
         }
         .proto-copy {
             max-width: 760px;
-            color: #7a5a54;
+            color: #8b6861;
             line-height: 1.7;
         }
         .proto-surface-grid {
@@ -250,8 +250,8 @@
         .proto-surface-box {
             min-height: 180px;
             border-radius: 24px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.74), rgba(248,232,225,0.64));
-            border: 1px solid rgba(255,255,255,0.52);
+            background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(250,238,232,0.68));
+            border: 1px solid rgba(255,255,255,0.54);
         }
         .proto-surface-box.tall {
             grid-column: span 2;

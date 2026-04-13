@@ -15,8 +15,8 @@
         body.sidebar-prototype-page {
             min-height: 100vh;
             font-family: 'Inter', system-ui, sans-serif;
-            background: linear-gradient(180deg, #fbf4ef 0%, #f6e8e1 100%);
-            color: #7a5952;
+            background: linear-gradient(180deg, #0b1424 0%, #101b31 100%);
+            color: #d9e5ff;
         }
         .sidebar-prototype-page a { text-decoration: none; }
         .proto-shell { min-height: 100vh; }
@@ -34,9 +34,9 @@
             gap: 12px;
             padding: 12px 10px;
             border-radius: 30px;
-            background: linear-gradient(180deg, #cda29b 0%, #bf8d86 100%);
-            border: 1px solid rgba(255,255,255,0.28);
-            box-shadow: 0 24px 48px rgba(158, 110, 98, 0.14), inset 0 1px 0 rgba(255,255,255,0.18);
+            background: linear-gradient(180deg, #10213d 0%, #0d1a31 100%);
+            border: 1px solid rgba(148,175,255,0.16);
+            box-shadow: 0 24px 48px rgba(3, 8, 20, 0.34), inset 0 1px 0 rgba(255,255,255,0.06);
             overflow: hidden;
         }
         .proto-sidebar-top, .proto-sidebar-bottom { flex-shrink: 0; }
@@ -47,18 +47,18 @@
             gap: 12px;
             padding: 12px 11px;
             border-radius: 22px;
-            background: linear-gradient(180deg, rgba(252,244,239,0.34), rgba(247,228,219,0.16));
-            border: 1px solid rgba(255,255,255,0.24);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+            background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            border: 1px solid rgba(148,175,255,0.14);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .proto-project-symbol-wrap {
             width: 46px;
             height: 46px;
             border-radius: 16px;
-            background: linear-gradient(180deg, rgba(255,253,250,0.98), rgba(250,237,230,0.96));
+            background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(159,193,255,0.08));
             display: grid;
             place-items: center;
-            box-shadow: 0 10px 20px rgba(154,104,92,0.10);
+            box-shadow: 0 10px 20px rgba(4,10,24,0.20);
             flex-shrink: 0;
         }
         .proto-project-symbol {
@@ -72,7 +72,7 @@
             display: block;
             width: 5px;
             border-radius: 999px;
-            background: linear-gradient(180deg, #c68f86 0%, #b67e77 100%);
+            background: linear-gradient(180deg, #8eb3ff 0%, #5d82d6 100%);
         }
         .proto-project-symbol span:nth-child(1) { height: 10px; opacity: 0.7; }
         .proto-project-symbol span:nth-child(2) { height: 16px; }
@@ -87,19 +87,19 @@
             font-size: 0.50rem;
             text-transform: uppercase;
             letter-spacing: 0.16em;
-            color: rgba(255,247,241,0.76);
+            color: rgba(205,223,255,0.74);
         }
         .proto-project-title {
             font-size: 0.80rem;
             font-weight: 700;
             line-height: 1.06;
-            color: #fffaf6;
+            color: #f5f9ff;
             white-space: nowrap;
         }
         .proto-project-sub {
             font-size: 0.56rem;
             line-height: 1.25;
-            color: rgba(255,244,238,0.82);
+            color: rgba(201,217,245,0.78);
         }
         .proto-footer-logo img {
             width: 100%;
@@ -115,18 +115,18 @@
         }
         .proto-nav-scroll::-webkit-scrollbar { width: 5px; }
         .proto-nav-scroll::-webkit-scrollbar-thumb {
-            background: rgba(159,113,101,0.28);
+            background: rgba(114,147,212,0.34);
             border-radius: 999px;
         }
         .proto-nav-group {
             padding: 10px 8px 8px;
             border-radius: 20px;
-            background: linear-gradient(180deg, rgba(251,241,235,0.18), rgba(255,255,255,0.05));
-            border: 1px solid rgba(255,255,255,0.12);
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+            border: 1px solid rgba(148,175,255,0.10);
         }
         .proto-nav-group + .proto-nav-group { margin-top: 10px; }
         .proto-nav-group-soft {
-            background: linear-gradient(180deg, rgba(249,231,221,0.24), rgba(255,255,255,0.05));
+            background: linear-gradient(180deg, rgba(122,152,214,0.12), rgba(255,255,255,0.02));
         }
         .proto-nav-group-head {
             display: flex;
@@ -139,12 +139,12 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.18em;
-            color: rgba(255,247,241,0.88);
+            color: rgba(208,224,255,0.84);
         }
         .proto-nav-group-line {
             flex: 1;
             height: 1px;
-            background: rgba(255,245,239,0.24);
+            background: rgba(164,188,238,0.22);
         }
         .proto-nav-list {
             display: flex;
@@ -159,28 +159,28 @@
             min-height: 42px;
             padding: 7px 10px;
             border-radius: 17px;
-            background: linear-gradient(180deg, rgba(255,251,248,0.26), rgba(255,247,243,0.10));
-            color: #785550;
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+            color: #d8e4ff;
             font-size: 0.67rem;
             font-weight: 500;
             transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
         }
         .proto-nav-item:hover {
-            background: linear-gradient(180deg, rgba(252,243,237,0.74), rgba(247,229,220,0.54));
-            color: #704b46;
-            box-shadow: 0 10px 20px rgba(165,113,100,0.07);
+            background: linear-gradient(180deg, rgba(95,126,189,0.30), rgba(57,84,137,0.22));
+            color: #eef4ff;
+            box-shadow: 0 10px 20px rgba(3,10,24,0.16);
         }
         .proto-nav-item.active {
-            background: linear-gradient(180deg, rgba(255,248,243,0.98), rgba(247,229,219,0.94));
-            color: #6f4a44;
-            box-shadow: 0 12px 22px rgba(177,125,111,0.12), inset 0 1px 0 rgba(255,255,255,0.90);
+            background: linear-gradient(180deg, rgba(120,151,219,0.34), rgba(70,99,160,0.30));
+            color: #f5f9ff;
+            box-shadow: 0 12px 22px rgba(4,12,28,0.24), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .proto-nav-item.active::after {
             content: '';
             position: absolute;
             inset: 0;
             border-radius: 16px;
-            box-shadow: inset 0 0 0 1px rgba(236,202,187,0.62);
+            box-shadow: inset 0 0 0 1px rgba(163,191,247,0.36);
             pointer-events: none;
         }
         .proto-nav-icon {
@@ -191,13 +191,13 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            background: linear-gradient(180deg, rgba(255,252,249,0.62), rgba(249,236,229,0.38));
-            color: rgba(141,96,87,0.82);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.38);
+            background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(121,151,212,0.08));
+            color: rgba(193,214,255,0.86);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
         }
         .proto-nav-item.active .proto-nav-icon {
-            background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(249,236,229,0.58));
-            color: #b07b70;
+            background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(183,206,255,0.10));
+            color: #f5f9ff;
         }
         .proto-nav-text {
             flex: 1;
@@ -207,10 +207,10 @@
         .proto-footer-card {
             padding: 16px 12px 14px;
             border-radius: 22px;
-            background: linear-gradient(180deg, rgba(252,244,239,0.98), rgba(245,227,218,0.90));
-            border: 1px solid rgba(255,255,255,0.40);
+            background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(120,148,204,0.06));
+            border: 1px solid rgba(148,175,255,0.16);
             text-align: center;
-            box-shadow: 0 16px 26px rgba(168,116,103,0.11), inset 0 1px 0 rgba(255,255,255,0.56);
+            box-shadow: 0 16px 26px rgba(3,10,24,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .proto-footer-logo {
             width: 46px;
@@ -218,10 +218,10 @@
             margin: 0 auto 10px;
             padding: 8px;
             border-radius: 14px;
-            background: linear-gradient(180deg, rgba(255,253,250,0.98), rgba(250,238,231,0.96));
+            background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(160,189,247,0.10));
             display: grid;
             place-items: center;
-            box-shadow: 0 10px 18px rgba(170,118,105,0.09);
+            box-shadow: 0 10px 18px rgba(4,10,24,0.18);
         }
         .proto-footer-text {
             display: flex;
@@ -229,13 +229,13 @@
             gap: 4px;
             align-items: center;
             line-height: 1.15;
-            color: #87615a;
+            color: #d6e3ff;
             font-weight: 600;
         }
         .proto-footer-text span:first-child {
             font-size: 0.62rem;
             letter-spacing: 0.08em;
-            color: #a2766c;
+            color: #9bbcff;
             text-transform: uppercase;
         }
         .proto-footer-text span:last-child {
@@ -243,7 +243,7 @@
             white-space: nowrap;
             font-size: 0.58rem;
             letter-spacing: 0.015em;
-            color: #865f58;
+            color: #dbe7ff;
         }
         .proto-content {
             margin-left: 230px;
@@ -254,16 +254,16 @@
             min-height: calc(100vh - 56px);
             padding: 28px;
             border-radius: 30px;
-            background: rgba(255,255,255,0.60);
-            border: 1px solid rgba(255,255,255,0.48);
-            box-shadow: 0 20px 44px rgba(177,128,114,0.08);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(140,170,230,0.12);
+            box-shadow: 0 20px 44px rgba(2,8,20,0.24);
         }
         .proto-kicker {
             display: inline-flex;
             padding: 0.4rem 0.7rem;
             border-radius: 999px;
-            background: rgba(201,145,130,0.10);
-            color: #b07b70;
+            background: rgba(120,151,219,0.14);
+            color: #9ebeff;
             font-size: 0.68rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -273,11 +273,11 @@
             margin: 16px 0 10px;
             font-size: 2rem;
             font-weight: 800;
-            color: #6c4a44;
+            color: #f3f7ff;
         }
         .proto-copy {
             max-width: 760px;
-            color: #8b6861;
+            color: #bed0f4;
             line-height: 1.7;
         }
         .proto-surface-grid {
@@ -289,8 +289,8 @@
         .proto-surface-box {
             min-height: 180px;
             border-radius: 24px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(250,238,232,0.68));
-            border: 1px solid rgba(255,255,255,0.54);
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(116,145,201,0.04));
+            border: 1px solid rgba(140,170,230,0.12);
         }
         .proto-surface-box.tall {
             grid-column: span 2;

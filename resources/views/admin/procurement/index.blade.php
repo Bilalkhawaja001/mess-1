@@ -105,6 +105,7 @@
                     'ordered' => number_format((float) $line->qty_ordered, 3, '.', ''),
                     'received' => number_format((float) ($line->received_qty ?? 0), 3, '.', ''),
                     'pending' => number_format((float) ($line->pending_qty ?? 0), 3, '.', ''),
+                    'unit_price' => number_format((float) $line->unit_price, 2, '.', ''),
                 ];
             })->values()->all(),
         ];
@@ -216,8 +217,28 @@
             @error('unit_code')
                 <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
             @enderror
-            <div class="col-12"><input type="number" step="0.01" min="0.01" name="unit_cost" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}"></div>
+            <div class="col-12">
+                <label class="form-label">PO Unit Cost</label>
+                <input type="text" id="grn-po-unit-cost" class="form-control" readonly placeholder="Select PO line first">
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" name="override_po_rate" id="grn-override-rate" @checked(old('override_po_rate'))>
+                    <label class="form-check-label" for="grn-override-rate">Override PO rate</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Actual GRN Unit Cost</label>
+                <input type="number" step="0.01" min="0.01" name="unit_cost" id="grn-unit-cost-input" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}">
+            </div>
             @error('unit_cost')
+                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+            @enderror
+            <div class="col-12 d-none" id="grn-override-reason-wrap">
+                <label class="form-label">Override Reason</label>
+                <input type="text" name="override_reason" id="grn-override-reason" class="form-control @error('override_reason') is-invalid @enderror" maxlength="500" placeholder="Why actual GRN rate differs from PO rate" value="{{ old('override_reason') }}">
+            </div>
+            @error('override_reason')
                 <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
             @enderror
             <div class="col-12"><button class="btn btn-primary" id="grn-submit-btn">Create GRN</button></div>
@@ -388,6 +409,11 @@
         const grnBlockMessage = document.getElementById('grn-block-message');
         const grnUnitSelect = document.getElementById('grn-unit-select');
         const grnConversionPreview = document.getElementById('grn-conversion-preview');
+        const grnPoUnitCost = document.getElementById('grn-po-unit-cost');
+        const grnUnitCostInput = document.getElementById('grn-unit-cost-input');
+        const grnOverrideRate = document.getElementById('grn-override-rate');
+        const grnOverrideReasonWrap = document.getElementById('grn-override-reason-wrap');
+        const grnOverrideReason = document.getElementById('grn-override-reason');
 
         const syncPo = () => {
             const option = poSelect?.selectedOptions?.[0];
@@ -400,6 +426,12 @@
                 grnReceived.textContent = '0.000';
                 grnPending.textContent = '0.000';
                 grnQtyInput.removeAttribute('max');
+                if (grnPoUnitCost) grnPoUnitCost.value = '';
+                if (grnUnitCostInput) grnUnitCostInput.value = '';
+                if (grnOverrideRate) grnOverrideRate.checked = false;
+                if (grnOverrideReasonWrap) grnOverrideReasonWrap.classList.add('d-none');
+                if (grnOverrideReason) grnOverrideReason.value = '';
+                if (grnUnitCostInput) grnUnitCostInput.readOnly = true;
                 return;
             }
 
@@ -413,6 +445,7 @@
                 opt.dataset.ordered = line.ordered;
                 opt.dataset.received = line.received;
                 opt.dataset.pending = line.pending;
+                opt.dataset.unitPrice = line.unit_price;
                 opt.textContent = `${line.item_label} | Pending ${line.pending}`;
                 grnLineSelect.appendChild(opt);
             });
@@ -429,6 +462,12 @@
                 grnReceived.textContent = '0.000';
                 grnPending.textContent = '0.000';
                 grnQtyInput.removeAttribute('max');
+                if (grnPoUnitCost) grnPoUnitCost.value = '';
+                if (grnUnitCostInput) grnUnitCostInput.value = '';
+                if (grnOverrideRate) grnOverrideRate.checked = false;
+                if (grnOverrideReasonWrap) grnOverrideReasonWrap.classList.add('d-none');
+                if (grnOverrideReason) grnOverrideReason.value = '';
+                if (grnUnitCostInput) grnUnitCostInput.readOnly = true;
                 if (grnUnitSelect) {
                     grnUnitSelect.innerHTML = '<option value="">Select unit</option>';
                 }
@@ -445,6 +484,12 @@
             grnReceived.textContent = line.dataset.received || '0.000';
             grnPending.textContent = line.dataset.pending || '0.000';
             grnQtyInput.max = line.dataset.pending || '';
+            if (grnPoUnitCost) grnPoUnitCost.value = line.dataset.unitPrice || '';
+            if (grnUnitCostInput) grnUnitCostInput.value = line.dataset.unitPrice || '';
+            if (grnOverrideRate) grnOverrideRate.checked = false;
+            if (grnOverrideReasonWrap) grnOverrideReasonWrap.classList.add('d-none');
+            if (grnOverrideReason) grnOverrideReason.value = '';
+            if (grnUnitCostInput) grnUnitCostInput.readOnly = true;
 
             if (grnUnitSelect) {
                 const itemId = Number(line.dataset.itemId || 0);
@@ -500,6 +545,25 @@
             grnConversionPreview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.base_uom}`;
         };
 
+        const syncGrnRateMode = () => {
+            const overrideEnabled = !!grnOverrideRate?.checked;
+            if (grnUnitCostInput) {
+                grnUnitCostInput.readOnly = !overrideEnabled;
+            }
+            if (grnOverrideReasonWrap) {
+                grnOverrideReasonWrap.classList.toggle('d-none', !overrideEnabled);
+            }
+            if (grnOverrideReason) {
+                grnOverrideReason.disabled = !overrideEnabled;
+                if (!overrideEnabled) {
+                    grnOverrideReason.value = '';
+                }
+            }
+            if (!overrideEnabled && grnPoUnitCost && grnUnitCostInput) {
+                grnUnitCostInput.value = grnPoUnitCost.value || '';
+            }
+        };
+
         const syncGrnQtyGuard = () => {
             const pending = Number(grnPending.textContent || 0);
             const qty = Number(grnQtyInput.value || 0);
@@ -530,6 +594,7 @@
             syncGrnConversion();
         });
         grnUnitSelect?.addEventListener('change', syncGrnConversion);
+        grnOverrideRate?.addEventListener('change', syncGrnRateMode);
 
         document.getElementById('po-form')?.addEventListener('submit', () => {
             if (poSubmitBtn) {
@@ -547,6 +612,7 @@
         });
 
         syncPo();
+        syncGrnRateMode();
         syncGrnQtyGuard();
     })();
 </script>

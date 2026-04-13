@@ -139,6 +139,8 @@ class ProcurementController extends Controller
             'qty_received' => 'required|numeric|gt:0',
             'unit_cost' => 'required|numeric|gt:0',
             'unit_code' => 'required|string|max:20',
+            'override_po_rate' => 'nullable|boolean',
+            'override_reason' => 'nullable|string|max:500',
         ]);
 
         $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
@@ -146,6 +148,18 @@ class ProcurementController extends Controller
 
         if (! $poLine) {
             return back()->withErrors(['purchase_order_line_id' => 'Selected PO line is invalid.'])->withInput();
+        }
+
+        $poUnitPrice = round((float) $poLine->unit_price, 2);
+        $grnUnitCost = round((float) $d['unit_cost'], 2);
+        $overridePoRate = (bool) ($d['override_po_rate'] ?? false);
+
+        if (! $overridePoRate && $grnUnitCost !== $poUnitPrice) {
+            return back()->withErrors(['unit_cost' => 'GRN unit cost must match the selected PO line rate unless override is enabled.'])->withInput();
+        }
+
+        if ($overridePoRate && blank($d['override_reason'] ?? null)) {
+            return back()->withErrors(['override_reason' => 'Override reason is required when PO rate override is enabled.'])->withInput();
         }
 
         if ((int) $poLine->item_id !== (int) $d['item_id']) {
@@ -175,12 +189,23 @@ class ProcurementController extends Controller
             return back()->withErrors(['unit_code' => 'Invalid unit for item'])->withInput();
         }
 
-        DB::transaction(function () use ($d, $r, $item, $unit, &$grn) {
+        DB::transaction(function () use ($d, $r, $item, $unit, $overridePoRate, $poUnitPrice, $grnUnitCost, &$grn) {
             $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->lockForUpdate()->findOrFail($d['purchase_order_id']);
             $poLine = $po->lines->firstWhere('id', (int) $d['purchase_order_line_id']);
 
             if (! $poLine) {
                 throw new \RuntimeException('Selected PO line is invalid.');
+            }
+
+            $lockedPoUnitPrice = round((float) $poLine->unit_price, 2);
+            $lockedGrnUnitCost = round((float) $d['unit_cost'], 2);
+
+            if (! $overridePoRate && $lockedGrnUnitCost !== $lockedPoUnitPrice) {
+                throw new \RuntimeException('GRN unit cost must match the selected PO line rate unless override is enabled.');
+            }
+
+            if ($overridePoRate && blank($d['override_reason'] ?? null)) {
+                throw new \RuntimeException('Override reason is required when PO rate override is enabled.');
             }
 
             if ((int) $poLine->item_id !== (int) $d['item_id']) {
@@ -206,7 +231,9 @@ class ProcurementController extends Controller
                 'purchase_order_id' => $d['purchase_order_id'],
                 'grn_number' => 'GRN-'.now()->format('YmdHis'),
                 'received_date' => $d['received_date'],
-                'remarks' => $r->input('remarks'),
+                'remarks' => $overridePoRate
+                    ? 'GRN rate override. PO rate: '.number_format($poUnitPrice, 2, '.', '').'; Actual GRN rate: '.number_format($grnUnitCost, 2, '.', '').'; Reason: '.trim((string) ($d['override_reason'] ?? ''))
+                    : $r->input('remarks'),
             ]);
 
             GoodsReceiptLine::create([

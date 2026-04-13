@@ -58,6 +58,7 @@ Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'
     Route::get('/api/menus', [KitchenController::class, 'apiMenus'])->name('api.menus');
     Route::get('/api/guest-rate', [GuestController::class, 'guestRate'])->name('api.guest-rate');
     Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.legacy');
+    Route::view('/prototype/sidebar', 'prototypes.sidebar')->name('prototype.sidebar');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {

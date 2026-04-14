@@ -5,6 +5,120 @@
 
 @section('content')
 <div class="row g-3">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <strong>Kitchen Month Summary / Ledger</strong>
+                    <div class="small text-muted">Approved kitchen issues only. Draft issues are excluded from monthly truth.</div>
+                </div>
+                <form method="GET" action="{{ route('admin.kitchen.index') }}" class="d-flex gap-2 align-items-center">
+                    <input type="month" name="month" class="form-control" value="{{ $selectedMonth }}">
+                    <button class="btn btn-outline-primary btn-sm">Load</button>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Month</div><div class="fw-semibold">{{ $kitchenMonthSummary['month_start']->format('F Y') }}</div></div></div>
+                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Approved Issues</div><div class="fw-semibold">{{ $kitchenMonthSummary['approved_issue_count'] }}</div></div></div>
+                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Approved Qty</div><div class="fw-semibold">{{ number_format((float) $kitchenMonthSummary['approved_total_qty'], 3) }}</div></div></div>
+                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Draft Issues (excluded)</div><div class="fw-semibold">{{ $kitchenMonthSummary['draft_issue_count'] }}</div></div></div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-lg-3">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead><tr><th colspan="3">By Item</th></tr><tr><th>Item</th><th colspan="2">Qty</th></tr></thead>
+                                <tbody>
+                                    @forelse($consumption as $row)
+                                        <tr><td>{{ $row->item?->name ?? $row->item_id }}</td><td colspan="2">{{ number_format((float) $row->total_qty, 3) }} {{ $row->item?->uom }}</td></tr>
+                                    @empty
+                                        <tr><td colspan="3" class="text-center text-muted">No approved issues in selected month</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead><tr><th colspan="3">By Mess</th></tr><tr><th>Mess</th><th>Issues</th><th>Qty</th></tr></thead>
+                                <tbody>
+                                    @forelse($kitchenMonthByMess as $row)
+                                        <tr><td>{{ $row['mess_name'] }}</td><td>{{ $row['issue_count'] }}</td><td>{{ number_format((float) $row['total_qty'], 3) }}</td></tr>
+                                    @empty
+                                        <tr><td colspan="3" class="text-center text-muted">No approved issues in selected month</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead><tr><th colspan="3">By Type</th></tr><tr><th>Type</th><th>Issues</th><th>Qty</th></tr></thead>
+                                <tbody>
+                                    @forelse($kitchenMonthByType as $row)
+                                        <tr><td>{{ $row['issue_type'] }}</td><td>{{ $row['issue_count'] }}</td><td>{{ number_format((float) $row['total_qty'], 3) }}</td></tr>
+                                    @empty
+                                        <tr><td colspan="3" class="text-center text-muted">No approved issues in selected month</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead><tr><th colspan="3">Daily Totals</th></tr><tr><th>Date</th><th>Issues</th><th>Qty</th></tr></thead>
+                                <tbody>
+                                    @forelse($kitchenMonthDaily as $row)
+                                        <tr><td>{{ $row['issue_date'] }}</td><td>{{ $row['issue_count'] }}</td><td>{{ number_format((float) $row['total_qty'], 3) }}</td></tr>
+                                    @empty
+                                        <tr><td colspan="3" class="text-center text-muted">No approved issues in selected month</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Approved At</th>
+                                <th>Mess</th>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Type</th>
+                                <th>Stock Txn</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($kitchenMonthLedger as $row)
+                                <tr>
+                                    <td>{{ $row['issue_date'] }}</td>
+                                    <td>{{ $row['approved_at'] }}</td>
+                                    <td>{{ $row['mess_name'] }}</td>
+                                    <td>{{ $row['item_name'] }}</td>
+                                    <td>{{ number_format((float) $row['quantity'], 3) }} {{ $row['item_uom'] }}</td>
+                                    <td>{{ $row['issue_type'] }}</td>
+                                    <td>#{{ $row['stock_txn_id'] }}</td>
+                                    <td>{{ $row['remarks'] }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="8" class="text-center text-muted">No approved kitchen ledger rows for selected month</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="col-lg-6">
         <div class="card shadow-sm mb-3"><div class="card-header">Create Menu</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.menus.store') }}" class="row g-2">@csrf

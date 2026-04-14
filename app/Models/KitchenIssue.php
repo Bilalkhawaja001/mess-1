@@ -21,6 +21,11 @@ class KitchenIssue extends Model
         return $this->belongsTo(Mess::class);
     }
 
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class);
+    }
+
     public function approvedStockTransaction(): BelongsTo
     {
         return $this->belongsTo(StockTransaction::class, 'approved_stock_txn_id');

@@ -22,7 +22,7 @@ class KitchenController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $items = Item::query()->with('units')->orderBy('name')->get();
         $issueItems = $items
@@ -38,11 +38,109 @@ class KitchenController extends Controller
         $menus = Menu::query()->latest()->get();
         $recipes = Recipe::query()->latest()->limit(200)->get();
         $plans = MealPlan::query()->latest('plan_date')->limit(200)->get();
-        $issues = KitchenIssue::query()->latest('issue_date')->limit(200)->get();
-        $consumption = KitchenIssue::query()->selectRaw('item_id, sum(quantity) total_qty')->groupBy('item_id')->get();
+        $issues = KitchenIssue::query()->with(['mess', 'approvedStockTransaction'])->latest('issue_date')->limit(200)->get();
         $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.kitchen.index', compact('items', 'issueItems', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes'));
+        $selectedMonth = (string) ($request->query('month') ?: now()->format('Y-m'));
+        $monthStart = now()->startOfMonth();
+        try {
+            $monthStart = \Illuminate\Support\Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        } catch (\Throwable $e) {
+            $selectedMonth = now()->format('Y-m');
+            $monthStart = now()->startOfMonth();
+        }
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        $approvedIssueQuery = KitchenIssue::query()
+            ->with(['mess', 'approvedStockTransaction', 'item'])
+            ->where('status', KitchenIssue::STATUS_APPROVED)
+            ->whereNotNull('approved_stock_txn_id')
+            ->whereBetween('issue_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+
+        $approvedIssuesMonth = $approvedIssueQuery
+            ->clone()
+            ->orderByDesc('issue_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $kitchenMonthSummary = [
+            'selected_month' => $selectedMonth,
+            'month_start' => $monthStart,
+            'month_end' => $monthEnd,
+            'approved_issue_count' => $approvedIssuesMonth->count(),
+            'approved_total_qty' => round((float) $approvedIssuesMonth->sum('quantity'), 3),
+            'draft_issue_count' => KitchenIssue::query()
+                ->where('status', KitchenIssue::STATUS_DRAFT)
+                ->whereBetween('issue_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                ->count(),
+        ];
+
+        $consumption = $approvedIssuesMonth
+            ->groupBy('item_id')
+            ->map(function ($rows, $itemId) use ($items) {
+                return (object) [
+                    'item_id' => (int) $itemId,
+                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
+                    'item' => $items->firstWhere('id', (int) $itemId),
+                ];
+            })
+            ->sortByDesc('total_qty')
+            ->values();
+
+        $kitchenMonthByMess = $approvedIssuesMonth
+            ->groupBy('mess_id')
+            ->map(function ($rows, $messId) use ($messes) {
+                return [
+                    'mess_id' => (int) $messId,
+                    'mess_name' => $messes->firstWhere('id', (int) $messId)?->name ?? '—',
+                    'issue_count' => collect($rows)->count(),
+                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
+                ];
+            })
+            ->sortByDesc('total_qty')
+            ->values();
+
+        $kitchenMonthByType = $approvedIssuesMonth
+            ->groupBy(fn (KitchenIssue $issue) => $issue->issue_type ?: 'CONSUMPTION')
+            ->map(function ($rows, $issueType) {
+                return [
+                    'issue_type' => $issueType,
+                    'issue_count' => collect($rows)->count(),
+                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
+                ];
+            })
+            ->sortByDesc('total_qty')
+            ->values();
+
+        $kitchenMonthDaily = $approvedIssuesMonth
+            ->groupBy(fn (KitchenIssue $issue) => (string) $issue->issue_date)
+            ->map(function ($rows, $issueDate) {
+                return [
+                    'issue_date' => $issueDate,
+                    'issue_count' => collect($rows)->count(),
+                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
+                ];
+            })
+            ->sortBy('issue_date')
+            ->values();
+
+        $kitchenMonthLedger = $approvedIssuesMonth
+            ->map(function (KitchenIssue $issue) {
+                return [
+                    'issue_date' => $issue->issue_date,
+                    'approved_at' => $issue->approved_at,
+                    'mess_name' => $issue->mess?->name ?? '—',
+                    'item_name' => $issue->item?->name ?? $issue->item_id,
+                    'item_uom' => $issue->item?->uom,
+                    'quantity' => round((float) $issue->quantity, 3),
+                    'issue_type' => $issue->issue_type ?: 'CONSUMPTION',
+                    'remarks' => $issue->remarks,
+                    'stock_txn_id' => $issue->approved_stock_txn_id,
+                ];
+            })
+            ->values();
+
+        return view('admin.kitchen.index', compact('items', 'issueItems', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes', 'selectedMonth', 'kitchenMonthSummary', 'kitchenMonthByMess', 'kitchenMonthByType', 'kitchenMonthDaily', 'kitchenMonthLedger'));
     }
 
     public function apiMenus(): JsonResponse

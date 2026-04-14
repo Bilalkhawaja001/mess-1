@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\GoodsReceipt;
 use App\Models\Item;
 use App\Models\StockTransaction;
+use App\Models\VendorReturn;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +36,7 @@ class InventoryController extends Controller
                     ->whereIn('txn_type', ['OPENING', 'IN', 'ADJUSTMENT', 'GRN'])
                     ->sum('quantity');
                 $issuedQty = (float) $itemLedger
-                    ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE'])
+                    ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE', 'VENDOR_RETURN'])
                     ->sum('quantity');
                 $latestMovement = $itemLedger->sortByDesc('txn_at')->first();
 
@@ -49,7 +51,77 @@ class InventoryController extends Controller
             ->sortBy(fn (array $row) => strtolower((string) $row['item']->name))
             ->values();
 
-        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems', 'storeStockRows'));
+        $returnSourceGrns = GoodsReceipt::query()
+            ->with(['purchaseOrder.vendor', 'lines.item.units'])
+            ->latest('received_date')
+            ->limit(200)
+            ->get();
+
+        $returnSourceTxns = StockTransaction::query()
+            ->where('reference_type', GoodsReceipt::class)
+            ->where('txn_type', 'GRN')
+            ->whereIn('reference_id', $returnSourceGrns->pluck('id'))
+            ->get()
+            ->keyBy('reference_id');
+
+        $returnedQtyByGrn = VendorReturn::query()
+            ->selectRaw('goods_receipt_id, SUM(qty_returned) as total_returned')
+            ->groupBy('goods_receipt_id')
+            ->pluck('total_returned', 'goods_receipt_id');
+
+        $vendorReturnSources = $returnSourceGrns
+            ->map(function (GoodsReceipt $grn) use ($returnSourceTxns, $returnedQtyByGrn) {
+                $line = $grn->lines->first();
+                $item = $line?->item;
+                $vendor = $grn->purchaseOrder?->vendor;
+                $txn = $returnSourceTxns->get($grn->id);
+
+                if (! $line || ! $item || ! $vendor || ! $txn) {
+                    return null;
+                }
+
+                $currentBalance = $this->inventoryService->balanceForItem($item->id);
+                $receivedBaseQty = (float) $txn->quantity;
+                $alreadyReturnedBaseQty = (float) ($returnedQtyByGrn[$grn->id] ?? 0);
+                $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
+                $returnableQty = min($currentBalance, $sourcePendingQty);
+
+                if ($returnableQty <= 0) {
+                    return null;
+                }
+
+                return [
+                    'goods_receipt_id' => $grn->id,
+                    'grn_number' => $grn->grn_number,
+                    'received_date' => $grn->received_date,
+                    'vendor_id' => $vendor->id,
+                    'vendor_name' => $vendor->name,
+                    'item_id' => $item->id,
+                    'item_name' => $item->name,
+                    'item_sku' => $item->sku,
+                    'uom' => $item->uom,
+                    'unit_cost' => (float) $txn->unit_cost,
+                    'source_received_qty' => $receivedBaseQty,
+                    'already_returned_qty' => $alreadyReturnedBaseQty,
+                    'current_balance_qty' => $currentBalance,
+                    'returnable_qty' => $returnableQty,
+                    'units' => $item->units->map(fn ($u) => [
+                        'code' => $u->unit_code,
+                        'factor' => (float) $u->factor_to_base,
+                    ])->values()->all(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('received_date')
+            ->values();
+
+        $vendorReturns = VendorReturn::query()
+            ->with(['vendor', 'goodsReceipt', 'item'])
+            ->latest('return_date')
+            ->limit(50)
+            ->get();
+
+        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems', 'storeStockRows', 'vendorReturnSources', 'vendorReturns'));
     }
 
     public function storeItem(Request $request): RedirectResponse
@@ -236,6 +308,147 @@ class InventoryController extends Controller
         ]);
 
         return back()->with('success', 'Stock transaction posted.');
+    }
+
+    public function storeVendorReturn(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'vendor_id' => 'required|exists:vendors,id',
+            'goods_receipt_id' => 'required|exists:goods_receipts,id',
+            'item_id' => 'required|exists:items,id',
+            'return_date' => 'required|date',
+            'quantity' => 'required|numeric|min:0.001',
+            'unit_code' => 'nullable|string|max:20',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        $grn = GoodsReceipt::query()->with(['purchaseOrder.vendor', 'lines.item.units'])->findOrFail($data['goods_receipt_id']);
+        $vendor = $grn->purchaseOrder?->vendor;
+        $line = $grn->lines->firstWhere('item_id', (int) $data['item_id']) ?? $grn->lines->first();
+        $item = $line?->item;
+
+        if (! $vendor || (int) $vendor->id !== (int) $data['vendor_id']) {
+            return back()->withErrors(['vendor_id' => 'Selected vendor does not match the selected GRN.'])->withInput();
+        }
+
+        if (! $line || ! $item || (int) $item->id !== (int) $data['item_id']) {
+            return back()->withErrors(['item_id' => 'Selected item does not match the selected GRN source.'])->withInput();
+        }
+
+        $unitCode = trim((string) ($data['unit_code'] ?? ''));
+        $transQuantity = (float) $data['quantity'];
+        $baseQuantity = $transQuantity;
+        $transUnitCode = null;
+        $transQty = null;
+
+        if ($unitCode !== '') {
+            $unit = $item->units->firstWhere('unit_code', $unitCode);
+            if (! $unit) {
+                return back()->withErrors(['unit_code' => 'Invalid unit for selected item.'])->withInput();
+            }
+
+            $baseQuantity = $transQuantity * (float) $unit->factor_to_base;
+            $transUnitCode = $unit->unit_code;
+            $transQty = $transQuantity;
+        }
+
+        $sourceTxn = StockTransaction::query()
+            ->where('reference_type', GoodsReceipt::class)
+            ->where('reference_id', $grn->id)
+            ->where('txn_type', 'GRN')
+            ->where('item_id', $item->id)
+            ->latest('id')
+            ->first();
+
+        if (! $sourceTxn) {
+            return back()->withErrors(['goods_receipt_id' => 'Selected GRN has no stock receipt trail.'])->withInput();
+        }
+
+        $currentBalance = $this->inventoryService->balanceForItem($item->id);
+        $alreadyReturnedQty = (float) VendorReturn::query()
+            ->where('goods_receipt_id', $grn->id)
+            ->where('item_id', $item->id)
+            ->sum('qty_returned');
+        $sourceReceivedQty = (float) $sourceTxn->quantity;
+        $sourcePendingQty = max($sourceReceivedQty - $alreadyReturnedQty, 0);
+        $maxReturnableQty = min($currentBalance, $sourcePendingQty);
+
+        if ($maxReturnableQty <= 0) {
+            return back()->withErrors(['quantity' => 'This source has no returnable store stock left.'])->withInput();
+        }
+
+        if ($baseQuantity > $currentBalance) {
+            return back()->withErrors(['quantity' => 'Return quantity cannot exceed current store stock. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])->withInput();
+        }
+
+        if ($baseQuantity > $sourcePendingQty) {
+            return back()->withErrors(['quantity' => 'Return quantity cannot exceed remaining returnable qty for selected GRN source.'])->withInput();
+        }
+
+        try {
+            DB::transaction(function () use ($data, $grn, $item, $vendor, $baseQuantity, $transUnitCode, $transQty, $sourceTxn) {
+                $lockedSourceTxn = StockTransaction::query()
+                    ->whereKey($sourceTxn->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $lockedCurrentIn = (float) StockTransaction::query()
+                    ->where('item_id', $item->id)
+                    ->lockForUpdate()
+                    ->whereIn('txn_type', ['OPENING', 'IN', 'ADJUSTMENT', 'GRN'])
+                    ->sum('quantity');
+                $lockedCurrentOut = (float) StockTransaction::query()
+                    ->where('item_id', $item->id)
+                    ->lockForUpdate()
+                    ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE', 'VENDOR_RETURN'])
+                    ->sum('quantity');
+                $lockedCurrentBalance = round($lockedCurrentIn - $lockedCurrentOut, 3);
+                $lockedAlreadyReturnedQty = (float) VendorReturn::query()
+                    ->where('goods_receipt_id', $grn->id)
+                    ->where('item_id', $item->id)
+                    ->lockForUpdate()
+                    ->sum('qty_returned');
+                $lockedSourcePendingQty = max((float) $lockedSourceTxn->quantity - $lockedAlreadyReturnedQty, 0);
+
+                if ($baseQuantity > $lockedCurrentBalance) {
+                    throw new \RuntimeException('Return quantity cannot exceed current store stock.');
+                }
+
+                if ($baseQuantity > $lockedSourcePendingQty) {
+                    throw new \RuntimeException('Return quantity cannot exceed remaining returnable qty for selected GRN source.');
+                }
+
+                $vendorReturn = VendorReturn::query()->create([
+                    'vendor_id' => $vendor->id,
+                    'goods_receipt_id' => $grn->id,
+                    'item_id' => $item->id,
+                    'return_number' => 'VRN-'.now()->format('YmdHis'),
+                    'return_date' => $data['return_date'],
+                    'qty_returned' => $baseQuantity,
+                    'trans_unit_code' => $transUnitCode,
+                    'trans_quantity' => $transQty,
+                    'unit_cost' => (float) $lockedSourceTxn->unit_cost,
+                    'remarks' => $data['remarks'] ?? null,
+                ]);
+
+                StockTransaction::query()->create([
+                    'item_id' => $item->id,
+                    'txn_type' => 'VENDOR_RETURN',
+                    'quantity' => $baseQuantity,
+                    'unit_cost' => (float) $lockedSourceTxn->unit_cost,
+                    'trans_unit_code' => $transUnitCode,
+                    'trans_quantity' => $transQty,
+                    'reference_type' => VendorReturn::class,
+                    'reference_id' => $vendorReturn->id,
+                    'remarks' => 'Vendor return against '.$grn->grn_number,
+                    'txn_at' => $data['return_date'],
+                ]);
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['quantity' => $e->getMessage()])->withInput();
+        }
+
+        return back()->with('success', 'Vendor return posted. Stock reduced from store balance.');
     }
 
     public function importItems(Request $request): RedirectResponse

@@ -398,14 +398,105 @@
         </div>
 
         <div class="tab-pane fade" id="vendor-return-pane" role="tabpanel" aria-labelledby="vendor-return-tab" tabindex="0">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Vendor Return</h5>
-                    <span class="text-muted small">Flow intentionally deferred to Phase 4.</span>
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Vendor Return</h5>
+                            <span class="text-muted small">Store stock only</span>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('admin.inventory.vendor-returns.store') }}" class="row g-2">
+                                @csrf
+                                <input type="hidden" name="vendor_id" id="vendor-return-vendor-id" value="{{ old('vendor_id') }}">
+                                <input type="hidden" name="item_id" id="vendor-return-item-id" value="{{ old('item_id') }}">
+
+                                <div class="col-12">
+                                    <label class="form-label">Received Stock Source</label>
+                                    <select name="goods_receipt_id" id="vendor-return-source" class="form-select" required>
+                                        <option value="">Select GRN source</option>
+                                        @foreach($vendorReturnSources as $source)
+                                            <option value="{{ $source['goods_receipt_id'] }}" {{ (string) old('goods_receipt_id') === (string) $source['goods_receipt_id'] ? 'selected' : '' }}>
+                                                {{ $source['grn_number'] }} — {{ $source['vendor_name'] }} — {{ $source['item_sku'] }} / {{ $source['item_name'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="text-muted">Only sources with current store-returnable quantity are shown.</small>
+                                </div>
+
+                                <div class="col-12 small text-muted" id="vendor-return-source-meta"></div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Return Date</label>
+                                    <input type="date" name="return_date" class="form-control" value="{{ old('return_date', now()->toDateString()) }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Quantity</label>
+                                    <input type="number" step="0.001" min="0.001" name="quantity" id="vendor-return-qty" class="form-control" value="{{ old('quantity') }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Unit</label>
+                                    <select name="unit_code" id="vendor-return-unit" class="form-select">
+                                        <option value="">Base unit</option>
+                                    </select>
+                                    <div class="small text-muted" id="vendor-return-conversion"></div>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">Remarks</label>
+                                    <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="Reason / vendor note">
+                                </div>
+
+                                <div class="col-12">
+                                    <button class="btn btn-warning" type="submit">Post Vendor Return</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-secondary mb-0">
-                        Phase 3 only prepares the Inventory structure. Vendor Return posting, validation, and stock impact will be added in Phase 4 using store-stock truth only.
+
+                <div class="col-lg-7">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">Recent Vendor Returns</h5>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Return No</th>
+                                        <th>Vendor</th>
+                                        <th>Source GRN</th>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($vendorReturns as $vendorReturn)
+                                        <tr>
+                                            <td>{{ \Illuminate\Support\Carbon::parse($vendorReturn->return_date)->format('Y-m-d') }}</td>
+                                            <td>{{ $vendorReturn->return_number }}</td>
+                                            <td>{{ $vendorReturn->vendor?->name }}</td>
+                                            <td>{{ $vendorReturn->goodsReceipt?->grn_number }}</td>
+                                            <td>{{ $vendorReturn->item?->sku }} {{ $vendorReturn->item?->name ? '— '.$vendorReturn->item?->name : '' }}</td>
+                                            <td>
+                                                {{ number_format((float) $vendorReturn->qty_returned, 3) }} {{ $vendorReturn->item?->uom }}
+                                                @if($vendorReturn->trans_unit_code && $vendorReturn->trans_quantity)
+                                                    <div class="small text-muted">{{ number_format((float) $vendorReturn->trans_quantity, 3) }} {{ $vendorReturn->trans_unit_code }}</div>
+                                                @endif
+                                            </td>
+                                            <td>{{ number_format((float) $vendorReturn->unit_cost, 2) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">No vendor returns posted yet</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -433,6 +524,24 @@
             })->values()->all(),
         ];
     })->values()->all();
+
+    $vendorReturnSourcesJson = collect($vendorReturnSources ?? [])->map(function ($source) {
+        return [
+            'goods_receipt_id' => $source['goods_receipt_id'],
+            'vendor_id' => $source['vendor_id'],
+            'vendor_name' => $source['vendor_name'],
+            'grn_number' => $source['grn_number'],
+            'item_id' => $source['item_id'],
+            'item_name' => $source['item_name'],
+            'item_sku' => $source['item_sku'],
+            'uom' => $source['uom'],
+            'source_received_qty' => (float) $source['source_received_qty'],
+            'already_returned_qty' => (float) $source['already_returned_qty'],
+            'current_balance_qty' => (float) $source['current_balance_qty'],
+            'returnable_qty' => (float) $source['returnable_qty'],
+            'units' => $source['units'] ?? [],
+        ];
+    })->values()->all();
 @endphp
 
 @push('scripts')
@@ -447,6 +556,18 @@
         const qtyInput = document.getElementById('inv-qty-input');
         const balanceIndicator = document.getElementById('inv-balance-indicator');
         const preview = document.getElementById('inv-conversion-preview');
+
+        const returnSources = @json($vendorReturnSourcesJson);
+        const returnSourcesByGrnId = {};
+        returnSources.forEach((source) => { returnSourcesByGrnId[source.goods_receipt_id] = source; });
+
+        const returnSourceSelect = document.getElementById('vendor-return-source');
+        const returnVendorInput = document.getElementById('vendor-return-vendor-id');
+        const returnItemInput = document.getElementById('vendor-return-item-id');
+        const returnUnitSelect = document.getElementById('vendor-return-unit');
+        const returnQtyInput = document.getElementById('vendor-return-qty');
+        const returnMeta = document.getElementById('vendor-return-source-meta');
+        const returnConversion = document.getElementById('vendor-return-conversion');
 
         const syncBalanceAndUnits = () => {
             const itemId = Number((itemSelect && itemSelect.value) || 0);
@@ -508,11 +629,75 @@
             preview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.uom}`;
         };
 
+        const syncVendorReturnSource = () => {
+            const grnId = Number((returnSourceSelect && returnSourceSelect.value) || 0);
+            const source = returnSourcesByGrnId[grnId];
+
+            if (!source) {
+                if (returnVendorInput) returnVendorInput.value = '';
+                if (returnItemInput) returnItemInput.value = '';
+                if (returnUnitSelect) returnUnitSelect.innerHTML = '<option value="">Base unit</option>';
+                if (returnMeta) returnMeta.textContent = '';
+                if (returnConversion) returnConversion.textContent = '';
+                return;
+            }
+
+            if (returnVendorInput) returnVendorInput.value = source.vendor_id;
+            if (returnItemInput) returnItemInput.value = source.item_id;
+
+            if (returnMeta) {
+                returnMeta.textContent = `${source.vendor_name} | ${source.item_sku} - ${source.item_name} | Store balance ${source.current_balance_qty.toFixed(3)} ${source.uom} | Source pending ${source.returnable_qty.toFixed(3)} ${source.uom}`;
+            }
+
+            if (returnUnitSelect) {
+                returnUnitSelect.innerHTML = '';
+                const baseOpt = document.createElement('option');
+                baseOpt.value = '';
+                baseOpt.textContent = source.uom ? `Base unit (${source.uom})` : 'Base unit';
+                returnUnitSelect.appendChild(baseOpt);
+
+                (source.units || []).forEach((u) => {
+                    const opt = document.createElement('option');
+                    opt.value = u.code;
+                    opt.textContent = `${u.code} (x${Number(u.factor).toFixed(3)} ${source.uom})`;
+                    returnUnitSelect.appendChild(opt);
+                });
+            }
+
+            syncVendorReturnPreview();
+        };
+
+        const syncVendorReturnPreview = () => {
+            if (!returnConversion) return;
+            const grnId = Number((returnSourceSelect && returnSourceSelect.value) || 0);
+            const source = returnSourcesByGrnId[grnId];
+            const qty = Number((returnQtyInput && returnQtyInput.value) || 0);
+            const unitCode = (returnUnitSelect && returnUnitSelect.value) || '';
+
+            if (!source || !qty || !unitCode) {
+                returnConversion.textContent = '';
+                return;
+            }
+
+            const unit = (source.units || []).find(function (u) { return u.code === unitCode; });
+            if (!unit) {
+                returnConversion.textContent = '';
+                return;
+            }
+
+            const baseQty = qty * Number(unit.factor);
+            returnConversion.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${source.uom}`;
+        };
+
         if (itemSelect) itemSelect.addEventListener('change', syncBalanceAndUnits);
         if (unitSelect) unitSelect.addEventListener('change', syncPreview);
         if (qtyInput) qtyInput.addEventListener('input', syncPreview);
+        if (returnSourceSelect) returnSourceSelect.addEventListener('change', syncVendorReturnSource);
+        if (returnUnitSelect) returnUnitSelect.addEventListener('change', syncVendorReturnPreview);
+        if (returnQtyInput) returnQtyInput.addEventListener('input', syncVendorReturnPreview);
 
         syncBalanceAndUnits();
+        syncVendorReturnSource();
     })();
 </script>
 @endpush

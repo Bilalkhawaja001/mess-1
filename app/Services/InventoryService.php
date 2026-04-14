@@ -16,7 +16,7 @@ class InventoryService
 
         $out = (float) StockTransaction::query()
             ->where('item_id', $itemId)
-            ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE'])
+            ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE', 'VENDOR_RETURN'])
             ->sum('quantity');
 
         return round($in - $out, 3);
@@ -89,7 +89,7 @@ class InventoryService
 
         $outward = StockTransaction::query()
             ->where('item_id', $itemId)
-            ->whereIn('txn_type', ['KITCHEN_ISSUE', 'OUT'])
+            ->whereIn('txn_type', ['KITCHEN_ISSUE', 'OUT', 'VENDOR_RETURN'])
             ->orderBy('txn_at', 'desc')
             ->limit(200)
             ->get()
@@ -104,6 +104,15 @@ class InventoryService
                         $issueType = $issue->issue_type;
                         $messName = $issue->mess?->name;
                         $remarks = $issue->remarks;
+                    }
+                }
+
+                if ($txn->reference_type === \App\Models\VendorReturn::class && $txn->reference_id) {
+                    $vendorReturn = \App\Models\VendorReturn::query()->with('vendor')->find($txn->reference_id);
+                    if ($vendorReturn) {
+                        $issueType = 'VENDOR_RETURN';
+                        $messName = $vendorReturn->vendor?->name;
+                        $remarks = $vendorReturn->remarks;
                     }
                 }
 

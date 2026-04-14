@@ -268,7 +268,9 @@
             </div>
             <table class="table table-sm"><thead><tr><th><input type="checkbox" id="po-select-all"></th><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
                 @foreach($pos as $po)
-                    @php($poSelectable = $po->status !== 'APPROVED')
+                    @php
+                        $poSelectable = $po->status !== 'APPROVED';
+                    @endphp
                     <tr>
                         <td>
                             @if($poSelectable)

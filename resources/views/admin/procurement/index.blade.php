@@ -85,6 +85,20 @@
         font-size: 0.8rem;
     }
 
+    .bulk-action-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .bulk-action-count {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
     @media (max-width: 991.98px) {
         .procurement-line-grid {
             grid-template-columns: 1fr;
@@ -245,48 +259,79 @@
         </form>
     </div></div></div>
 
-    <div class="col-lg-6"><div class="card shadow-sm"><div class="card-header">Purchase Orders</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-        @foreach($pos as $po)
-            <tr>
-                <td>{{ $po->po_number }}</td>
-                <td>{{ $po->po_date }}</td>
-                <td>
-                    <div>{{ $po->vendor->name ?? '-' }}</div>
-                    <div class="po-summary-list">
-                        @foreach($po->lines->take(3) as $line)
-                            <span>{{ $line->item?->sku }} {{ $line->item?->name ? '— '.$line->item->name : '' }}</span>
-                        @endforeach
-                    </div>
-                </td>
-                <td>{{ $po->total_lines }}</td>
-                <td>{{ number_format((float) ($po->total_qty ?? 0), 3) }}</td>
-                <td>{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
-                <td>{{ number_format((float) ($po->received_qty ?? 0), 3) }}</td>
-                <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
-                <td>{{ $po->status }}</td>
-                <td><form method="POST" action="{{ route('admin.procurement.po.approve',$po) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form></td>
-            </tr>
-        @endforeach
-    </tbody></table></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm"><div class="card-header">Purchase Orders</div><div class="card-body table-responsive">
+        <form method="POST" action="{{ route('admin.procurement.po.bulk-approve') }}" id="po-bulk-form">
+            @csrf
+            <div class="bulk-action-bar">
+                <div class="bulk-action-count"><span id="po-selected-count">0</span> PO(s) selected</div>
+                <button type="submit" class="btn btn-sm btn-outline-success" id="po-bulk-submit" disabled>Bulk Approve</button>
+            </div>
+            <table class="table table-sm"><thead><tr><th><input type="checkbox" id="po-select-all"></th><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+                @foreach($pos as $po)
+                    @php($poSelectable = $po->status !== 'APPROVED')
+                    <tr>
+                        <td>
+                            @if($poSelectable)
+                                <input type="checkbox" class="po-row-check" name="po_ids[]" value="{{ $po->id }}">
+                            @endif
+                        </td>
+                        <td>{{ $po->po_number }}</td>
+                        <td>{{ $po->po_date }}</td>
+                        <td>
+                            <div>{{ $po->vendor->name ?? '-' }}</div>
+                            <div class="po-summary-list">
+                                @foreach($po->lines->take(3) as $line)
+                                    <span>{{ $line->item?->sku }} {{ $line->item?->name ? '— '.$line->item->name : '' }}</span>
+                                @endforeach
+                            </div>
+                        </td>
+                        <td>{{ $po->total_lines }}</td>
+                        <td>{{ number_format((float) ($po->total_qty ?? 0), 3) }}</td>
+                        <td>{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
+                        <td>{{ number_format((float) ($po->received_qty ?? 0), 3) }}</td>
+                        <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
+                        <td>{{ $po->status }}</td>
+                        <td>
+                            @if($poSelectable)
+                                <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}" formmethod="POST" class="btn btn-sm btn-outline-success">Approve</button>
+                            @else
+                                <span class="text-muted small">Approved</span>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody></table>
+        </form>
+    </div></div></div>
 
-    <div class="col-lg-6"><div class="card shadow-sm"><div class="card-header">GRNs</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-        @foreach($grns as $grn)
-            @php
-                $grnLine = $grn->lines->first();
-            @endphp
-            <tr>
-                <td>{{ $grn->grn_number }}</td>
-                <td>{{ $grn->received_date }}</td>
-                <td>{{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}</td>
-                <td>{{ $grn->purchaseOrder->vendor->name ?? '-' }}</td>
-                <td>{{ $grnLine?->item?->sku }} {{ $grnLine?->item?->name ? '— '.$grnLine->item->name : '' }}</td>
-                <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
-                <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
-                <td>Posted on Create</td>
-                <td><form method="POST" action="{{ route('admin.procurement.grn.approve',$grn) }}">@csrf<button class="btn btn-sm btn-outline-success">Acknowledge</button></form></td>
-            </tr>
-        @endforeach
-    </tbody></table></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm"><div class="card-header">GRNs</div><div class="card-body table-responsive">
+        <form method="POST" action="{{ route('admin.procurement.grn.bulk-approve') }}" id="grn-bulk-form">
+            @csrf
+            <div class="bulk-action-bar">
+                <div class="bulk-action-count"><span id="grn-selected-count">0</span> GRN(s) selected</div>
+                <button type="submit" class="btn btn-sm btn-outline-success" id="grn-bulk-submit" disabled>Bulk Acknowledge</button>
+            </div>
+            <table class="table table-sm"><thead><tr><th><input type="checkbox" id="grn-select-all"></th><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+                @foreach($grns as $grn)
+                    @php
+                        $grnLine = $grn->lines->first();
+                    @endphp
+                    <tr>
+                        <td><input type="checkbox" class="grn-row-check" name="grn_ids[]" value="{{ $grn->id }}"></td>
+                        <td>{{ $grn->grn_number }}</td>
+                        <td>{{ $grn->received_date }}</td>
+                        <td>{{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}</td>
+                        <td>{{ $grn->purchaseOrder->vendor->name ?? '-' }}</td>
+                        <td>{{ $grnLine?->item?->sku }} {{ $grnLine?->item?->name ? '— '.$grnLine->item->name : '' }}</td>
+                        <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
+                        <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
+                        <td>Posted on Create</td>
+                        <td><button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button></td>
+                    </tr>
+                @endforeach
+            </tbody></table>
+        </form>
+    </div></div></div>
 </div>
 
 <datalist id="procurement-items-list">
@@ -596,6 +641,37 @@
         grnUnitSelect?.addEventListener('change', syncGrnConversion);
         grnOverrideRate?.addEventListener('change', syncGrnRateMode);
 
+        const bindBulkSelection = ({ selectAllId, rowSelector, countId, submitId, formId }) => {
+            const selectAll = document.getElementById(selectAllId);
+            const rows = [...document.querySelectorAll(rowSelector)];
+            const countNode = document.getElementById(countId);
+            const submitBtn = document.getElementById(submitId);
+            const form = document.getElementById(formId);
+
+            const sync = () => {
+                const selected = rows.filter((row) => row.checked).length;
+                if (countNode) countNode.textContent = String(selected);
+                if (submitBtn) submitBtn.disabled = selected === 0;
+                if (selectAll) {
+                    selectAll.checked = rows.length > 0 && selected === rows.length;
+                    selectAll.indeterminate = selected > 0 && selected < rows.length;
+                    selectAll.disabled = rows.length === 0;
+                }
+            };
+
+            selectAll?.addEventListener('change', () => {
+                rows.forEach((row) => { row.checked = selectAll.checked; });
+                sync();
+            });
+
+            rows.forEach((row) => row.addEventListener('change', sync));
+            form?.addEventListener('submit', () => {
+                if (submitBtn) submitBtn.disabled = true;
+            });
+
+            sync();
+        };
+
         document.getElementById('po-form')?.addEventListener('submit', () => {
             if (poSubmitBtn) {
                 poSubmitBtn.disabled = true;
@@ -609,6 +685,22 @@
                 return;
             }
             grnSubmitBtn.disabled = true;
+        });
+
+        bindBulkSelection({
+            selectAllId: 'po-select-all',
+            rowSelector: '.po-row-check',
+            countId: 'po-selected-count',
+            submitId: 'po-bulk-submit',
+            formId: 'po-bulk-form',
+        });
+
+        bindBulkSelection({
+            selectAllId: 'grn-select-all',
+            rowSelector: '.grn-row-check',
+            countId: 'grn-selected-count',
+            submitId: 'grn-bulk-submit',
+            formId: 'grn-bulk-form',
         });
 
         syncPo();

@@ -126,10 +126,25 @@ class ProcurementController extends Controller
 
     public function approvePo(PurchaseOrder $po): RedirectResponse
     {
-        $po->status = 'APPROVED';
-        $po->save();
+        $this->approvePurchaseOrderRecord($po);
 
         return back()->with('success', 'PO approved. Current schema has no deeper approval posting beyond status transition.');
+    }
+
+    public function bulkApprovePo(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'po_ids' => 'required|array|min:1',
+            'po_ids.*' => 'integer|exists:purchase_orders,id',
+        ]);
+
+        $pos = PurchaseOrder::query()->whereIn('id', $data['po_ids'])->get();
+
+        foreach ($pos as $po) {
+            $this->approvePurchaseOrderRecord($po);
+        }
+
+        return back()->with('success', $pos->count().' purchase order(s) approved.');
     }
 
     public function storeGrn(Request $r): RedirectResponse
@@ -301,6 +316,35 @@ class ProcurementController extends Controller
 
     public function approveGrn(GoodsReceipt $grn): RedirectResponse
     {
+        $this->acknowledgeGoodsReceiptRecord($grn);
+
+        return back()->with('success', 'GRN approval acknowledged. Stock was already posted on GRN create; no extra approval side-effect exists in current schema.');
+    }
+
+    public function bulkApproveGrn(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'grn_ids' => 'required|array|min:1',
+            'grn_ids.*' => 'integer|exists:goods_receipts,id',
+        ]);
+
+        $grns = GoodsReceipt::query()->whereIn('id', $data['grn_ids'])->get();
+
+        foreach ($grns as $grn) {
+            $this->acknowledgeGoodsReceiptRecord($grn);
+        }
+
+        return back()->with('success', $grns->count().' GRN acknowledgement(s) processed.');
+    }
+
+    private function approvePurchaseOrderRecord(PurchaseOrder $po): void
+    {
+        $po->status = 'APPROVED';
+        $po->save();
+    }
+
+    private function acknowledgeGoodsReceiptRecord(GoodsReceipt $grn): void
+    {
         $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($grn->purchase_order_id);
         $totalOrderedQty = (float) $po->lines->sum('qty_ordered');
         $totalReceivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
@@ -309,7 +353,5 @@ class ProcurementController extends Controller
             'status' => $totalReceivedQty < $totalOrderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
         ]);
         $grn->touch();
-
-        return back()->with('success', 'GRN approval acknowledged. Stock was already posted on GRN create; no extra approval side-effect exists in current schema.');
     }
 }

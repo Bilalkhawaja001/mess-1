@@ -164,8 +164,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::get('/procurement', [ProcurementController::class, 'index'])->name('procurement.index');
         Route::post('/procurement/vendors', [ProcurementController::class, 'storeVendor'])->name('procurement.vendors.store');
         Route::post('/procurement/po', [ProcurementController::class, 'storePo'])->name('procurement.po.store');
+        Route::post('/procurement/po/bulk-approve', [ProcurementController::class, 'bulkApprovePo'])->name('procurement.po.bulk-approve');
         Route::post('/procurement/po/{po}/approve', [ProcurementController::class, 'approvePo'])->name('procurement.po.approve');
         Route::post('/procurement/grn', [ProcurementController::class, 'storeGrn'])->name('procurement.grn.store');
+        Route::post('/procurement/grn/bulk-approve', [ProcurementController::class, 'bulkApproveGrn'])->name('procurement.grn.bulk-approve');
         Route::post('/procurement/grn/{grn}/approve', [ProcurementController::class, 'approveGrn'])->name('procurement.grn.approve');
     });
 

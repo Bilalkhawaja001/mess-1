@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
 use App\Models\KitchenIssue;
-use App\Models\KitchenIssueTarget;
 use App\Models\Mess;
 use App\Models\MealPlan;
 use App\Models\Menu;
@@ -28,27 +27,13 @@ class KitchenController extends Controller
         $items = Item::query()->with('units')->orderBy('name')->get();
         $issueItems = $items
             ->where('is_active', true)
-            ->filter(fn (Item $item) => $this->inventoryService->balanceForItem($item->id) > 0)
-            ->values();
-        $issueTargets = KitchenIssueTarget::query()
-            ->select(['id', 'target_date', 'mess_id', 'item_id', 'required_qty', 'issued_qty', 'status'])
-            ->get()
-            ->map(function (KitchenIssueTarget $target) {
-                $required = round((float) $target->required_qty, 3);
-                $issued = round((float) $target->issued_qty, 3);
-                $pending = round(max($required - $issued, 0), 3);
+            ->map(function (Item $item) {
+                $availableQty = $this->inventoryService->balanceForItem($item->id);
+                $item->setAttribute('available_qty', $availableQty);
 
-                return [
-                    'id' => $target->id,
-                    'target_date' => optional($target->target_date)->format('Y-m-d'),
-                    'mess_id' => (int) $target->mess_id,
-                    'item_id' => (int) $target->item_id,
-                    'required_qty' => $required,
-                    'issued_qty' => $issued,
-                    'pending_qty' => $pending,
-                    'status' => $pending > 0 ? KitchenIssueTarget::STATUS_OPEN : KitchenIssueTarget::STATUS_COMPLETED,
-                ];
+                return $item;
             })
+            ->filter(fn (Item $item) => (float) ($item->available_qty ?? 0) > 0)
             ->values();
         $menus = Menu::query()->latest()->get();
         $recipes = Recipe::query()->latest()->limit(200)->get();
@@ -57,7 +42,7 @@ class KitchenController extends Controller
         $consumption = KitchenIssue::query()->selectRaw('item_id, sum(quantity) total_qty')->groupBy('item_id')->get();
         $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.kitchen.index', compact('items', 'issueItems', 'issueTargets', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes'));
+        return view('admin.kitchen.index', compact('items', 'issueItems', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes'));
     }
 
     public function apiMenus(): JsonResponse
@@ -212,57 +197,22 @@ class KitchenController extends Controller
             return back()->with('info', 'Similar kitchen issue was just created. Duplicate posting has been skipped.');
         }
 
-        try {
-            DB::transaction(function () use ($d, $request, $item, $baseQuantity): void {
-                $target = KitchenIssueTarget::query()
-                    ->whereDate('target_date', $d['issue_date'])
-                    ->where('mess_id', (int) $d['mess_id'])
-                    ->where('item_id', $item->id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (! $target) {
-                    throw new \RuntimeException('No kitchen issue target exists for the selected date, mess, and item.');
-                }
-
-                $requiredQty = round((float) $target->required_qty, 3);
-                $issuedQty = round((float) $target->issued_qty, 3);
-                $pendingQty = round(max($requiredQty - $issuedQty, 0), 3);
-
-                if ($pendingQty <= 0) {
-                    throw new \RuntimeException('This item is already fully completed for the selected date and mess.');
-                }
-
-                if ($baseQuantity > $pendingQty) {
-                    throw new \RuntimeException('Issue quantity cannot exceed pending target quantity of '.number_format($pendingQty, 3).'.');
-                }
-
-                $currentBalance = $this->inventoryService->balanceForItem($item->id);
-                if ($baseQuantity > $currentBalance) {
-                    throw new \RuntimeException('Not enough stock to post this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom);
-                }
-
-                KitchenIssue::query()->create([
-                    'issue_date' => $d['issue_date'],
-                    'item_id' => $item->id,
-                    'quantity' => $baseQuantity,
-                    'mess_id' => $d['mess_id'],
-                    'issue_type' => $d['issue_type'],
-                    'remarks' => $request->input('remarks'),
-                    'status' => KitchenIssue::STATUS_DRAFT,
-                    'approved_at' => null,
-                    'approved_stock_txn_id' => null,
-                ]);
-
-                $newIssuedQty = round($issuedQty + $baseQuantity, 3);
-                $target->update([
-                    'issued_qty' => $newIssuedQty,
-                    'status' => $newIssuedQty >= $requiredQty ? KitchenIssueTarget::STATUS_COMPLETED : KitchenIssueTarget::STATUS_OPEN,
-                ]);
-            });
-        } catch (\RuntimeException $e) {
-            return back()->withErrors(['item_id' => $e->getMessage()])->withInput();
+        $currentBalance = $this->inventoryService->balanceForItem($item->id);
+        if ($baseQuantity > $currentBalance) {
+            return back()->withErrors(['quantity' => 'Not enough stock to post this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])->withInput();
         }
+
+        KitchenIssue::query()->create([
+            'issue_date' => $d['issue_date'],
+            'item_id' => $item->id,
+            'quantity' => $baseQuantity,
+            'mess_id' => $d['mess_id'],
+            'issue_type' => $d['issue_type'],
+            'remarks' => $request->input('remarks'),
+            'status' => KitchenIssue::STATUS_DRAFT,
+            'approved_at' => null,
+            'approved_stock_txn_id' => null,
+        ]);
 
         return back()->with('success', 'Kitchen issue created');
     }

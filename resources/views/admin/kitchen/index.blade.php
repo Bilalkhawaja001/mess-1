@@ -85,9 +85,9 @@
                 </div>
                 <div class="col-md-4">
                     <select name="item_id" id="kitchen-item-select" class="form-select" required>
-                        <option value="">Select date and mess first</option>
+                        <option value="">Select stock item</option>
                     </select>
-                    <div class="small text-muted" id="kitchen-target-status">Only items with stock and pending target quantity will appear.</div>
+                    <div class="small text-muted" id="kitchen-target-status">Only items with current available stock are shown.</div>
                 </div>
                 <div class="col-md-1"><input name="quantity" id="kitchen-qty-input" type="number" step="0.001" min="0.001" class="form-control" value="{{ old('quantity') }}" required></div>
                 <div class="col-md-2">
@@ -130,6 +130,7 @@
             'id' => $i->id,
             'name' => $i->name,
             'base_uom' => $i->uom,
+            'available_qty' => number_format((float) ($i->available_qty ?? 0), 3, '.', ''),
             'units' => $i->units->map(function ($u) {
                 return [
                     'code' => $u->unit_code,
@@ -140,89 +141,49 @@
             })->values()->all(),
         ];
     })->values()->all();
-
-    $kitchenTargetsJson = $issueTargets->values()->all();
 @endphp
 
 @push('scripts')
 <script>
     (() => {
         const items = @json($kitchenItemsJson);
-        const targets = @json($kitchenTargetsJson);
         const oldItemId = @json(old('item_id'));
         const itemsById = {};
-        const targetsByContext = {};
 
         items.forEach((i) => { itemsById[i.id] = i; });
-        targets.forEach((target) => {
-            const key = `${target.target_date}|${target.mess_id}|${target.item_id}`;
-            targetsByContext[key] = target;
-        });
 
-        const issueDateInput = document.getElementById('kitchen-issue-date');
-        const messSelect = document.getElementById('kitchen-mess-select');
         const itemSelect = document.getElementById('kitchen-item-select');
         const unitSelect = document.getElementById('kitchen-unit-select');
         const qtyInput = document.getElementById('kitchen-qty-input');
         const preview = document.getElementById('kitchen-conversion-preview');
         const targetStatus = document.getElementById('kitchen-target-status');
 
-        const selectedContextItems = () => {
-            const issueDate = issueDateInput?.value || '';
-            const messId = Number(messSelect?.value || 0);
-
-            if (!issueDate || !messId) {
-                return [];
-            }
-
-            return items.filter((item) => {
-                const target = targetsByContext[`${issueDate}|${messId}|${item.id}`];
-                return !!target && Number(target.pending_qty || 0) > 0;
-            });
-        };
-
         const syncItems = () => {
             if (!itemSelect) {
                 return;
             }
 
-            const options = selectedContextItems();
-            const previousValue = itemSelect.value || oldItemId || '';
             itemSelect.innerHTML = '';
-
-            if (options.length === 0) {
-                const opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = 'No pending target items for selected date and mess';
-                itemSelect.appendChild(opt);
-                itemSelect.value = '';
-                if (targetStatus) {
-                    targetStatus.textContent = 'No item is eligible until a matching kitchen issue target exists with pending quantity and positive stock.';
-                }
-                syncUnits();
-                return;
-            }
 
             const placeholder = document.createElement('option');
             placeholder.value = '';
-            placeholder.textContent = 'Select item';
+            placeholder.textContent = items.length > 0 ? 'Select item' : 'No stock-available items';
             itemSelect.appendChild(placeholder);
 
-            options.forEach((item) => {
-                const issueDate = issueDateInput?.value || '';
-                const messId = Number(messSelect?.value || 0);
-                const target = targetsByContext[`${issueDate}|${messId}|${item.id}`];
+            items.forEach((item) => {
                 const opt = document.createElement('option');
                 opt.value = item.id;
-                opt.textContent = `${item.name} (pending ${Number(target?.pending_qty || 0).toFixed(3)} ${item.base_uom})`;
-                if (String(previousValue) === String(item.id)) {
+                opt.textContent = `${item.name} (available ${Number(item.available_qty || 0).toFixed(3)} ${item.base_uom})`;
+                if (String(oldItemId || '') === String(item.id)) {
                     opt.selected = true;
                 }
                 itemSelect.appendChild(opt);
             });
 
             if (targetStatus) {
-                targetStatus.textContent = 'Dropdown shows only stock-positive items with a pending kitchen target for the selected date and mess.';
+                targetStatus.textContent = items.length > 0
+                    ? 'Dropdown shows only items with current available store stock.'
+                    : 'No item is currently eligible because no store stock is available.';
             }
 
             syncUnits();
@@ -296,8 +257,6 @@
             preview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.base_uom}`;
         };
 
-        issueDateInput?.addEventListener('change', syncItems);
-        messSelect?.addEventListener('change', syncItems);
         itemSelect?.addEventListener('change', syncUnits);
         unitSelect?.addEventListener('change', syncPreview);
         qtyInput?.addEventListener('input', syncPreview);

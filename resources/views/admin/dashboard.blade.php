@@ -3,6 +3,70 @@
 @section('title', 'Admin Dashboard')
 @section('page_title', 'Enterprise Dashboard')
 
+@push('styles')
+<style>
+    .dashboard-hero-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-hero-left {
+        max-width: 640px;
+    }
+
+    .dashboard-hero-right {
+        min-width: 220px;
+    }
+
+    .dashboard-metrics-row .card.metric-card {
+        padding: 0.85rem 1rem !important;
+    }
+
+    .dashboard-metrics-row .metric-label {
+        font-size: 0.72rem;
+    }
+
+    .dashboard-metrics-row .metric-caption {
+        font-size: 0.72rem;
+    }
+
+    .dashboard-quick-actions .btn {
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
+
+    .dashboard-billing-overview .summary-card {
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+    }
+
+    .dashboard-billing-overview .summary-label {
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .dashboard-billing-overview .summary-value {
+        font-size: 1rem;
+    }
+
+    .dashboard-recent-cycles table tbody td {
+        font-size: 0.82rem;
+    }
+
+    .dashboard-recent-cycles .badge {
+        font-size: 0.72rem;
+    }
+
+    .dashboard-right-col .card {
+        margin-bottom: 0.75rem;
+    }
+</style>
+@endpush
+
 @section('content')
 @php
     $users = $stats['users'] ?? 0;
@@ -17,21 +81,21 @@
     $recentActivity = $stats['recentActivity'] ?? ($stats['recent_activity'] ?? []);
 @endphp
 
-<div class="hero-panel p-4 p-xl-5 mb-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-        <div>
-            <div class="section-kicker mb-3"><i class="bi bi-buildings"></i> Executive Control Layer</div>
-            <h3 class="mb-2 fw-bold">Mess Billing Executive View</h3>
-            <div class="text-muted">Operational + financial snapshot across billing, attendance, and collections in a premium light workspace.</div>
+<div class="hero-panel p-4 mb-4">
+    <div class="dashboard-hero-inner">
+        <div class="dashboard-hero-left">
+            <div class="section-kicker mb-2"><i class="bi bi-buildings"></i> Executive Control Layer</div>
+            <h4 class="mb-1 fw-bold">Mess Billing Executive View</h4>
+            <div class="text-muted small">Operational + financial snapshot across billing, attendance, and collections in a premium light workspace.</div>
         </div>
-        <div class="text-md-end">
+        <div class="dashboard-hero-right text-md-end">
             <div class="small text-muted text-uppercase fw-semibold mb-1">Live focus</div>
-            <div class="fw-semibold">Collections, member lifecycle, and billing governance</div>
+            <div class="fw-semibold small">Collections, member lifecycle, and billing governance</div>
         </div>
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4 dashboard-metrics-row">
     <div class="col-xl col-md-6">
         <div class="card metric-card metric-blue p-3 p-xl-4">
             <div class="d-flex justify-content-between align-items-start gap-3">
@@ -76,13 +140,28 @@
 
 <div class="row g-3">
     <div class="col-xl-8">
-        <div class="card p-3 mb-3">
+        <div class="card p-3 mb-3 dashboard-billing-overview">
             <h5 class="mb-1">Billing Overview</h5>
             <div class="text-muted small mb-3">High-level financial performance summary.</div>
             <div class="row g-2">
-                <div class="col-md-4"><div class="p-3 rounded-4 border bg-white"><span class="small text-muted">Billable</span><div class="fw-semibold fs-5">{{ $billable !== null ? number_format((float) $billable, 2) : '—' }}</div></div></div>
-                <div class="col-md-4"><div class="p-3 rounded-4 border bg-white"><span class="small text-muted">Collected</span><div class="fw-semibold fs-5">{{ $collected !== null ? number_format((float) $collected, 2) : '—' }}</div></div></div>
-                <div class="col-md-4"><div class="p-3 rounded-4 border bg-white"><span class="small text-muted">Outstanding</span><div class="fw-semibold fs-5">{{ $outstanding !== null ? number_format((float) $outstanding, 2) : '—' }}</div></div></div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-4 border bg-white summary-card">
+                        <span class="small text-muted summary-label">Billable</span>
+                        <div class="fw-semibold fs-5 summary-value">{{ $billable !== null ? number_format((float) $billable, 2) : '—' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-4 border bg-white summary-card">
+                        <span class="small text-muted summary-label">Collected</span>
+                        <div class="fw-semibold fs-5 summary-value">{{ $collected !== null ? number_format((float) $collected, 2) : '—' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-4 border bg-white summary-card">
+                        <span class="small text-muted summary-label">Outstanding</span>
+                        <div class="fw-semibold fs-5 summary-value">{{ $outstanding !== null ? number_format((float) $outstanding, 2) : '—' }}</div>
+                    </div>
+                </div>
             </div>
         </div>
 

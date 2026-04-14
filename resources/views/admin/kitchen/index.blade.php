@@ -3,14 +3,73 @@
 @section('title','Meal Planning / Kitchen')
 @section('page_title','Meal Planning / Kitchen')
 
+@push('styles')
+<style>
+    .kitchen-month-header-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .kitchen-month-header-sub {
+        font-size: 0.8rem;
+    }
+
+    .kitchen-summary-tile {
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+        font-size: 0.82rem;
+    }
+
+    .kitchen-summary-tile .label {
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #64748b;
+    }
+
+    .kitchen-summary-tile .value {
+        font-size: 0.98rem;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .kitchen-summary-table table,
+    .kitchen-ledger-table table {
+        font-size: 0.82rem;
+    }
+
+    .kitchen-form-card .card-header {
+        padding-top: 0.6rem;
+        padding-bottom: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .kitchen-form-card .card-body {
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+    }
+
+    .kitchen-data-card .card-header {
+        padding-top: 0.6rem;
+        padding-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .kitchen-data-card .table {
+        font-size: 0.82rem;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="row g-3">
     <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <strong>Kitchen Month Summary / Ledger</strong>
-                    <div class="small text-muted">Approved kitchen issues only. Draft issues are excluded from monthly truth.</div>
+                    <div class="kitchen-month-header-title">Kitchen Month Summary / Ledger</div>
+                    <div class="small text-muted kitchen-month-header-sub">Approved kitchen issues only. Draft issues are excluded from monthly truth.</div>
                 </div>
                 <form method="GET" action="{{ route('admin.kitchen.index') }}" class="d-flex gap-2 align-items-center">
                     <input type="month" name="month" class="form-control" value="{{ $selectedMonth }}">
@@ -19,14 +78,14 @@
             </div>
             <div class="card-body">
                 <div class="row g-3 mb-3">
-                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Month</div><div class="fw-semibold">{{ $kitchenMonthSummary['month_start']->format('F Y') }}</div></div></div>
-                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Approved Issues</div><div class="fw-semibold">{{ $kitchenMonthSummary['approved_issue_count'] }}</div></div></div>
-                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Approved Qty</div><div class="fw-semibold">{{ number_format((float) $kitchenMonthSummary['approved_total_qty'], 3) }}</div></div></div>
-                    <div class="col-md-3"><div class="border rounded p-3 h-100"><div class="small text-muted">Draft Issues (excluded)</div><div class="fw-semibold">{{ $kitchenMonthSummary['draft_issue_count'] }}</div></div></div>
+                    <div class="col-md-3"><div class="border rounded h-100 kitchen-summary-tile"><div class="label">Month</div><div class="value">{{ $kitchenMonthSummary['month_start']->format('F Y') }}</div></div></div>
+                    <div class="col-md-3"><div class="border rounded h-100 kitchen-summary-tile"><div class="label">Approved Issues</div><div class="value">{{ $kitchenMonthSummary['approved_issue_count'] }}</div></div></div>
+                    <div class="col-md-3"><div class="border rounded h-100 kitchen-summary-tile"><div class="label">Approved Qty</div><div class="value">{{ number_format((float) $kitchenMonthSummary['approved_total_qty'], 3) }}</div></div></div>
+                    <div class="col-md-3"><div class="border rounded h-100 kitchen-summary-tile"><div class="label">Draft Issues (excluded)</div><div class="value">{{ $kitchenMonthSummary['draft_issue_count'] }}</div></div></div>
                 </div>
 
                 <div class="row g-3">
-                    <div class="col-lg-3">
+                    <div class="col-lg-3 kitchen-summary-table">
                         <div class="table-responsive">
                             <table class="table table-sm align-middle">
                                 <thead><tr><th colspan="3">By Item</th></tr><tr><th>Item</th><th colspan="2">Qty</th></tr></thead>
@@ -40,7 +99,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-3 kitchen-summary-table">
                         <div class="table-responsive">
                             <table class="table table-sm align-middle">
                                 <thead><tr><th colspan="3">By Mess</th></tr><tr><th>Mess</th><th>Issues</th><th>Qty</th></tr></thead>
@@ -54,7 +113,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-3 kitchen-summary-table">
                         <div class="table-responsive">
                             <table class="table table-sm align-middle">
                                 <thead><tr><th colspan="3">By Type</th></tr><tr><th>Type</th><th>Issues</th><th>Qty</th></tr></thead>
@@ -68,7 +127,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-3 kitchen-summary-table">
                         <div class="table-responsive">
                             <table class="table table-sm align-middle">
                                 <thead><tr><th colspan="3">Daily Totals</th></tr><tr><th>Date</th><th>Issues</th><th>Qty</th></tr></thead>
@@ -84,7 +143,7 @@
                     </div>
                 </div>
 
-                <div class="table-responsive mt-3">
+                <div class="table-responsive mt-3 kitchen-ledger-table">
                     <table class="table table-sm table-striped align-middle">
                         <thead>
                             <tr>
@@ -120,7 +179,7 @@
         </div>
     </div>
     <div class="col-lg-6">
-        <div class="card shadow-sm mb-3"><div class="card-header">Create Menu</div><div class="card-body">
+        <div class="card shadow-sm mb-3 kitchen-form-card"><div class="card-header">Create Menu</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.menus.store') }}" class="row g-2">@csrf
                 <div class="col-md-6"><input class="form-control" name="name" placeholder="Menu name" required></div>
                 <div class="col-md-4"><input class="form-control" name="meal_type" placeholder="Meal type" required></div>
@@ -128,7 +187,7 @@
             </form>
         </div></div>
 
-        <div class="card shadow-sm"><div class="card-header">Menus</div><div class="card-body table-responsive">
+        <div class="card shadow-sm kitchen-data-card"><div class="card-header">Menus</div><div class="card-body table-responsive">
             <table class="table table-sm"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Actions</th></tr></thead><tbody>
                 @foreach($menus as $m)
                     <tr>
@@ -148,7 +207,7 @@
     </div>
 
     <div class="col-lg-6">
-        <div class="card shadow-sm mb-3"><div class="card-header">Add Recipe Line</div><div class="card-body">
+        <div class="card shadow-sm mb-3 kitchen-form-card"><div class="card-header">Add Recipe Line</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.recipes.store') }}" class="row g-2">@csrf
                 <div class="col-md-4"><select name="menu_id" class="form-select" required>@foreach($menus as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach</select></div>
                 <div class="col-md-4"><select name="item_id" class="form-select" required>@foreach($items as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
@@ -157,7 +216,7 @@
             </form>
         </div></div>
 
-        <div class="card shadow-sm"><div class="card-header">Recipes</div><div class="card-body table-responsive">
+        <div class="card shadow-sm kitchen-data-card"><div class="card-header">Recipes</div><div class="card-body table-responsive">
             <table class="table table-sm"><thead><tr><th>Menu</th><th>Item</th><th>Qty/Serving</th><th></th></tr></thead><tbody>
                 @foreach($recipes as $r)
                     <tr>
@@ -172,7 +231,7 @@
     </div>
 
     <div class="col-lg-6">
-        <div class="card shadow-sm mb-3"><div class="card-header">Create Meal Plan</div><div class="card-body">
+        <div class="card shadow-sm mb-3 kitchen-form-card"><div class="card-header">Create Meal Plan</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.plans.store') }}" class="row g-2">@csrf
                 <div class="col-md-4"><input name="plan_date" type="date" class="form-control" required></div>
                 <div class="col-md-4"><select name="menu_id" class="form-select" required>@foreach($menus as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach</select></div>
@@ -180,13 +239,13 @@
                 <div class="col-md-2"><button class="btn btn-primary w-100">Add</button></div>
             </form>
         </div></div>
-        <div class="card shadow-sm"><div class="card-header">Meal Plans</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Menu</th><th>Servings</th><th>Status</th><th></th></tr></thead><tbody>
+        <div class="card shadow-sm kitchen-data-card"><div class="card-header">Meal Plans</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Menu</th><th>Servings</th><th>Status</th><th></th></tr></thead><tbody>
             @foreach($plans as $p)<tr><td>{{ $p->plan_date }}</td><td>{{ $menus->firstWhere('id',$p->menu_id)?->name ?? $p->menu_id }}</td><td>{{ $p->planned_servings }}</td><td>@if($p->status === \App\Models\MealPlan::STATUS_APPROVED)<span class="badge bg-success">Approved</span>@if($p->approved_at)<div class="small text-muted">{{ $p->approved_at }}</div>@endif @else <span class="badge bg-secondary">Draft</span> @endif</td><td class="d-flex gap-1">@if($p->status !== \App\Models\MealPlan::STATUS_APPROVED)<form method="POST" action="{{ route('admin.kitchen.plans.approve.legacy',$p) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form>@else<span class="text-success small align-self-center">Approved</span>@endif<form method="POST" action="{{ route('admin.kitchen.plans.edit.legacy',$p) }}">@csrf<input type="hidden" name="plan_date" value="{{ $p->plan_date }}"><input type="hidden" name="menu_id" value="{{ $p->menu_id }}"><input type="hidden" name="planned_servings" value="{{ $p->planned_servings }}"><button class="btn btn-sm btn-outline-secondary">Save</button></form></td></tr>@endforeach
         </tbody></table></div></div>
     </div>
 
     <div class="col-lg-6">
-        <div class="card shadow-sm mb-3"><div class="card-header">Post Kitchen Issue</div><div class="card-body">
+        <div class="card shadow-sm mb-3 kitchen-form-card"><div class="card-header">Post Kitchen Issue</div><div class="card-body">
             <form method="POST" action="{{ route('admin.kitchen.issues.store') }}" class="row g-2">@csrf
                 <div class="col-md-3"><input name="issue_date" id="kitchen-issue-date" type="date" class="form-control" value="{{ old('issue_date') }}" required></div>
                 <div class="col-md-2">
@@ -222,7 +281,7 @@
                 <div class="col-12"><button class="btn btn-primary">Post Issue</button></div>
             </form>
         </div></div>
-        <div class="card shadow-sm"><div class="card-header">Kitchen Issues</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Item</th><th>Qty (Base)</th><th>Type</th><th>Mess</th><th>Remarks</th><th>Status</th><th></th></tr></thead><tbody>
+        <div class="card shadow-sm kitchen-data-card"><div class="card-header">Kitchen Issues</div><div class="card-body table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Item</th><th>Qty (Base)</th><th>Type</th><th>Mess</th><th>Remarks</th><th>Status</th><th></th></tr></thead><tbody>
             @foreach($issues as $i)<tr>
                 <td>{{ $i->issue_date }}</td>
                 <td>{{ $items->firstWhere('id',$i->item_id)?->name ?? $i->item_id }}</td>

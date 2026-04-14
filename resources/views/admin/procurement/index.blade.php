@@ -23,15 +23,17 @@
     }
 
     .procurement-kpi div {
-        padding: 10px 12px;
+        padding: 9px 11px;
         border-radius: 14px;
         background: rgba(37,99,235,0.06);
         border: 1px solid rgba(37,99,235,0.10);
-        font-size: 0.85rem;
+        font-size: 0.82rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
     }
 
     .procurement-kpi strong {
-        display: block;
         font-size: 1rem;
         color: #0f172a;
     }
@@ -66,6 +68,11 @@
         align-items: end;
     }
 
+    .procurement-line-grid .form-label {
+        font-size: 0.78rem;
+        margin-bottom: 0.15rem;
+    }
+
     .procurement-mini-result {
         font-size: 0.8rem;
         color: #64748b;
@@ -97,6 +104,28 @@
     .bulk-action-count {
         font-size: 0.85rem;
         color: #64748b;
+    }
+
+    .procurement-primary-card .card-header {
+        padding-top: 0.6rem;
+        padding-bottom: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .procurement-primary-card .card-body {
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+    }
+
+    .procurement-table-card .card-header {
+        padding-top: 0.6rem;
+        padding-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .procurement-table-card .table {
+        font-size: 0.82rem;
     }
 
     @media (max-width: 991.98px) {
@@ -143,7 +172,7 @@
     })->values()->all();
 @endphp
 <div class="row g-3">
-    <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create Vendor</div><div class="card-body">
+    <div class="col-lg-4"><div class="card shadow-sm procurement-primary-card"><div class="card-header">Create Vendor</div><div class="card-body">
         <form method="POST" action="{{ route('admin.procurement.vendors.store') }}" class="row g-2">@csrf
             <div class="col-12"><input name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Vendor name" required value="{{ old('name') }}"></div>
             @error('name')
@@ -153,7 +182,7 @@
         </form>
     </div></div></div>
 
-    <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create PO</div><div class="card-body">
+    <div class="col-lg-4"><div class="card shadow-sm procurement-primary-card"><div class="card-header">Create PO</div><div class="card-body">
         <form method="POST" action="{{ route('admin.procurement.po.store') }}" class="row g-2" id="po-form">@csrf
             <div class="col-12"><select name="vendor_id" class="form-select @error('vendor_id') is-invalid @enderror" required><option value="">Select vendor</option>@foreach($vendors as $v)<option value="{{ $v->id }}" @selected((string) old('vendor_id') === (string) $v->id)>{{ $v->name }}</option>@endforeach</select></div>
             @error('vendor_id')
@@ -174,7 +203,7 @@
         </form>
     </div></div></div>
 
-    <div class="col-lg-4"><div class="card shadow-sm"><div class="card-header">Create GRN</div><div class="card-body">
+    <div class="col-lg-4"><div class="card shadow-sm procurement-primary-card"><div class="card-header">Create GRN</div><div class="card-body">
         <form method="POST" action="{{ route('admin.procurement.grn.store') }}" class="row g-2" id="grn-form">@csrf
             <div class="col-12">
                 <label class="form-label">Purchase Order</label>
@@ -259,7 +288,7 @@
         </form>
     </div></div></div>
 
-    <div class="col-lg-6"><div class="card shadow-sm"><div class="card-header">Purchase Orders</div><div class="card-body table-responsive">
+    <div class="col-lg-6"><div class="card shadow-sm procurement-table-card"><div class="card-header">Purchase Orders</div><div class="card-body table-responsive">
         <form method="POST" action="{{ route('admin.procurement.po.bulk-approve') }}" id="po-bulk-form">
             @csrf
             <div class="bulk-action-bar">
@@ -293,7 +322,7 @@
                         <td>{{ number_format((float) ($po->received_qty ?? 0), 3) }}</td>
                         <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
                         <td>{{ $po->status }}</td>
-                        <td>
+                        <td class="text-end">
                             @if($poSelectable)
                                 <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}" formmethod="POST" class="btn btn-sm btn-outline-success">Approve</button>
                             @else
@@ -306,7 +335,7 @@
         </form>
     </div></div></div>
 
-    <div class="col-lg-6"><div class="card shadow-sm"><div class="card-header">GRNs</div><div class="card-body table-responsive">
+    <div class="col-lg-6"><div class="card shadow-sm procurement-table-card"><div class="card-header">GRNs</div><div class="card-body table-responsive">
         <form method="POST" action="{{ route('admin.procurement.grn.bulk-approve') }}" id="grn-bulk-form">
             @csrf
             <div class="bulk-action-bar">
@@ -328,7 +357,7 @@
                         <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
                         <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
                         <td>Posted on Create</td>
-                        <td><button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button></td>
+                        <td class="text-end"><button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button></td>
                     </tr>
                 @endforeach
             </tbody></table>

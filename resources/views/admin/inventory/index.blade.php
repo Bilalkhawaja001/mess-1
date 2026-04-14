@@ -32,6 +32,47 @@
         font-size: 0.85rem;
         color: #64748b;
     }
+
+    .inventory-header-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    .inventory-header-sub {
+        font-size: 0.8rem;
+    }
+
+    .inventory-header-badges .badge {
+        font-size: 0.72rem;
+        padding: 0.25rem 0.55rem;
+    }
+
+    .inventory-tab-nav .nav-link {
+        padding-inline: 0.9rem;
+        padding-block: 0.35rem;
+        font-size: 0.82rem;
+    }
+
+    .inventory-import-shell .card-header,
+    .inventory-import-shell .card-body {
+        padding-top: 0.7rem;
+        padding-bottom: 0.7rem;
+    }
+
+    .inventory-items-table .card-header {
+        padding-top: 0.7rem;
+        padding-bottom: 0.55rem;
+    }
+
+    .inventory-manual-txn .card-header {
+        padding-top: 0.7rem;
+        padding-bottom: 0.55rem;
+    }
+
+    .inventory-vendor-return .card-header {
+        padding-top: 0.7rem;
+        padding-bottom: 0.55rem;
+    }
 </style>
 @endpush
 
@@ -39,10 +80,10 @@
 <div class="inventory-page-wrap">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
-            <h5 class="mb-1">Items / Store</h5>
-            <div class="inventory-stat">Item master and live store stock separated without changing route structure.</div>
+            <div class="inventory-header-title mb-1">Items / Store</div>
+            <div class="inventory-header-sub inventory-stat">Item master and live store stock separated without changing route structure.</div>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 inventory-header-badges">
             <span class="badge bg-danger">{{ count($lowStockItems ?? []) }} low stock</span>
             <span class="badge bg-secondary">{{ $items->count() }} items</span>
         </div>
@@ -62,7 +103,7 @@
 
     <div class="tab-content" id="inventory-tab-content">
         <div class="tab-pane fade show active" id="items-pane" role="tabpanel" aria-labelledby="items-tab" tabindex="0">
-            <div class="card shadow-sm mb-3">
+            <div class="card shadow-sm mb-3 inventory-import-shell">
                 <div class="card-header">Legacy Bulk Import (name,sku,uom,reorder_level,is_active,category)</div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.inventory.items.import') }}" enctype="multipart/form-data" class="row g-2">
@@ -75,7 +116,7 @@
 
             <div class="row g-3">
                 <div class="col-lg-6">
-                    <div class="card shadow-sm">
+                    <div class="card shadow-sm inventory-import-shell">
                         <div class="card-header">
                             <h5 class="mb-0">Manual Item Create</h5>
                         </div>
@@ -137,7 +178,7 @@
                 </div>
 
                 <div class="col-12">
-                    <div class="card shadow-sm">
+                    <div class="card shadow-sm inventory-items-table">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Items</h5>
                             <span class="badge bg-secondary">{{ $items->count() }} items</span>
@@ -201,7 +242,7 @@
         <div class="tab-pane fade" id="store-stock-pane" role="tabpanel" aria-labelledby="store-stock-tab" tabindex="0">
             <div class="row g-3">
                 <div class="col-12">
-                    <div class="card shadow-sm">
+                    <div class="card shadow-sm inventory-manual-txn">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Store Stock</h5>
                             <span class="text-muted small">Usable stock based on auditable transaction balance.</span>
@@ -400,7 +441,7 @@
         <div class="tab-pane fade" id="vendor-return-pane" role="tabpanel" aria-labelledby="vendor-return-tab" tabindex="0">
             <div class="row g-3">
                 <div class="col-lg-5">
-                    <div class="card shadow-sm">
+                    <div class="card shadow-sm inventory-vendor-return">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Vendor Return</h5>
                             <span class="text-muted small">Store stock only</span>

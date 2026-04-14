@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Inventory')
-@section('page_title', 'Inventory')
+@section('title', 'Items / Store')
+@section('page_title', 'Items / Store')
 
 @push('styles')
 <style>
@@ -19,242 +19,398 @@
         z-index: 1;
         background-image: none !important;
     }
+
+    .inventory-tab-nav {
+        gap: 8px;
+    }
+
+    .inventory-tab-nav .nav-link {
+        border-radius: 999px;
+    }
+
+    .inventory-stat {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
 </style>
 @endpush
 
 @section('content')
 <div class="inventory-page-wrap">
-<div class="card shadow-sm mb-3">
-    <div class="card-header">Legacy Bulk Import (name,sku,uom,reorder_level,is_active,category)</div>
-    <div class="card-body">
-        <form method="POST" action="{{ route('admin.inventory.items.import') }}" enctype="multipart/form-data" class="row g-2">
-            @csrf
-            <div class="col-md-6"><input type="file" name="file" class="form-control" accept=".csv,.txt" required></div>
-            <div class="col-md-3"><button class="btn btn-outline-primary">Import Items CSV</button></div>
-        </form>
-    </div>
-</div>
-
-<div class="row g-3">
-    <div class="col-lg-6">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h5 class="mb-0">Manual Item Create</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('admin.inventory.items.store') }}" class="row g-2">
-                    @csrf
-                    <div class="col-md-6">
-                        <label class="form-label">ItemCode</label>
-                        <input type="text" name="item_code" class="form-control" value="{{ old('item_code') }}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">ItemName</label>
-                        <input type="text" name="item_name" class="form-control" value="{{ old('item_name') }}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Category</label>
-                        <input type="text" name="category" class="form-control" value="{{ old('category') }}" placeholder="e.g. Grocery">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">UoM</label>
-                        <input type="text" name="uom" class="form-control" value="{{ old('uom', 'kg') }}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Reorder Level</label>
-                        <input type="number" name="reorder_level" class="form-control" value="{{ old('reorder_level', 0) }}" min="0" step="0.001">
-                    </div>
-                    <div class="col-12">
-                        <button class="btn btn-primary" type="submit">Create Item</button>
-                    </div>
-                </form>
-            </div>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <h5 class="mb-1">Items / Store</h5>
+            <div class="inventory-stat">Item master and live store stock separated without changing route structure.</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-danger">{{ count($lowStockItems ?? []) }} low stock</span>
+            <span class="badge bg-secondary">{{ $items->count() }} items</span>
         </div>
     </div>
 
-    <div class="col-lg-6">
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h5 class="mb-0">Bulk Items Upload (CSV)</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('admin.inventory.items.bulk-upload') }}" enctype="multipart/form-data" class="row g-2">
-                    @csrf
-                    <div class="col-12">
-                        <label class="form-label">CSV File</label>
-                        <input type="file" name="items_file" class="form-control" accept=".csv,text/csv" required>
-                        <small class="text-muted">Required headers: <strong>ItemCode, ItemName, Category, UoM</strong></small>
-                    </div>
-                    <div class="col-12">
-                        <button class="btn btn-success" type="submit">Upload CSV</button>
-                    </div>
-                </form>
-                <hr>
-                <div class="small text-muted">
-                    <div><strong>Sample Row:</strong></div>
-                    <code>ITM-001, Rice Super, Grocery, kg</code>
-                </div>
-            </div>
-        </div>
-    </div>
+    <ul class="nav nav-pills inventory-tab-nav mb-3" id="inventory-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="items-tab" data-bs-toggle="pill" data-bs-target="#items-pane" type="button" role="tab" aria-controls="items-pane" aria-selected="true">Items</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="store-stock-tab" data-bs-toggle="pill" data-bs-target="#store-stock-pane" type="button" role="tab" aria-controls="store-stock-pane" aria-selected="false">Store Stock</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="vendor-return-tab" data-bs-toggle="pill" data-bs-target="#vendor-return-pane" type="button" role="tab" aria-controls="vendor-return-pane" aria-selected="false">Vendor Return</button>
+        </li>
+    </ul>
 
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Items List</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-danger">{{ count($lowStockItems ?? []) }} low stock</span>
-                    <span class="badge bg-secondary">{{ $items->count() }} items</span>
+    <div class="tab-content" id="inventory-tab-content">
+        <div class="tab-pane fade show active" id="items-pane" role="tabpanel" aria-labelledby="items-tab" tabindex="0">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header">Legacy Bulk Import (name,sku,uom,reorder_level,is_active,category)</div>
+                <div class="card-body">
+                    <form method="POST" action="{{ route('admin.inventory.items.import') }}" enctype="multipart/form-data" class="row g-2">
+                        @csrf
+                        <div class="col-md-6"><input type="file" name="file" class="form-control" accept=".csv,.txt" required></div>
+                        <div class="col-md-3"><button class="btn btn-outline-primary">Import Items CSV</button></div>
+                    </form>
                 </div>
             </div>
-            <div class="card-body table-responsive">
-                <table class="table table-sm table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>ItemCode</th>
-                            <th>ItemName</th>
-                            <th>Category</th>
-                            <th>UoM</th>
-                            <th>Reorder</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php
-                            $lowIds = collect($lowStockItems ?? [])->pluck('item.id')->all();
-                        @endphp
-                        @forelse($items as $item)
-                            <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->sku }}</td>
-                                <td>{{ $item->name }}</td>
-                                <td>{{ $item->category ?? 'Uncategorized' }}</td>
-                                <td>{{ $item->uom }}</td>
-                                <td>
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">Manual Item Create</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('admin.inventory.items.store') }}" class="row g-2">
+                                @csrf
+                                <div class="col-md-6">
+                                    <label class="form-label">ItemCode</label>
+                                    <input type="text" name="item_code" class="form-control" value="{{ old('item_code') }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ItemName</label>
+                                    <input type="text" name="item_name" class="form-control" value="{{ old('item_name') }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Category</label>
+                                    <input type="text" name="category" class="form-control" value="{{ old('category') }}" placeholder="e.g. Grocery">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">UoM</label>
+                                    <input type="text" name="uom" class="form-control" value="{{ old('uom', 'kg') }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Reorder Level</label>
+                                    <input type="number" name="reorder_level" class="form-control" value="{{ old('reorder_level', 0) }}" min="0" step="0.001">
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-primary" type="submit">Create Item</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">Bulk Items Upload (CSV)</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('admin.inventory.items.bulk-upload') }}" enctype="multipart/form-data" class="row g-2">
+                                @csrf
+                                <div class="col-12">
+                                    <label class="form-label">CSV File</label>
+                                    <input type="file" name="items_file" class="form-control" accept=".csv,text/csv" required>
+                                    <small class="text-muted">Required headers: <strong>ItemCode, ItemName, Category, UoM</strong></small>
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-success" type="submit">Upload CSV</button>
+                                </div>
+                            </form>
+                            <hr>
+                            <div class="small text-muted">
+                                <div><strong>Sample Row:</strong></div>
+                                <code>ITM-001, Rice Super, Grocery, kg</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Items</h5>
+                            <span class="badge bg-secondary">{{ $items->count() }} items</span>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>ItemCode</th>
+                                        <th>ItemName</th>
+                                        <th>Category</th>
+                                        <th>UoM</th>
+                                        <th>Reorder</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                                     @php
-                                        $isLow = in_array($item->id, $lowIds, true);
+                                        $lowIds = collect($lowStockItems ?? [])->pluck('item.id')->all();
                                     @endphp
-                                    <span class="badge {{ $isLow ? 'bg-danger' : 'bg-light text-muted' }}">
-                                        {{ number_format((float) $item->reorder_level, 3) }}
-                                        @if($isLow)
-                                            <span class="ms-1">Low</span>
-                                        @endif
-                                    </span>
-                                </td>
-                                <td>
-                                    @if($item->is_active)
-                                        <span class="badge bg-success">Active</span>
-                                    @else
-                                        <span class="badge bg-secondary">Inactive</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted">No items found</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                    @forelse($items as $item)
+                                        <tr>
+                                            <td>{{ $item->id }}</td>
+                                            <td>{{ $item->sku }}</td>
+                                            <td>{{ $item->name }}</td>
+                                            <td>{{ $item->category ?? 'Uncategorized' }}</td>
+                                            <td>{{ $item->uom }}</td>
+                                            <td>
+                                                @php
+                                                    $isLow = in_array($item->id, $lowIds, true);
+                                                @endphp
+                                                <span class="badge {{ $isLow ? 'bg-danger' : 'bg-light text-muted' }}">
+                                                    {{ number_format((float) $item->reorder_level, 3) }}
+                                                    @if($isLow)
+                                                        <span class="ms-1">Low</span>
+                                                    @endif
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if($item->is_active)
+                                                    <span class="badge bg-success">Active</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">No items found</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    @if(!empty($lowStockItems))
-        <div class="col-12 mt-3">
+        <div class="tab-pane fade" id="store-stock-pane" role="tabpanel" aria-labelledby="store-stock-tab" tabindex="0">
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Store Stock</h5>
+                            <span class="text-muted small">Usable stock based on auditable transaction balance.</span>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>ItemCode</th>
+                                        <th>ItemName</th>
+                                        <th>Category</th>
+                                        <th>UoM</th>
+                                        <th>Available Stock</th>
+                                        <th>Received Qty</th>
+                                        <th>Issued Qty</th>
+                                        <th>Latest Movement</th>
+                                        <th>Trail</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($storeStockRows as $row)
+                                        @php
+                                            $item = $row['item'];
+                                            $latest = $row['latest_movement'];
+                                        @endphp
+                                        <tr>
+                                            <td>{{ $item->sku }}</td>
+                                            <td>{{ $item->name }}</td>
+                                            <td>{{ $item->category ?? 'Uncategorized' }}</td>
+                                            <td>{{ $item->uom }}</td>
+                                            <td>
+                                                <span class="badge {{ (float) $row['balance'] > 0 ? 'bg-success' : 'bg-secondary' }}">
+                                                    {{ number_format((float) $row['balance'], 3) }} {{ $item->uom }}
+                                                </span>
+                                            </td>
+                                            <td>{{ number_format((float) $row['received_qty'], 3) }} {{ $item->uom }}</td>
+                                            <td>{{ number_format((float) $row['issued_qty'], 3) }} {{ $item->uom }}</td>
+                                            <td>
+                                                @if($latest)
+                                                    <div>{{ $latest->txn_type }}</div>
+                                                    <div class="small text-muted">{{ optional($latest->txn_at)->format('Y-m-d H:i') }}</div>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
+                                            <td><a class="btn btn-sm btn-outline-secondary" href="{{ route('admin.inventory.items.trail', $item) }}">Trail</a></td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="9" class="text-center text-muted">No stock rows found</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                @if(!empty($lowStockItems))
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <h5 class="mb-0">Low Stock Items</h5>
+                            </div>
+                            <div class="card-body table-responsive">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>ItemCode</th>
+                                            <th>ItemName</th>
+                                            <th>Balance</th>
+                                            <th>Reorder Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($lowStockItems as $row)
+                                            @php
+                                                $item = $row['item'];
+                                            @endphp
+                                            <tr>
+                                                <td>{{ $item->sku }}</td>
+                                                <td>{{ $item->name }}</td>
+                                                <td>{{ number_format((float) $row['balance'], 3) }} {{ $item->uom }}</td>
+                                                <td>{{ number_format((float) $item->reorder_level, 3) }} {{ $item->uom }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Manual Inventory Transaction</h5>
+                            <span class="text-muted small">Use for opening balance, adjustments and ad-hoc IN/OUT</span>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('admin.inventory.txns.store') }}" class="row g-2">
+                                @csrf
+                                <div class="col-md-3">
+                                    <label class="form-label">Item</label>
+                                    <select name="item_id" id="inv-item-select" class="form-select" required>
+                                        <option value="">Select item</option>
+                                        @foreach($items as $item)
+                                            <option value="{{ $item->id }}">{{ $item->sku }} — {{ $item->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="small mt-1" id="inv-balance-indicator"></div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Txn Type</label>
+                                    <select name="txn_type" class="form-select" required>
+                                        <option value="OPENING">OPENING</option>
+                                        <option value="IN">IN</option>
+                                        <option value="OUT">OUT</option>
+                                        <option value="ADJUSTMENT">ADJUSTMENT</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Date</label>
+                                    <input type="date" name="txn_at" class="form-control" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Quantity</label>
+                                    <input type="number" step="0.001" min="0.001" name="quantity" id="inv-qty-input" class="form-control" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Unit</label>
+                                    <select name="unit_code" id="inv-unit-select" class="form-select">
+                                        <option value="">Base unit</option>
+                                    </select>
+                                    <div class="small text-muted" id="inv-conversion-preview"></div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Cost</label>
+                                    <input type="number" step="0.01" min="0" name="unit_cost" class="form-control" placeholder="optional for OUT/ADJ">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Remarks</label>
+                                    <input type="text" name="remarks" class="form-control" placeholder="optional reference">
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100">Post Transaction</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">Recent Stock Ledger</h5>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Item</th>
+                                        <th>Txn Type</th>
+                                        <th>Qty</th>
+                                        <th>Unit Cost</th>
+                                        <th>Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($ledger as $txn)
+                                        @php
+                                            $item = $items->firstWhere('id', $txn->item_id);
+                                        @endphp
+                                        <tr>
+                                            <td>{{ optional($txn->txn_at)->format('Y-m-d H:i') }}</td>
+                                            <td>{{ $item?->sku }} {{ $item?->name ? '— '.$item->name : '' }}</td>
+                                            <td>{{ $txn->txn_type }}</td>
+                                            <td>{{ number_format((float) $txn->quantity, 3) }}</td>
+                                            <td>{{ number_format((float) $txn->unit_cost, 2) }}</td>
+                                            <td>{{ $txn->remarks }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">No ledger rows found</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="vendor-return-pane" role="tabpanel" aria-labelledby="vendor-return-tab" tabindex="0">
             <div class="card shadow-sm">
-                <div class="card-header">
-                    <h5 class="mb-0">Low Stock Items</h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Vendor Return</h5>
+                    <span class="text-muted small">Flow intentionally deferred to Phase 4.</span>
                 </div>
-                <div class="card-body table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead>
-                            <tr>
-                                <th>ItemCode</th>
-                                <th>ItemName</th>
-                                <th>Balance</th>
-                                <th>Reorder Level</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($lowStockItems as $row)
-                                @php
-                                    $item = $row['item'];
-                                @endphp
-                                <tr>
-                                    <td>{{ $item->sku }}</td>
-                                    <td>{{ $item->name }}</td>
-                                    <td>{{ number_format((float) $row['balance'], 3) }} {{ $item->uom }}</td>
-                                    <td>{{ number_format((float) $item->reorder_level, 3) }} {{ $item->uom }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                <div class="card-body">
+                    <div class="alert alert-secondary mb-0">
+                        Phase 3 only prepares the Inventory structure. Vendor Return posting, validation, and stock impact will be added in Phase 4 using store-stock truth only.
+                    </div>
                 </div>
-            </div>
-        </div>
-    @endif
-
-    <div class="col-12 mt-3">
-        <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Manual Inventory Transaction</h5>
-                <span class="text-muted small">Use for opening balance, adjustments and ad-hoc IN/OUT</span>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ route('admin.inventory.txns.store') }}" class="row g-2">
-                    @csrf
-                    <div class="col-md-3">
-                        <label class="form-label">Item</label>
-                        <select name="item_id" id="inv-item-select" class="form-select" required>
-                            <option value="">Select item</option>
-                            @foreach($items as $item)
-                                <option value="{{ $item->id }}">{{ $item->sku }} — {{ $item->name }}</option>
-                            @endforeach
-                        </select>
-                        <div class="small mt-1" id="inv-balance-indicator"></div>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Txn Type</label>
-                        <select name="txn_type" class="form-select" required>
-                            <option value="OPENING">OPENING</option>
-                            <option value="IN">IN</option>
-                            <option value="OUT">OUT</option>
-                            <option value="ADJUSTMENT">ADJUSTMENT</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Date</label>
-                        <input type="date" name="txn_at" class="form-control" required>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Quantity</label>
-                        <input type="number" step="0.001" min="0.001" name="quantity" id="inv-qty-input" class="form-control" required>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Unit</label>
-                        <select name="unit_code" id="inv-unit-select" class="form-select">
-                            <option value="">Base unit</option>
-                        </select>
-                        <div class="small text-muted" id="inv-conversion-preview"></div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Unit Cost</label>
-                        <input type="number" step="0.01" min="0" name="unit_cost" class="form-control" placeholder="optional for OUT/ADJ">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Remarks</label>
-                        <input type="text" name="remarks" class="form-control" placeholder="optional reference">
-                    </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button class="btn btn-primary w-100">Post Transaction</button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
-</div>
 </div>
 @endsection
 

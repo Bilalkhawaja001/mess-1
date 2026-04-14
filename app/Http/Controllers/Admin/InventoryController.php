@@ -19,12 +19,37 @@ class InventoryController extends Controller
 
     public function index()
     {
-        $items = Item::query()->orderBy('name')->get();
+        $items = Item::query()->with('units')->orderBy('name')->get();
         $ledger = StockTransaction::query()->latest('txn_at')->limit(100)->get();
         $balances = $this->inventoryService->stockBalances();
         $lowStockItems = $this->inventoryService->lowStockItems();
 
-        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems'));
+        $ledgerByItem = $ledger->groupBy('item_id');
+        $storeStockRows = collect($balances)
+            ->map(function (array $row) use ($ledgerByItem) {
+                /** @var \App\Models\Item $item */
+                $item = $row['item'];
+                $itemLedger = collect($ledgerByItem->get($item->id, collect()));
+                $receivedQty = (float) $itemLedger
+                    ->whereIn('txn_type', ['OPENING', 'IN', 'ADJUSTMENT', 'GRN'])
+                    ->sum('quantity');
+                $issuedQty = (float) $itemLedger
+                    ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE'])
+                    ->sum('quantity');
+                $latestMovement = $itemLedger->sortByDesc('txn_at')->first();
+
+                return [
+                    'item' => $item,
+                    'balance' => (float) ($row['balance'] ?? 0),
+                    'received_qty' => $receivedQty,
+                    'issued_qty' => $issuedQty,
+                    'latest_movement' => $latestMovement,
+                ];
+            })
+            ->sortBy(fn (array $row) => strtolower((string) $row['item']->name))
+            ->values();
+
+        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems', 'storeStockRows'));
     }
 
     public function storeItem(Request $request): RedirectResponse

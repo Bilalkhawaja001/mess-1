@@ -59,17 +59,34 @@
     .kitchen-data-card .table {
         font-size: 0.82rem;
     }
+
+    .kitchen-section-kicker {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #64748b;
+    }
+
+    .kitchen-section-sub {
+        font-size: 0.82rem;
+        color: #64748b;
+    }
+
+    .kitchen-month-shell .card-body {
+        background: radial-gradient(circle at top left, rgba(34,197,94,0.06), transparent 55%);
+    }
 </style>
 @endpush
 
 @section('content')
 <div class="row g-3">
     <div class="col-12">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm kitchen-month-shell">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <div class="kitchen-month-header-title">Kitchen Month Summary / Ledger</div>
                     <div class="small text-muted kitchen-month-header-sub">Approved kitchen issues only. Draft issues are excluded from monthly truth.</div>
+                    <div class="kitchen-section-sub">Summary and ledger are driven strictly from stock-backed approved issues.</div>
                 </div>
                 <form method="GET" action="{{ route('admin.kitchen.index') }}" class="d-flex gap-2 align-items-center">
                     <input type="month" name="month" class="form-control" value="{{ $selectedMonth }}">

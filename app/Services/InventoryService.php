@@ -133,4 +133,17 @@ class InventoryService
             'outward' => $outward,
         ];
     }
+
+    public function currentUnitCostForItem(int $itemId): float
+    {
+        $latestInboundCost = StockTransaction::query()
+            ->where('item_id', $itemId)
+            ->whereIn('txn_type', ['OPENING', 'IN', 'ADJUSTMENT', 'GRN'])
+            ->where('unit_cost', '>', 0)
+            ->orderByDesc('txn_at')
+            ->orderByDesc('id')
+            ->value('unit_cost');
+
+        return round((float) ($latestInboundCost ?? 0), 2);
+    }
 }

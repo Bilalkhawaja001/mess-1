@@ -38,11 +38,17 @@ class KitchenController extends Controller
         $menus = Menu::query()->latest()->get();
         $recipes = Recipe::query()->latest()->limit(200)->get();
         $plans = MealPlan::query()->latest('plan_date')->limit(200)->get();
-        $issues = KitchenIssue::query()->with(['mess', 'approvedStockTransaction'])->latest('issue_date')->limit(200)->get();
+        $issues = KitchenIssue::query()->with(['mess', 'approvedStockTransaction', 'item'])->latest('issue_date')->limit(200)->get();
         $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
+        $consumption = KitchenIssue::query()
+            ->where('status', KitchenIssue::STATUS_APPROVED)
+            ->selectRaw('item_id, SUM(quantity) as total_qty')
+            ->groupBy('item_id')
+            ->orderByDesc('total_qty')
+            ->get();
+
         $selectedMonth = (string) ($request->query('month') ?: now()->format('Y-m'));
-        $monthStart = now()->startOfMonth();
         try {
             $monthStart = \Illuminate\Support\Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
         } catch (\Throwable $e) {
@@ -51,96 +57,68 @@ class KitchenController extends Controller
         }
         $monthEnd = $monthStart->copy()->endOfMonth();
 
-        $approvedIssueQuery = KitchenIssue::query()
-            ->with(['mess', 'approvedStockTransaction', 'item'])
-            ->where('status', KitchenIssue::STATUS_APPROVED)
-            ->whereNotNull('approved_stock_txn_id')
-            ->whereBetween('issue_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
-
-        $approvedIssuesMonth = $approvedIssueQuery
-            ->clone()
-            ->orderByDesc('issue_date')
-            ->orderByDesc('id')
-            ->get();
-
-        $kitchenMonthSummary = [
-            'selected_month' => $selectedMonth,
-            'month_start' => $monthStart,
-            'month_end' => $monthEnd,
-            'approved_issue_count' => $approvedIssuesMonth->count(),
-            'approved_total_qty' => round((float) $approvedIssuesMonth->sum('quantity'), 3),
-            'draft_issue_count' => KitchenIssue::query()
-                ->where('status', KitchenIssue::STATUS_DRAFT)
-                ->whereBetween('issue_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
-                ->count(),
-        ];
-
-        $consumption = $approvedIssuesMonth
-            ->groupBy('item_id')
-            ->map(function ($rows, $itemId) use ($items) {
-                return (object) [
-                    'item_id' => (int) $itemId,
-                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
-                    'item' => $items->firstWhere('id', (int) $itemId),
-                ];
+        $kitchenLedgerBase = StockTransaction::query()
+            ->from('stock_transactions as st')
+            ->join('items as i', 'i.id', '=', 'st.item_id')
+            ->join('kitchen_issues as ki', function ($join) {
+                $join->on('ki.id', '=', 'st.reference_id')
+                    ->where('st.reference_type', '=', KitchenIssue::class);
             })
-            ->sortByDesc('total_qty')
-            ->values();
+            ->leftJoin('messes as m', 'm.id', '=', 'ki.mess_id')
+            ->where('st.txn_type', StockTransaction::TXN_TYPE_KITCHEN_ISSUE)
+            ->where('st.reference_type', KitchenIssue::class)
+            ->where('ki.status', KitchenIssue::STATUS_APPROVED)
+            ->whereNotNull('ki.approved_stock_txn_id');
 
-        $kitchenMonthByMess = $approvedIssuesMonth
-            ->groupBy('mess_id')
-            ->map(function ($rows, $messId) use ($messes) {
-                return [
-                    'mess_id' => (int) $messId,
-                    'mess_name' => $messes->firstWhere('id', (int) $messId)?->name ?? '—',
-                    'issue_count' => collect($rows)->count(),
-                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
-                ];
-            })
-            ->sortByDesc('total_qty')
-            ->values();
+        $kitchenLedgerRows = (clone $kitchenLedgerBase)
+            ->whereBetween('st.txn_at', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->orderByDesc('st.txn_at')
+            ->orderByDesc('st.id')
+            ->limit(200)
+            ->get([
+                'st.id',
+                'st.txn_at',
+                'st.txn_type',
+                'st.quantity',
+                'st.unit_cost',
+                'st.reference_type',
+                'st.reference_id',
+                'st.remarks',
+                'i.name as item_name',
+                'i.uom as item_uom',
+                'ki.issue_date as source_issue_date',
+                'ki.approved_at as issue_approved_at',
+                'ki.issue_type',
+                'ki.unit_code',
+                'ki.mess_id',
+                'm.name as mess_name',
+                DB::raw('(st.quantity * st.unit_cost) as amount'),
+            ]);
 
-        $kitchenMonthByType = $approvedIssuesMonth
-            ->groupBy(fn (KitchenIssue $issue) => $issue->issue_type ?: 'CONSUMPTION')
-            ->map(function ($rows, $issueType) {
-                return [
-                    'issue_type' => $issueType,
-                    'issue_count' => collect($rows)->count(),
-                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
-                ];
-            })
-            ->sortByDesc('total_qty')
-            ->values();
+        $kitchenMonthlySummary = (clone $kitchenLedgerBase)
+            ->groupBy(DB::raw("DATE_FORMAT(st.txn_at, '%Y-%m')"))
+            ->orderByDesc(DB::raw("DATE_FORMAT(st.txn_at, '%Y-%m')"))
+            ->limit(12)
+            ->get([
+                DB::raw("DATE_FORMAT(st.txn_at, '%Y-%m') as month_cycle"),
+                DB::raw('COUNT(*) as ledger_rows'),
+                DB::raw('SUM(st.quantity) as total_qty'),
+                DB::raw('SUM(st.quantity * st.unit_cost) as total_amount'),
+            ]);
 
-        $kitchenMonthDaily = $approvedIssuesMonth
-            ->groupBy(fn (KitchenIssue $issue) => (string) $issue->issue_date)
-            ->map(function ($rows, $issueDate) {
-                return [
-                    'issue_date' => $issueDate,
-                    'issue_count' => collect($rows)->count(),
-                    'total_qty' => round((float) collect($rows)->sum('quantity'), 3),
-                ];
-            })
-            ->sortBy('issue_date')
-            ->values();
-
-        $kitchenMonthLedger = $approvedIssuesMonth
-            ->map(function (KitchenIssue $issue) {
-                return [
-                    'issue_date' => $issue->issue_date,
-                    'approved_at' => $issue->approved_at,
-                    'mess_name' => $issue->mess?->name ?? '—',
-                    'item_name' => $issue->item?->name ?? $issue->item_id,
-                    'item_uom' => $issue->item?->uom,
-                    'quantity' => round((float) $issue->quantity, 3),
-                    'issue_type' => $issue->issue_type ?: 'CONSUMPTION',
-                    'remarks' => $issue->remarks,
-                    'stock_txn_id' => $issue->approved_stock_txn_id,
-                ];
-            })
-            ->values();
-
-        return view('admin.kitchen.index', compact('items', 'issueItems', 'menus', 'recipes', 'plans', 'issues', 'consumption', 'messes', 'selectedMonth', 'kitchenMonthSummary', 'kitchenMonthByMess', 'kitchenMonthByType', 'kitchenMonthDaily', 'kitchenMonthLedger'));
+        return view('admin.kitchen.index', compact(
+            'items',
+            'issueItems',
+            'menus',
+            'recipes',
+            'plans',
+            'issues',
+            'consumption',
+            'messes',
+            'selectedMonth',
+            'kitchenMonthlySummary',
+            'kitchenLedgerRows'
+        ));
     }
 
     public function apiMenus(): JsonResponse
@@ -264,46 +242,37 @@ class KitchenController extends Controller
         $transQuantity = (float) $d['quantity'];
 
         $baseQuantity = $transQuantity;
-        $transUnitCode = null;
         $transQty = null;
-
         if ($unitCode !== null && $unitCode !== '') {
             $unit = $item->units->firstWhere('unit_code', $unitCode);
             if (! $unit) {
-                return back()
-                    ->withErrors(['unit_code' => 'Invalid unit for item'])
-                    ->withInput();
+                return back()->withErrors(['unit_code' => 'Invalid unit for item'])->withInput();
             }
 
             $baseQuantity = $transQuantity * (float) $unit->factor_to_base;
-            $transUnitCode = $unit->unit_code;
             $transQty = $transQuantity;
         }
 
-        // Lightweight duplicate guard: block very recent identical issues from being posted twice.
         $recentDuplicate = KitchenIssue::query()
             ->where('item_id', $item->id)
             ->where('issue_date', $d['issue_date'])
             ->where('quantity', $baseQuantity)
             ->where('issue_type', $d['issue_type'])
             ->where('mess_id', $d['mess_id'])
+            ->where('unit_code', $unitCode)
             ->where('remarks', $request->input('remarks'))
             ->where('created_at', '>=', now()->subMinutes(2))
             ->exists();
 
         if ($recentDuplicate) {
-            return back()->with('info', 'Similar kitchen issue was just created. Duplicate posting has been skipped.');
-        }
-
-        $currentBalance = $this->inventoryService->balanceForItem($item->id);
-        if ($baseQuantity > $currentBalance) {
-            return back()->withErrors(['quantity' => 'Not enough stock to post this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])->withInput();
+            return back()->with('info', 'Similar kitchen issue was just created. Duplicate request has been skipped.');
         }
 
         KitchenIssue::query()->create([
             'issue_date' => $d['issue_date'],
             'item_id' => $item->id,
             'quantity' => $baseQuantity,
+            'unit_code' => $unitCode,
             'mess_id' => $d['mess_id'],
             'issue_type' => $d['issue_type'],
             'remarks' => $request->input('remarks'),
@@ -312,52 +281,93 @@ class KitchenController extends Controller
             'approved_stock_txn_id' => null,
         ]);
 
-        return back()->with('success', 'Kitchen issue created');
+        return back()->with('success', 'Kitchen issue request created and pending approval.');
     }
 
     public function approveIssue(KitchenIssue $issue): RedirectResponse
     {
         if ($issue->isApproved()) {
-            return back()->with('success', 'Kitchen issue already approved');
+            return back()->with('success', 'Kitchen issue already approved.');
         }
 
-        DB::transaction(function () use ($issue): void {
-            $issue->refresh();
+        $existingPosting = StockTransaction::query()
+            ->where('txn_type', StockTransaction::TXN_TYPE_KITCHEN_ISSUE)
+            ->where('reference_type', KitchenIssue::class)
+            ->where('reference_id', $issue->id)
+            ->first();
 
-            if ($issue->isApproved()) {
-                return;
-            }
-
-            $item = Item::query()->findOrFail($issue->item_id);
-            $currentBalance = $this->inventoryService->balanceForItem($item->id);
-            if ((float) $issue->quantity > $currentBalance) {
-                throw new \RuntimeException('Not enough stock to approve this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom);
-            }
-
-            $txn = StockTransaction::query()->create([
-                'item_id' => $item->id,
-                'txn_type' => StockTransaction::TXN_TYPE_KITCHEN_ISSUE,
-                'quantity' => $issue->quantity,
-                'unit_cost' => 0,
-                'trans_unit_code' => null,
-                'trans_quantity' => null,
-                'reference_type' => KitchenIssue::class,
-                'reference_id' => $issue->id,
-                'txn_at' => $issue->issue_date,
-                'remarks' => $issue->remarks ?: sprintf(
-                    'Kitchen issue (%s%s)',
-                    $issue->issue_type ?? 'CONSUMPTION',
-                    $issue->mess_id ? ', Mess: '.$issue->mess?->name : ''
-                ),
-            ]);
-
-            $issue->update([
+        if ($existingPosting) {
+            $issue->forceFill([
                 'status' => KitchenIssue::STATUS_APPROVED,
-                'approved_at' => now(),
-                'approved_stock_txn_id' => $txn->id,
-            ]);
-        });
+                'approved_at' => $issue->approved_at ?? now(),
+                'approved_stock_txn_id' => $issue->approved_stock_txn_id ?? $existingPosting->id,
+            ])->save();
 
-        return back()->with('success', 'Kitchen issue approved');
+            return back()->with('success', 'Kitchen issue already had a stock posting. Approval state synced without duplicate posting.');
+        }
+
+        try {
+            DB::transaction(function () use ($issue): void {
+                $lockedIssue = KitchenIssue::query()
+                    ->whereKey($issue->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($lockedIssue->isApproved()) {
+                    return;
+                }
+
+                $duplicatePosting = StockTransaction::query()
+                    ->where('txn_type', StockTransaction::TXN_TYPE_KITCHEN_ISSUE)
+                    ->where('reference_type', KitchenIssue::class)
+                    ->where('reference_id', $lockedIssue->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($duplicatePosting) {
+                    $lockedIssue->forceFill([
+                        'status' => KitchenIssue::STATUS_APPROVED,
+                        'approved_at' => $lockedIssue->approved_at ?? now(),
+                        'approved_stock_txn_id' => $lockedIssue->approved_stock_txn_id ?? $duplicatePosting->id,
+                    ])->save();
+                    return;
+                }
+
+                $item = Item::query()->findOrFail($lockedIssue->item_id);
+                $currentBalance = $this->inventoryService->balanceForItem($item->id);
+                if ((float) $lockedIssue->quantity > $currentBalance) {
+                    throw new \RuntimeException('Not enough stock to approve this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom);
+                }
+
+                $unitCost = $this->inventoryService->currentUnitCostForItem((int) $lockedIssue->item_id);
+
+                $txn = StockTransaction::query()->create([
+                    'item_id' => $item->id,
+                    'txn_type' => StockTransaction::TXN_TYPE_KITCHEN_ISSUE,
+                    'quantity' => $lockedIssue->quantity,
+                    'unit_cost' => $unitCost,
+                    'trans_unit_code' => $lockedIssue->unit_code,
+                    'trans_quantity' => $lockedIssue->unit_code ? (float) $lockedIssue->quantity : null,
+                    'reference_type' => KitchenIssue::class,
+                    'reference_id' => $lockedIssue->id,
+                    'txn_at' => $lockedIssue->issue_date,
+                    'remarks' => $lockedIssue->remarks ?: sprintf(
+                        'Kitchen issue (%s%s)',
+                        $lockedIssue->issue_type ?? 'CONSUMPTION',
+                        $lockedIssue->mess_id ? ', Mess: '.($lockedIssue->mess?->name ?? $lockedIssue->mess_id) : ''
+                    ),
+                ]);
+
+                $lockedIssue->forceFill([
+                    'status' => KitchenIssue::STATUS_APPROVED,
+                    'approved_at' => now(),
+                    'approved_stock_txn_id' => $txn->id,
+                ])->save();
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['kitchen_issue' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Kitchen issue approved and stock posted successfully.');
     }
 }

@@ -555,3 +555,135 @@ a { text-decoration: none; }
         height: 108px;
     }
 }
+
+/* FINAL LIVE SIDEBAR CONTRAST OVERRIDE */
+.app-shell > .sidebar,
+.app-shell > aside.sidebar,
+.sidebar,
+.app-sidebar,
+aside.sidebar,
+.sidebar-panel,
+.workspace-panel {
+    background: linear-gradient(180deg, #0b1220 0%, #132033 48%, #18283f 100%) !important;
+    color: #f8fafc !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+}
+
+.app-shell > .sidebar *,
+.app-shell > aside.sidebar *,
+.sidebar *,
+.app-sidebar *,
+aside.sidebar *,
+.sidebar-panel *,
+.workspace-panel * {
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+.app-shell > .sidebar .sb-brand,
+.app-shell > .sidebar .sb-group,
+.app-shell > .sidebar .sb-powered,
+.sidebar .sb-brand,
+.sidebar .sb-group,
+.sidebar .sb-powered,
+.app-sidebar .sb-brand,
+.app-sidebar .sb-group,
+.app-sidebar .sb-powered,
+aside.sidebar .sb-brand,
+aside.sidebar .sb-group,
+aside.sidebar .sb-powered {
+    background: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(191, 219, 254, 0.18) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(2, 6, 23, 0.18) !important;
+}
+
+.app-shell > .sidebar .sb-title,
+.app-shell > .sidebar .sb-sub,
+.app-shell > .sidebar .sb-label,
+.app-shell > .sidebar .sb-powered-text,
+.sidebar .sb-title,
+.sidebar .sb-sub,
+.sidebar .sb-label,
+.sidebar .sb-powered-text,
+.app-sidebar .sb-title,
+.app-sidebar .sb-sub,
+.app-sidebar .sb-label,
+.app-sidebar .sb-powered-text,
+aside.sidebar .sb-title,
+aside.sidebar .sb-sub,
+aside.sidebar .sb-label,
+aside.sidebar .sb-powered-text,
+.sidebar span,
+.sidebar small {
+    color: #f8fafc !important;
+    text-shadow: 0 1px 1px rgba(2, 6, 23, 0.30) !important;
+}
+
+.app-shell > .sidebar a,
+.app-shell > .sidebar .nav-link,
+.sidebar a,
+.sidebar .nav-link,
+.app-sidebar a,
+.app-sidebar .nav-link,
+aside.sidebar a,
+aside.sidebar .nav-link,
+.sidebar-panel a,
+.sidebar-panel .nav-link,
+.workspace-panel a,
+.workspace-panel .nav-link {
+    color: #f8fafc !important;
+    opacity: 1 !important;
+    background: transparent !important;
+    font-weight: 650 !important;
+}
+
+.app-shell > .sidebar i,
+.app-shell > .sidebar svg,
+.sidebar i,
+.sidebar svg,
+.app-sidebar i,
+.app-sidebar svg,
+aside.sidebar i,
+aside.sidebar svg,
+.sidebar-panel i,
+.sidebar-panel svg,
+.workspace-panel i,
+.workspace-panel svg {
+    color: #dbeafe !important;
+    fill: currentColor !important;
+    opacity: 1 !important;
+}
+
+.app-shell > .sidebar .nav-link:hover,
+.app-shell > .sidebar .nav-link:focus,
+.sidebar .nav-link:hover,
+.sidebar .nav-link:focus,
+.app-sidebar .nav-link:hover,
+.app-sidebar .nav-link:focus,
+aside.sidebar .nav-link:hover,
+aside.sidebar .nav-link:focus {
+    color: #ffffff !important;
+    background: rgba(59, 130, 246, 0.24) !important;
+}
+
+.app-shell > .sidebar .nav-link.active,
+.sidebar .nav-link.active,
+.app-sidebar .nav-link.active,
+aside.sidebar .nav-link.active {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.42), rgba(14, 165, 233, 0.30)) !important;
+    box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.46), 0 12px 24px rgba(2, 6, 23, 0.22) !important;
+}
+
+.app-shell > .sidebar .nav-link.active i,
+.app-shell > .sidebar .nav-link:hover i,
+.sidebar .nav-link.active i,
+.sidebar .nav-link:hover i,
+.app-sidebar .nav-link.active i,
+.app-sidebar .nav-link:hover i,
+aside.sidebar .nav-link.active i,
+aside.sidebar .nav-link:hover i {
+    color: #ffffff !important;
+}

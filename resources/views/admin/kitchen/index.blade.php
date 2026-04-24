@@ -86,6 +86,30 @@
     .table > :not(caption) > * > * {
         vertical-align: middle;
     }
+    .kitchen-issue-form .form-control,
+    .kitchen-issue-form .form-select {
+        min-height: 50px;
+    }
+    .kitchen-field-date {
+        min-width: 180px;
+    }
+    .kitchen-field-mess,
+    .kitchen-field-item,
+    .kitchen-field-type,
+    .kitchen-field-unit {
+        min-width: 170px;
+    }
+    .kitchen-field-qty {
+        min-width: 120px;
+    }
+    .kitchen-field-remarks {
+        min-width: 240px;
+    }
+    @media (min-width: 992px) {
+        .kitchen-issue-form {
+            align-items: start;
+        }
+    }
     @media (max-width: 767.98px) {
         .kitchen-tabs-nav {
             padding: .75rem;
@@ -97,6 +121,15 @@
         .kitchen-card .card-header {
             padding-left: .9rem;
             padding-right: .9rem;
+        }
+        .kitchen-field-date,
+        .kitchen-field-mess,
+        .kitchen-field-item,
+        .kitchen-field-type,
+        .kitchen-field-unit,
+        .kitchen-field-qty,
+        .kitchen-field-remarks {
+            min-width: 100%;
         }
     }
 </style>
@@ -138,39 +171,39 @@
                     <div class="card kitchen-card">
                         <div class="card-header">Post Kitchen Issue</div>
                         <div class="card-body">
-                            <form method="POST" action="{{ route('admin.kitchen.issues.store') }}" class="row g-2">
+                            <form method="POST" action="{{ route('admin.kitchen.issues.store') }}" class="row g-3 kitchen-issue-form">
                                 @csrf
-                                <div class="col-md-3"><input name="issue_date" id="kitchen-issue-date" type="date" class="form-control" value="{{ old('issue_date') }}" required></div>
-                                <div class="col-md-2">
-                                    <select name="mess_id" id="kitchen-mess-select" class="form-select" required>
+                                <div class="col-12 col-md-6 col-lg-auto"><input name="issue_date" id="kitchen-issue-date" type="date" class="form-control kitchen-field-date" value="{{ old('issue_date') }}" required></div>
+                                <div class="col-12 col-md-6 col-lg-auto">
+                                    <select name="mess_id" id="kitchen-mess-select" class="form-select kitchen-field-mess" required>
                                         <option value="">Select mess</option>
                                         @foreach($messes as $mess)
                                             <option value="{{ $mess->id }}" @selected((string) old('mess_id') === (string) $mess->id)>{{ $mess->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-3">
-                                    <select name="item_id" id="kitchen-item-select" class="form-select" required>
+                                <div class="col-12 col-lg">
+                                    <select name="item_id" id="kitchen-item-select" class="form-select kitchen-field-item" required>
                                         <option value="">Select stock item</option>
                                     </select>
                                     <div class="small text-muted" id="kitchen-target-status">Only items with current available stock are shown.</div>
                                 </div>
-                                <div class="col-md-1"><input name="quantity" id="kitchen-qty-input" type="number" step="0.001" min="0.001" class="form-control" value="{{ old('quantity') }}" required></div>
-                                <div class="col-md-2">
-                                    <select name="issue_type" class="form-select" required>
+                                <div class="col-12 col-sm-6 col-lg-auto"><input name="quantity" id="kitchen-qty-input" type="number" step="0.001" min="0.001" class="form-control kitchen-field-qty" value="{{ old('quantity') }}" required></div>
+                                <div class="col-12 col-sm-6 col-lg-auto">
+                                    <select name="issue_type" class="form-select kitchen-field-type" required>
                                         <option value="CONSUMPTION" @selected(old('issue_type') === 'CONSUMPTION')>Consumption</option>
                                         <option value="WASTAGE" @selected(old('issue_type') === 'WASTAGE')>Wastage</option>
                                         <option value="DAMAGE" @selected(old('issue_type') === 'DAMAGE')>Damage</option>
                                         <option value="EXPIRED" @selected(old('issue_type') === 'EXPIRED')>Expired</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
-                                    <select name="unit_code" id="kitchen-unit-select" class="form-select">
+                                <div class="col-12 col-md-6 col-lg-auto">
+                                    <select name="unit_code" id="kitchen-unit-select" class="form-select kitchen-field-unit">
                                         <option value="">Base unit</option>
                                     </select>
                                     <div class="small text-muted" id="kitchen-conversion-preview"></div>
                                 </div>
-                                <div class="col-md-4"><input name="remarks" class="form-control" placeholder="remarks" value="{{ old('remarks') }}"></div>
+                                <div class="col-12 col-lg"><input name="remarks" class="form-control kitchen-field-remarks" placeholder="remarks" value="{{ old('remarks') }}"></div>
                                 <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary px-4">Post Issue</button></div>
                             </form>
                         </div>

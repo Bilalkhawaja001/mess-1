@@ -89,7 +89,6 @@ class KitchenController extends Controller
                 'ki.issue_date as source_issue_date',
                 'ki.approved_at as issue_approved_at',
                 'ki.issue_type',
-                'ki.unit_code',
                 'ki.mess_id',
                 'm.name as mess_name',
                 DB::raw('(st.quantity * st.unit_cost) as amount'),

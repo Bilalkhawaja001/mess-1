@@ -306,7 +306,7 @@
                                         <td>{{ $row->item_name }}</td>
                                         <td>{{ rtrim(rtrim(number_format((float) $row->quantity, 3, '.', ''), '0'), '.') }} {{ $row->item_uom }}</td>
                                         <td>{{ $row->issue_type ?? 'CONSUMPTION' }}</td>
-                                        <td>{{ $row->unit_code ?: $row->item_uom }}</td>
+                                        <td>{{ $row->item_uom }}</td>
                                         <td>{{ $row->remarks }}</td>
                                     </tr>
                                 @empty

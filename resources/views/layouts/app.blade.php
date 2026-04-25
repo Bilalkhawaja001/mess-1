@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @stack('styles')
-    <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}?v=b89ef21">
+    <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}?v=dd29f44">
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -37,9 +37,7 @@
     const applyState = (collapsed) => {
         shell.classList.toggle('sidebar-collapsed', collapsed);
         toggle.setAttribute('aria-expanded', String(!collapsed));
-        toggle.innerHTML = collapsed
-            ? '<i class="bi bi-layout-sidebar"></i>'
-            : '<i class="bi bi-layout-sidebar-inset"></i>';
+        toggle.innerHTML = '<i class="bi bi-list"></i>';
     };
 
     const applyMobileState = (open) => {

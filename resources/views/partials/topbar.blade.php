@@ -1,5 +1,8 @@
 <header class="topbar">
     <div class="topbar-meta">
+        <button class="sidebar-toggle" type="button" id="sidebarToggle" aria-label="Toggle sidebar" aria-controls="appSidebar" aria-expanded="true">
+            <i class="bi bi-layout-sidebar-inset"></i>
+        </button>
         <div>
             <div class="tb-title">@yield('page_title', 'Dashboard')</div>
             <div class="tb-sub">Enterprise billing command center</div>

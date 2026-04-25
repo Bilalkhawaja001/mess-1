@@ -1145,3 +1145,153 @@ a { text-decoration: none; }
 .content-area{
     padding-left: 0 !important;
 }
+
+/* BALANCED SIDEBAR FIX V5 */
+.sidebar {
+    width: 268px !important;
+    flex: 0 0 268px !important;
+    padding: 8px !important;
+}
+
+.sidebar-inner {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+    border-radius: 20px !important;
+}
+
+.content-wrap {
+    margin-left: 0 !important;
+}
+
+.page-body {
+    padding: 20px 20px 20px 20px !important;
+}
+
+.topbar {
+    padding: 14px 20px !important;
+}
+
+.sidebar-scroll {
+    max-height: calc(100vh - 140px) !important;
+    overflow-y: auto !important;
+    padding-right: 3px !important;
+    padding-bottom: 8px !important;
+}
+
+.sidebar .nav {
+    gap: 4px !important;
+}
+
+.sb-brand {
+    min-height: 64px !important;
+    padding: 11px 12px !important;
+    border-radius: 18px !important;
+}
+
+.sb-brand-mark {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+}
+
+.sb-title {
+    font-size: 0.92rem !important;
+    line-height: 1.1 !important;
+}
+
+.sb-sub {
+    font-size: 0.74rem !important;
+    margin-top: 2px !important;
+}
+
+.sb-label {
+    font-size: 0.64rem !important;
+    letter-spacing: 0.16em !important;
+    margin: 0 10px 8px !important;
+    color: #cbd5e1 !important;
+}
+
+.sb-group {
+    padding-top: 10px !important;
+}
+
+.sidebar .nav-link {
+    min-height: 40px !important;
+    padding: 5px 10px !important;
+    gap: 10px !important;
+    border-radius: 12px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+}
+
+.sidebar .nav-link.active {
+    box-shadow: 0 10px 18px rgba(37,99,235,0.22) !important;
+}
+
+.sidebar-icon-wrap {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 10px !important;
+}
+
+.sidebar .nav-link .sidebar-icon {
+    font-size: 0.95rem !important;
+}
+
+.sb-powered {
+    padding: 10px 10px 0 !important;
+}
+
+.sb-powered-text {
+    font-size: 0.72rem !important;
+}
+
+.app-shell.sidebar-collapsed .sidebar {
+    width: 76px !important;
+    flex-basis: 76px !important;
+}
+
+.app-shell.sidebar-collapsed .sidebar-inner {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+.app-shell.sidebar-collapsed .content-wrap {
+    margin-left: 0 !important;
+}
+
+.app-shell.sidebar-collapsed .sidebar .nav-link {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.app-shell.sidebar-collapsed .sb-brand-copy,
+.app-shell.sidebar-collapsed .sb-label,
+.app-shell.sidebar-collapsed .sidebar .nav-link span:last-child,
+.app-shell.sidebar-collapsed .sb-powered-text,
+.app-shell.sidebar-collapsed .sb-powered-logo {
+    display: none !important;
+}
+
+.app-shell.sidebar-collapsed .sidebar-icon-wrap {
+    margin: 0 auto !important;
+}
+
+@media (max-width: 991.98px) {
+    .sidebar {
+        width: min(268px, 84vw) !important;
+        flex-basis: min(268px, 84vw) !important;
+        padding: 0 !important;
+    }
+
+    .content-wrap {
+        margin-left: 0 !important;
+    }
+
+    .page-body {
+        padding: 18px !important;
+    }
+}
+

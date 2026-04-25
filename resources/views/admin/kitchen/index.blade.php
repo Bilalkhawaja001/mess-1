@@ -139,29 +139,29 @@
 <div class="kitchen-tabs-wrap">
     <ul class="nav nav-pills kitchen-tabs-nav" id="kitchenTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="tab-issue-tab" data-bs-toggle="pill" data-bs-target="#tab-issue" type="button" role="tab" aria-controls="tab-issue" aria-selected="true">
+            <button class="nav-link {{ ($activeTab ?? 'issue') === 'issue' ? 'active' : '' }}" id="tab-issue-tab" data-bs-toggle="pill" data-bs-target="#tab-issue" type="button" role="tab" aria-controls="tab-issue" aria-selected="{{ ($activeTab ?? 'issue') === 'issue' ? 'true' : 'false' }}">
                 <i class="bi bi-box-arrow-in-down-right me-1"></i> Post Kitchen Issue
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-ledger-tab" data-bs-toggle="pill" data-bs-target="#tab-ledger" type="button" role="tab" aria-controls="tab-ledger" aria-selected="false">
+            <button class="nav-link {{ ($activeTab ?? 'issue') === 'ledger' ? 'active' : '' }}" id="tab-ledger-tab" data-bs-toggle="pill" data-bs-target="#tab-ledger" type="button" role="tab" aria-controls="tab-ledger" aria-selected="{{ ($activeTab ?? 'issue') === 'ledger' ? 'true' : 'false' }}">
                 <i class="bi bi-journal-text me-1"></i> Kitchen Issues & Summary / Ledger
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-menu-tab" data-bs-toggle="pill" data-bs-target="#tab-menu" type="button" role="tab" aria-controls="tab-menu" aria-selected="false">
+            <button class="nav-link {{ ($activeTab ?? 'issue') === 'menu' ? 'active' : '' }}" id="tab-menu-tab" data-bs-toggle="pill" data-bs-target="#tab-menu" type="button" role="tab" aria-controls="tab-menu" aria-selected="{{ ($activeTab ?? 'issue') === 'menu' ? 'true' : 'false' }}">
                 <i class="bi bi-card-checklist me-1"></i> Menu / Recipes
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-plans-tab" data-bs-toggle="pill" data-bs-target="#tab-plans" type="button" role="tab" aria-controls="tab-plans" aria-selected="false">
+            <button class="nav-link {{ ($activeTab ?? 'issue') === 'plans' ? 'active' : '' }}" id="tab-plans-tab" data-bs-toggle="pill" data-bs-target="#tab-plans" type="button" role="tab" aria-controls="tab-plans" aria-selected="{{ ($activeTab ?? 'issue') === 'plans' ? 'true' : 'false' }}">
                 <i class="bi bi-calendar2-week me-1"></i> Meal Plans
             </button>
         </li>
     </ul>
 
     <div class="tab-content" id="kitchenTabsContent">
-        <div class="tab-pane fade show active kitchen-tab-pane" id="tab-issue" role="tabpanel" aria-labelledby="tab-issue-tab" tabindex="0">
+        <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'issue' ? 'show active' : '' }} kitchen-tab-pane" id="tab-issue" role="tabpanel" aria-labelledby="tab-issue-tab" tabindex="0">
             <div class="kitchen-tab-kicker">Kitchen Ops</div>
             <div class="kitchen-tab-title">Post Kitchen Issue</div>
             <div class="kitchen-tab-subtitle">Create kitchen issue requests here. Stock deduction happens only after approval.</div>
@@ -234,7 +234,7 @@
             </div>
         </div>
 
-        <div class="tab-pane fade kitchen-tab-pane" id="tab-ledger" role="tabpanel" aria-labelledby="tab-ledger-tab" tabindex="0">
+        <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'ledger' ? 'show active' : '' }} kitchen-tab-pane" id="tab-ledger" role="tabpanel" aria-labelledby="tab-ledger-tab" tabindex="0">
             <div class="kitchen-tab-kicker">Tracking</div>
             <div class="kitchen-tab-title">Kitchen Issues, Month Summary, and Ledger</div>
             <div class="kitchen-tab-subtitle">Issue list keeps remote fields. Month summary and ledger render stock transaction truth for approved kitchen postings only.</div>
@@ -290,7 +290,11 @@
                                             @if($i->status === \App\Models\KitchenIssue::STATUS_APPROVED)
                                                 <span class="text-success small">Approved</span>
                                             @else
-                                                <form method="POST" action="{{ route('admin.kitchen.issues.approve.legacy',$i) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form>
+                                                <form method="POST" action="{{ route('admin.kitchen.issues.approve.legacy',$i) }}">
+                                                    @csrf
+                                                    <input type="hidden" name="return_tab" value="ledger">
+                                                    <button class="btn btn-sm btn-outline-success">Approve</button>
+                                                </form>
                                             @endif
                                         </td>
                                     </tr>
@@ -353,7 +357,7 @@
             </div>
         </div>
 
-        <div class="tab-pane fade kitchen-tab-pane" id="tab-menu" role="tabpanel" aria-labelledby="tab-menu-tab" tabindex="0">
+        <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'menu' ? 'show active' : '' }} kitchen-tab-pane" id="tab-menu" role="tabpanel" aria-labelledby="tab-menu-tab" tabindex="0">
             <div class="kitchen-tab-kicker">Recipes</div>
             <div class="kitchen-tab-title">Menu / Recipes</div>
             <div class="kitchen-tab-subtitle">Remote menu and recipe flows preserved inside one tabbed workspace.</div>
@@ -435,7 +439,7 @@
             </div>
         </div>
 
-        <div class="tab-pane fade kitchen-tab-pane" id="tab-plans" role="tabpanel" aria-labelledby="tab-plans-tab" tabindex="0">
+        <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'plans' ? 'show active' : '' }} kitchen-tab-pane" id="tab-plans" role="tabpanel" aria-labelledby="tab-plans-tab" tabindex="0">
             <div class="kitchen-tab-kicker">Planning</div>
             <div class="kitchen-tab-title">Meal Plans</div>
             <div class="kitchen-tab-subtitle">Remote meal plan flows preserved in the 4 tab kitchen page.</div>
@@ -518,6 +522,13 @@
 @push('scripts')
 <script>
     (() => {
+        const kitchenTabParamMap = {
+            'tab-issue-tab': 'issue',
+            'tab-ledger-tab': 'ledger',
+            'tab-menu-tab': 'menu',
+            'tab-plans-tab': 'plans',
+        };
+
         const items = @json($kitchenItemsJson);
         const oldItemId = @json(old('item_id'));
         const oldUnitCode = @json(old('unit_code'));
@@ -633,6 +644,15 @@
         itemSelect?.addEventListener('change', syncUnits);
         unitSelect?.addEventListener('change', syncPreview);
         qtyInput?.addEventListener('input', syncPreview);
+
+        document.querySelectorAll('#kitchenTabs [data-bs-toggle="pill"]').forEach((tabButton) => {
+            tabButton.addEventListener('shown.bs.tab', (event) => {
+                const tabValue = kitchenTabParamMap[event.target.id] || 'issue';
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', tabValue);
+                window.history.replaceState({}, '', url.toString());
+            });
+        });
 
         syncItems();
     })();

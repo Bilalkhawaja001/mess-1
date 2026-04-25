@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class KitchenController extends Controller
 {
@@ -24,6 +25,14 @@ class KitchenController extends Controller
 
     public function index(Request $request)
     {
+        $activeTab = trim((string) $request->query('tab', 'issue'));
+        if (! in_array($activeTab, ['issue', 'issues', 'ledger', 'menu', 'plans'], true)) {
+            $activeTab = 'issue';
+        }
+        if ($activeTab === 'issues') {
+            $activeTab = 'ledger';
+        }
+
         $items = Item::query()->with('units')->orderBy('name')->get();
         $issueItems = $items
             ->where('is_active', true)
@@ -116,7 +125,8 @@ class KitchenController extends Controller
             'messes',
             'selectedMonth',
             'kitchenMonthlySummary',
-            'kitchenLedgerRows'
+            'kitchenLedgerRows',
+            'activeTab'
         ));
     }
 
@@ -283,10 +293,12 @@ class KitchenController extends Controller
         return back()->with('success', 'Kitchen issue request created and pending approval.');
     }
 
-    public function approveIssue(KitchenIssue $issue): RedirectResponse
+    public function approveIssue(Request $request, KitchenIssue $issue): RedirectResponse
     {
+        $returnTab = $this->normalizeKitchenTab((string) $request->input('return_tab', $request->query('tab', 'ledger')));
+
         if ($issue->isApproved()) {
-            return back()->with('success', 'Kitchen issue already approved.');
+            return $this->redirectToKitchenTab($returnTab)->with('success', 'Kitchen issue already approved.');
         }
 
         $existingPosting = StockTransaction::query()
@@ -302,7 +314,7 @@ class KitchenController extends Controller
                 'approved_stock_txn_id' => $issue->approved_stock_txn_id ?? $existingPosting->id,
             ])->save();
 
-            return back()->with('success', 'Kitchen issue already had a stock posting. Approval state synced without duplicate posting.');
+            return $this->redirectToKitchenTab($returnTab)->with('success', 'Kitchen issue already had a stock posting. Approval state synced without duplicate posting.');
         }
 
         try {
@@ -364,9 +376,26 @@ class KitchenController extends Controller
                 ])->save();
             });
         } catch (\RuntimeException $e) {
-            return back()->withErrors(['kitchen_issue' => $e->getMessage()]);
+            return $this->redirectToKitchenTab($returnTab)->withErrors(['kitchen_issue' => $e->getMessage()]);
         }
 
-        return back()->with('success', 'Kitchen issue approved and stock posted successfully.');
+        return $this->redirectToKitchenTab($returnTab)->with('success', 'Kitchen issue approved and stock posted successfully.');
+    }
+
+    private function normalizeKitchenTab(string $tab): string
+    {
+        $tab = Str::lower(trim($tab));
+
+        return match ($tab) {
+            'issues', 'ledger' => 'ledger',
+            'menu' => 'menu',
+            'plans' => 'plans',
+            default => 'issue',
+        };
+    }
+
+    private function redirectToKitchenTab(string $tab): RedirectResponse
+    {
+        return redirect()->route('admin.kitchen.index', ['tab' => $this->normalizeKitchenTab($tab)]);
     }
 }

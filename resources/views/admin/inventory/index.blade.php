@@ -89,20 +89,46 @@
         </div>
     </div>
 
+    <form method="GET" action="{{ route('admin.inventory.index') }}" class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-lg-7">
+                    <label class="form-label">Search inventory</label>
+                    <input type="text" name="q" class="form-control" value="{{ $search ?? '' }}" placeholder="Search by item name, code, category, store stock, vendor, GRN, reference">
+                </div>
+                <div class="col-lg-3">
+                    <label class="form-label">Keep tab</label>
+                    <select name="tab" class="form-select">
+                        <option value="items" @selected(($activeTab ?? 'items') === 'items')>Items</option>
+                        <option value="store-stock" @selected(($activeTab ?? 'items') === 'store-stock')>Store Stock</option>
+                        <option value="vendor-return" @selected(($activeTab ?? 'items') === 'vendor-return')>Vendor Return</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 d-flex gap-2">
+                    <button class="btn btn-primary w-100" type="submit">Search</button>
+                    <a href="{{ route('admin.inventory.index', ['tab' => $activeTab ?? 'items']) }}" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </div>
+            @if(($search ?? '') !== '')
+                <div class="small text-muted mt-2">Showing filtered results for <strong>{{ $search }}</strong>.</div>
+            @endif
+        </div>
+    </form>
+
     <ul class="nav nav-pills inventory-tab-nav mb-3" id="inventory-tabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="items-tab" data-bs-toggle="pill" data-bs-target="#items-pane" type="button" role="tab" aria-controls="items-pane" aria-selected="true">Items</button>
+            <button class="nav-link {{ ($activeTab ?? 'items') === 'items' ? 'active' : '' }}" id="items-tab" data-bs-toggle="pill" data-bs-target="#items-pane" type="button" role="tab" aria-controls="items-pane" aria-selected="{{ ($activeTab ?? 'items') === 'items' ? 'true' : 'false' }}">Items</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="store-stock-tab" data-bs-toggle="pill" data-bs-target="#store-stock-pane" type="button" role="tab" aria-controls="store-stock-pane" aria-selected="false">Store Stock</button>
+            <button class="nav-link {{ ($activeTab ?? 'items') === 'store-stock' ? 'active' : '' }}" id="store-stock-tab" data-bs-toggle="pill" data-bs-target="#store-stock-pane" type="button" role="tab" aria-controls="store-stock-pane" aria-selected="{{ ($activeTab ?? 'items') === 'store-stock' ? 'true' : 'false' }}">Store Stock</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="vendor-return-tab" data-bs-toggle="pill" data-bs-target="#vendor-return-pane" type="button" role="tab" aria-controls="vendor-return-pane" aria-selected="false">Vendor Return</button>
+            <button class="nav-link {{ ($activeTab ?? 'items') === 'vendor-return' ? 'active' : '' }}" id="vendor-return-tab" data-bs-toggle="pill" data-bs-target="#vendor-return-pane" type="button" role="tab" aria-controls="vendor-return-pane" aria-selected="{{ ($activeTab ?? 'items') === 'vendor-return' ? 'true' : 'false' }}">Vendor Return</button>
         </li>
     </ul>
 
     <div class="tab-content" id="inventory-tab-content">
-        <div class="tab-pane fade show active" id="items-pane" role="tabpanel" aria-labelledby="items-tab" tabindex="0">
+        <div class="tab-pane fade {{ ($activeTab ?? 'items') === 'items' ? 'show active' : '' }}" id="items-pane" role="tabpanel" aria-labelledby="items-tab" tabindex="0">
             <div class="card shadow-sm mb-3 inventory-import-shell">
                 <div class="card-header">Legacy Bulk Import (name,sku,uom,reorder_level,is_active,category)</div>
                 <div class="card-body">
@@ -228,7 +254,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted">No items found</td>
+                                            <td colspan="7" class="text-center text-muted">{{ ($search ?? '') !== '' ? 'No items matched your search.' : 'No items found' }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -239,7 +265,7 @@
             </div>
         </div>
 
-        <div class="tab-pane fade" id="store-stock-pane" role="tabpanel" aria-labelledby="store-stock-tab" tabindex="0">
+        <div class="tab-pane fade {{ ($activeTab ?? 'items') === 'store-stock' ? 'show active' : '' }}" id="store-stock-pane" role="tabpanel" aria-labelledby="store-stock-tab" tabindex="0">
             <div class="row g-3">
                 <div class="col-12">
                     <div class="card shadow-sm inventory-manual-txn">
@@ -292,7 +318,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="9" class="text-center text-muted">No stock rows found</td>
+                                            <td colspan="9" class="text-center text-muted">{{ ($search ?? '') !== '' ? 'No store stock rows matched your search.' : 'No stock rows found' }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -438,7 +464,7 @@
             </div>
         </div>
 
-        <div class="tab-pane fade" id="vendor-return-pane" role="tabpanel" aria-labelledby="vendor-return-tab" tabindex="0">
+        <div class="tab-pane fade {{ ($activeTab ?? 'items') === 'vendor-return' ? 'show active' : '' }}" id="vendor-return-pane" role="tabpanel" aria-labelledby="vendor-return-tab" tabindex="0">
             <div class="row g-3">
                 <div class="col-lg-5">
                     <div class="card shadow-sm inventory-vendor-return">
@@ -532,7 +558,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted">No vendor returns posted yet</td>
+                                            <td colspan="7" class="text-center text-muted">{{ ($search ?? '') !== '' ? 'No vendor return rows matched your search.' : 'No vendor returns posted yet' }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -588,6 +614,12 @@
 @push('scripts')
 <script>
     (() => {
+        const inventoryTabParamMap = {
+            'items-tab': 'items',
+            'store-stock-tab': 'store-stock',
+            'vendor-return-tab': 'vendor-return',
+        };
+
         const items = @json($inventoryItemsJson);
         const itemsById = {};
         items.forEach((i) => { itemsById[i.id] = i; });
@@ -736,6 +768,15 @@
         if (returnSourceSelect) returnSourceSelect.addEventListener('change', syncVendorReturnSource);
         if (returnUnitSelect) returnUnitSelect.addEventListener('change', syncVendorReturnPreview);
         if (returnQtyInput) returnQtyInput.addEventListener('input', syncVendorReturnPreview);
+
+        document.querySelectorAll('#inventory-tabs [data-bs-toggle="pill"]').forEach((tabButton) => {
+            tabButton.addEventListener('shown.bs.tab', (event) => {
+                const tabValue = inventoryTabParamMap[event.target.id] || 'items';
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', tabValue);
+                window.history.replaceState({}, '', url.toString());
+            });
+        });
 
         syncBalanceAndUnits();
         syncVendorReturnSource();

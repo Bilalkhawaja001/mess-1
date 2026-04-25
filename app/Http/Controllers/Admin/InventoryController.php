@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\StockTransaction;
 use App\Models\VendorReturn;
 use App\Services\InventoryService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,9 +20,27 @@ class InventoryController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $items = Item::query()->with('units')->orderBy('name')->get();
+        $search = trim((string) $request->query('q', ''));
+        $activeTab = trim((string) $request->query('tab', 'items'));
+
+        if (! in_array($activeTab, ['items', 'store-stock', 'vendor-return'], true)) {
+            $activeTab = 'items';
+        }
+
+        $items = Item::query()
+            ->with('units')
+            ->when($search !== '', function (Builder $query) use ($search) {
+                $query->where(function (Builder $inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
+                        ->orWhere('uom', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->get();
         $ledger = StockTransaction::query()->latest('txn_at')->limit(100)->get();
         $balances = $this->inventoryService->stockBalances();
         $lowStockItems = $this->inventoryService->lowStockItems();
@@ -47,6 +66,22 @@ class InventoryController extends Controller
                     'issued_qty' => $issuedQty,
                     'latest_movement' => $latestMovement,
                 ];
+            })
+            ->filter(function (array $row) use ($search) {
+                if ($search === '') {
+                    return true;
+                }
+
+                $item = $row['item'];
+                $haystack = strtolower(implode(' ', [
+                    (string) $item->name,
+                    (string) $item->sku,
+                    (string) ($item->category ?? ''),
+                    (string) $item->uom,
+                    (string) (optional($row['latest_movement'])->remarks ?? ''),
+                ]));
+
+                return str_contains($haystack, strtolower($search));
             })
             ->sortBy(fn (array $row) => strtolower((string) $row['item']->name))
             ->values();
@@ -112,6 +147,20 @@ class InventoryController extends Controller
                 ];
             })
             ->filter()
+            ->filter(function (array $source) use ($search) {
+                if ($search === '') {
+                    return true;
+                }
+
+                $haystack = strtolower(implode(' ', [
+                    (string) ($source['grn_number'] ?? ''),
+                    (string) ($source['vendor_name'] ?? ''),
+                    (string) ($source['item_sku'] ?? ''),
+                    (string) ($source['item_name'] ?? ''),
+                ]));
+
+                return str_contains($haystack, strtolower($search));
+            })
             ->sortByDesc('received_date')
             ->values();
 
@@ -121,7 +170,7 @@ class InventoryController extends Controller
             ->limit(50)
             ->get();
 
-        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems', 'storeStockRows', 'vendorReturnSources', 'vendorReturns'));
+        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems', 'storeStockRows', 'vendorReturnSources', 'vendorReturns', 'search', 'activeTab'));
     }
 
     public function storeItem(Request $request): RedirectResponse

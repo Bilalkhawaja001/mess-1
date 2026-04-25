@@ -407,79 +407,44 @@
                     @enderror
                 </div>
                 <div class="col-12">
-                    <div class="procurement-group-label">Line / item</div>
-                    <label class="form-label">PO Line / Item</label>
-                    <select id="grn-line-select" class="form-select @error('purchase_order_line_id') is-invalid @enderror" required>
-                        <option value="">Select PO first</option>
-                    </select>
-                    @error('purchase_order_line_id')
+                    <div class="procurement-group-label">Receive date</div>
+                    <input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}">
+                    @error('received_date')
                         <div class="text-danger small mt-1">{{ $message }}</div>
                     @enderror
-                    <input type="hidden" name="purchase_order_line_id" id="grn-line-id" required value="{{ old('purchase_order_line_id') }}">
-                    <input type="text" id="grn-item-display" class="form-control mt-2" readonly placeholder="Select PO line first">
-                    <input type="hidden" name="item_id" id="grn-item-id" required value="{{ old('item_id') }}">
-                    @error('item_id')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
+                </div>
+                <div class="col-12">
+                    <div class="procurement-group-label">PO lines to receive</div>
+                    <div class="procurement-note mb-2">Tick only the rows received now. Unchecked rows stay pending. Qty defaults to pending and can be edited for partial receive.</div>
+                    @error('receive_rows')
+                        <div class="text-danger small mb-2">{{ $message }}</div>
                     @enderror
+                    <div class="table-responsive grn-line-table">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Receive?</th>
+                                    <th>Item</th>
+                                    <th>Ordered</th>
+                                    <th>Received</th>
+                                    <th>Pending</th>
+                                    <th>Receive Qty</th>
+                                    <th>Unit</th>
+                                    <th>Unit Cost</th>
+                                    <th>Override</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grn-lines-body">
+                                <tr>
+                                    <td colspan="10" class="text-muted text-center">Select PO to load pending lines.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="procurement-note mt-2">Stock is posted immediately when GRN is created. Approval does not post stock again.</div>
-                    <div class="text-danger small mt-1 d-none" id="grn-block-message">Receive quantity cannot exceed pending quantity.</div>
                 </div>
-                <div class="col-12">
-                    <div class="procurement-group-label">KPI strip</div>
-                    <div class="procurement-kpi">
-                        <div>Ordered Qty<strong id="grn-ordered">0.000</strong></div>
-                        <div>Already Received<strong id="grn-received">0.000</strong></div>
-                        <div>Pending Qty<strong id="grn-pending">0.000</strong></div>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <div class="procurement-group-label">Receive quantity &amp; unit</div>
-                </div>
-                <div class="col-6"><input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}"></div>
-                <div class="col-3"><input type="number" step="0.001" min="0.001" name="qty_received" id="grn-qty-input" class="form-control @error('qty_received') is-invalid @enderror" required value="{{ old('qty_received') }}"></div>
-                <div class="col-3">
-                    <select name="unit_code" id="grn-unit-select" class="form-select @error('unit_code') is-invalid @enderror" required>
-                        <option value="">Select unit</option>
-                    </select>
-                    <div class="procurement-mini-result" id="grn-conversion-preview"></div>
-                </div>
-                @error('received_date')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                @error('qty_received')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                @error('unit_code')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                <div class="col-12">
-                    <div class="procurement-group-label">Cost &amp; override</div>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">PO Unit Cost</label>
-                    <input type="text" id="grn-po-unit-cost" class="form-control" readonly placeholder="Select PO line first">
-                </div>
-                <div class="col-12">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="1" name="override_po_rate" id="grn-override-rate" @checked(old('override_po_rate'))>
-                        <label class="form-check-label" for="grn-override-rate">Override PO rate</label>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Actual GRN Unit Cost</label>
-                    <input type="number" step="0.01" min="0.01" name="unit_cost" id="grn-unit-cost-input" class="form-control @error('unit_cost') is-invalid @enderror" placeholder="unit cost" required value="{{ old('unit_cost') }}">
-                </div>
-                @error('unit_cost')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                <div class="col-12 d-none" id="grn-override-reason-wrap">
-                    <label class="form-label">Override Reason</label>
-                    <input type="text" name="override_reason" id="grn-override-reason" class="form-control @error('override_reason') is-invalid @enderror" maxlength="500" placeholder="Why actual GRN rate differs from PO rate" value="{{ old('override_reason') }}">
-                </div>
-                @error('override_reason')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary" id="grn-submit-btn">Create GRN</button></div>
+                <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary" id="grn-submit-btn">Receive Selected Items</button></div>
             </form>
         </div></div></div>
     </div>
@@ -672,203 +637,172 @@
         createPoLine();
 
         const poSelect = document.getElementById('grn-po-select');
-        const grnLineSelect = document.getElementById('grn-line-select');
-        const grnLineId = document.getElementById('grn-line-id');
-        const grnItemDisplay = document.getElementById('grn-item-display');
-        const grnItemId = document.getElementById('grn-item-id');
-        const grnOrdered = document.getElementById('grn-ordered');
-        const grnReceived = document.getElementById('grn-received');
-        const grnPending = document.getElementById('grn-pending');
-        const grnQtyInput = document.getElementById('grn-qty-input');
-        const grnBlockMessage = document.getElementById('grn-block-message');
-        const grnUnitSelect = document.getElementById('grn-unit-select');
-        const grnConversionPreview = document.getElementById('grn-conversion-preview');
-        const grnPoUnitCost = document.getElementById('grn-po-unit-cost');
-        const grnUnitCostInput = document.getElementById('grn-unit-cost-input');
-        const grnOverrideRate = document.getElementById('grn-override-rate');
-        const grnOverrideReasonWrap = document.getElementById('grn-override-reason-wrap');
-        const grnOverrideReason = document.getElementById('grn-override-reason');
+        const grnLinesBody = document.getElementById('grn-lines-body');
 
-        const syncPo = () => {
-            const option = poSelect?.selectedOptions?.[0];
-            if (!option || !option.value) {
-                grnLineSelect.innerHTML = '<option value="">Select PO first</option>';
-                grnLineId.value = '';
-                grnItemDisplay.value = '';
-                grnItemId.value = '';
-                grnOrdered.textContent = '0.000';
-                grnReceived.textContent = '0.000';
-                grnPending.textContent = '0.000';
-                grnQtyInput.removeAttribute('max');
-                if (grnPoUnitCost) grnPoUnitCost.value = '';
-                if (grnUnitCostInput) grnUnitCostInput.value = '';
-                if (grnOverrideRate) grnOverrideRate.checked = false;
-                if (grnOverrideReasonWrap) grnOverrideReasonWrap.classList.add('d-none');
-                if (grnOverrideReason) grnOverrideReason.value = '';
-                if (grnUnitCostInput) grnUnitCostInput.readOnly = true;
-                return;
-            }
-
-            const lines = JSON.parse(option.dataset.lines || '[]').filter(line => Number(line.pending) > 0);
-            grnLineSelect.innerHTML = '<option value="">Select PO line</option>';
-            lines.forEach((line) => {
-                const opt = document.createElement('option');
-                opt.value = line.id;
-                opt.dataset.itemId = line.item_id;
-                opt.dataset.itemLabel = line.item_label;
-                opt.dataset.ordered = line.ordered;
-                opt.dataset.received = line.received;
-                opt.dataset.pending = line.pending;
-                opt.dataset.unitPrice = line.unit_price;
-                opt.textContent = `${line.item_label} | Pending ${line.pending}`;
-                grnLineSelect.appendChild(opt);
-            });
-            syncPoLine();
-        };
-
-        const syncPoLine = () => {
-            const line = grnLineSelect?.selectedOptions?.[0];
-            if (!line || !line.value) {
-                grnLineId.value = '';
-                grnItemDisplay.value = '';
-                grnItemId.value = '';
-                grnOrdered.textContent = '0.000';
-                grnReceived.textContent = '0.000';
-                grnPending.textContent = '0.000';
-                grnQtyInput.removeAttribute('max');
-                if (grnPoUnitCost) grnPoUnitCost.value = '';
-                if (grnUnitCostInput) grnUnitCostInput.value = '';
-                if (grnOverrideRate) grnOverrideRate.checked = false;
-                if (grnOverrideReasonWrap) grnOverrideReasonWrap.classList.add('d-none');
-                if (grnOverrideReason) grnOverrideReason.value = '';
-                if (grnUnitCostInput) grnUnitCostInput.readOnly = true;
-                if (grnUnitSelect) {
-                    grnUnitSelect.innerHTML = '<option value="">Select unit</option>';
-                }
-                if (grnConversionPreview) {
-                    grnConversionPreview.textContent = '';
-                }
-                return;
-            }
-
-            grnLineId.value = line.value;
-            grnItemDisplay.value = line.dataset.itemLabel || '';
-            grnItemId.value = line.dataset.itemId || '';
-            grnOrdered.textContent = line.dataset.ordered || '0.000';
-            grnReceived.textContent = line.dataset.received || '0.000';
-            grnPending.textContent = line.dataset.pending || '0.000';
-            grnQtyInput.max = line.dataset.pending || '';
-            if (grnPoUnitCost) grnPoUnitCost.value = line.dataset.unitPrice || '';
-            if (grnUnitCostInput) grnUnitCostInput.value = line.dataset.unitPrice || '';
-            if (grnOverrideRate) grnOverrideRate.checked = false;
-            if (grnOverrideReasonWrap) grnOverrideReasonWrap.classList.add('d-none');
-            if (grnOverrideReason) grnOverrideReason.value = '';
-            if (grnUnitCostInput) grnUnitCostInput.readOnly = true;
-
-            if (grnUnitSelect) {
-                const itemId = Number(line.dataset.itemId || 0);
-                const units = unitsByItemId[itemId] || [];
-                const item = itemsById[itemId];
-
-                grnUnitSelect.innerHTML = '';
-
-                if (units.length === 0) {
-                    const opt = document.createElement('option');
-                    opt.value = '';
-                    opt.textContent = item && item.base_uom ? `Base unit (${item.base_uom})` : 'Base unit';
-                    grnUnitSelect.appendChild(opt);
-                } else {
-                    const defaultUnit = units.find(u => u.is_default_for_grn) || units.find(u => u.factor === 1) || units[0];
-                    units.forEach((u) => {
-                        const opt = document.createElement('option');
-                        opt.value = u.code;
-                        opt.textContent = `${u.code} (x${u.factor.toFixed(3)} ${item && item.base_uom ? item.base_uom : ''})`;
-                        if (defaultUnit && defaultUnit.code === u.code) {
-                            opt.selected = true;
-                        }
-                        grnUnitSelect.appendChild(opt);
-                    });
-                }
-
-                syncGrnConversion();
-            }
-        };
-
-        const syncGrnConversion = () => {
-            if (!grnConversionPreview || !grnUnitSelect) return;
-
-            const qty = Number(grnQtyInput.value || 0);
-            const line = grnLineSelect?.selectedOptions?.[0];
-            if (!line || !line.value || !qty) {
-                grnConversionPreview.textContent = '';
-                return;
-            }
-
-            const itemId = Number(line.dataset.itemId || 0);
+        const makeUnitOptions = (itemId, selectedCode = '') => {
             const units = unitsByItemId[itemId] || [];
             const item = itemsById[itemId];
-            const selectedCode = grnUnitSelect.value;
-            const unit = units.find(u => u.code === selectedCode);
+            if (units.length === 0) {
+                return `<option value="">${item && item.base_uom ? `Base unit (${item.base_uom})` : 'Base unit'}</option>`;
+            }
 
-            if (!unit || !item) {
-                grnConversionPreview.textContent = '';
+            const defaultUnit = units.find(u => u.code === selectedCode) || units.find(u => u.is_default_for_grn) || units.find(u => u.factor === 1) || units[0];
+            return units.map((u) => `<option value="${u.code}" ${defaultUnit && defaultUnit.code === u.code ? 'selected' : ''}>${u.code} (x${u.factor.toFixed(3)} ${item && item.base_uom ? item.base_uom : ''})</option>`).join('');
+        };
+
+        const renderGrnRows = () => {
+            const option = poSelect?.selectedOptions?.[0];
+            if (!option || !option.value) {
+                grnLinesBody.innerHTML = '<tr><td colspan="10" class="text-muted text-center">Select PO to load pending lines.</td></tr>';
+                if (grnSubmitBtn) grnSubmitBtn.disabled = true;
                 return;
             }
 
-            const baseQty = qty * unit.factor;
-            grnConversionPreview.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${item.base_uom}`;
+            const oldRows = @json(old('receive_rows', []));
+            const oldRowsByLineId = {};
+            (oldRows || []).forEach((row) => {
+                if (row && row.purchase_order_line_id) {
+                    oldRowsByLineId[String(row.purchase_order_line_id)] = row;
+                }
+            });
+
+            const lines = JSON.parse(option.dataset.lines || '[]').filter(line => Number(line.pending) > 0);
+            if (lines.length === 0) {
+                grnLinesBody.innerHTML = '<tr><td colspan="10" class="text-muted text-center">This PO has no pending lines.</td></tr>';
+                if (grnSubmitBtn) grnSubmitBtn.disabled = true;
+                return;
+            }
+
+            grnLinesBody.innerHTML = lines.map((line, index) => {
+                const oldRow = oldRowsByLineId[String(line.id)] || {};
+                const checked = !!oldRow.selected;
+                const qtyValue = oldRow.qty_received ?? line.pending;
+                const costValue = oldRow.unit_cost ?? line.unit_price;
+                const remarksValue = oldRow.remarks ?? '';
+                const overrideChecked = !!oldRow.override_po_rate;
+                const overrideReason = oldRow.override_reason ?? '';
+                const unitOptions = makeUnitOptions(Number(line.item_id), oldRow.unit_code || '');
+                return `
+                    <tr data-line-index="${index}" data-pending="${line.pending}" data-item-id="${line.item_id}" data-line-id="${line.id}">
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input grn-row-selected" type="checkbox" name="receive_rows[${index}][selected]" value="1" ${checked ? 'checked' : ''}>
+                            </div>
+                            <input type="hidden" name="receive_rows[${index}][purchase_order_line_id]" value="${line.id}">
+                            <input type="hidden" name="receive_rows[${index}][item_id]" value="${line.item_id}">
+                        </td>
+                        <td>${line.item_label}</td>
+                        <td>${line.ordered}</td>
+                        <td>${line.received}</td>
+                        <td><strong>${line.pending}</strong></td>
+                        <td>
+                            <input type="number" step="0.001" min="0.001" max="${line.pending}" name="receive_rows[${index}][qty_received]" class="form-control grn-row-qty" value="${qtyValue}">
+                            <div class="small text-danger d-none grn-row-error"></div>
+                        </td>
+                        <td>
+                            <select name="receive_rows[${index}][unit_code]" class="form-select grn-row-unit">${unitOptions}</select>
+                            <div class="procurement-mini-result grn-row-conversion"></div>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" min="0.01" name="receive_rows[${index}][unit_cost]" class="form-control grn-row-cost" value="${costValue}">
+                        </td>
+                        <td>
+                            <div class="form-check mb-1">
+                                <input class="form-check-input grn-row-override" type="checkbox" name="receive_rows[${index}][override_po_rate]" value="1" ${overrideChecked ? 'checked' : ''}>
+                                <label class="form-check-label small">Override</label>
+                            </div>
+                            <input type="text" name="receive_rows[${index}][override_reason]" class="form-control grn-row-override-reason ${overrideChecked ? '' : 'd-none'}" placeholder="reason" value="${overrideReason}">
+                        </td>
+                        <td>
+                            <input type="text" name="receive_rows[${index}][remarks]" class="form-control" placeholder="optional remarks" value="${remarksValue}">
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            bindGrnRowEvents();
+            syncGrnRowsState();
         };
 
-        const syncGrnRateMode = () => {
-            const overrideEnabled = !!grnOverrideRate?.checked;
-            if (grnUnitCostInput) {
-                grnUnitCostInput.readOnly = !overrideEnabled;
+        const syncSingleGrnRow = (row) => {
+            const selected = row.querySelector('.grn-row-selected')?.checked;
+            const qtyInput = row.querySelector('.grn-row-qty');
+            const unitSelect = row.querySelector('.grn-row-unit');
+            const costInput = row.querySelector('.grn-row-cost');
+            const overrideInput = row.querySelector('.grn-row-override');
+            const overrideReasonInput = row.querySelector('.grn-row-override-reason');
+            const errorNode = row.querySelector('.grn-row-error');
+            const previewNode = row.querySelector('.grn-row-conversion');
+            const pending = Number(row.dataset.pending || 0);
+            const itemId = Number(row.dataset.itemId || 0);
+            const qty = Number(qtyInput?.value || 0);
+            const cost = Number(costInput?.value || 0);
+            const selectedCode = unitSelect?.value || '';
+            const item = itemsById[itemId];
+            const unit = (unitsByItemId[itemId] || []).find(u => u.code === selectedCode);
+            const overrideEnabled = !!overrideInput?.checked;
+
+            [qtyInput, unitSelect, costInput, overrideInput].forEach((el) => {
+                if (el) el.disabled = !selected;
+            });
+
+            if (overrideReasonInput) {
+                overrideReasonInput.disabled = !selected || !overrideEnabled;
+                overrideReasonInput.classList.toggle('d-none', !selected || !overrideEnabled);
             }
-            if (grnOverrideReasonWrap) {
-                grnOverrideReasonWrap.classList.toggle('d-none', !overrideEnabled);
-            }
-            if (grnOverrideReason) {
-                grnOverrideReason.disabled = !overrideEnabled;
-                if (!overrideEnabled) {
-                    grnOverrideReason.value = '';
+
+            if (previewNode) {
+                if (selected && unit && item && qty > 0) {
+                    previewNode.textContent = `${qty.toFixed(3)} ${unit.code} = ${(qty * unit.factor).toFixed(3)} ${item.base_uom}`;
+                } else {
+                    previewNode.textContent = '';
                 }
             }
-            if (!overrideEnabled && grnPoUnitCost && grnUnitCostInput) {
-                grnUnitCostInput.value = grnPoUnitCost.value || '';
+
+            if (!selected) {
+                errorNode?.classList.add('d-none');
+                if (errorNode) errorNode.textContent = '';
+                return true;
             }
+
+            let error = '';
+            if (!(qty > 0)) {
+                error = 'Qty must be greater than zero.';
+            } else if (qty > pending) {
+                error = 'Qty cannot exceed pending.';
+            } else if (!unitSelect?.value) {
+                error = 'Unit is required.';
+            } else if (!(cost > 0)) {
+                error = 'Unit cost must be greater than zero.';
+            } else if (overrideEnabled && !(overrideReasonInput?.value || '').trim()) {
+                error = 'Override reason is required.';
+            }
+
+            if (errorNode) {
+                errorNode.textContent = error;
+                errorNode.classList.toggle('d-none', error === '');
+            }
+
+            return error === '';
         };
 
-        const syncGrnQtyGuard = () => {
-            const pending = Number(grnPending.textContent || 0);
-            const qty = Number(grnQtyInput.value || 0);
-            const blocked = !grnLineId.value || pending <= 0 || (qty > 0 && qty > pending);
-
-            if (pending <= 0 && grnLineId.value) {
-                grnBlockMessage.textContent = 'This PO line is already fully received.';
-                grnBlockMessage.classList.remove('d-none');
-            } else if (qty > pending && qty > 0) {
-                grnBlockMessage.textContent = 'Receive quantity cannot exceed pending quantity.';
-                grnBlockMessage.classList.remove('d-none');
-            } else {
-                grnBlockMessage.classList.add('d-none');
-            }
-
+        const syncGrnRowsState = () => {
+            const rows = [...document.querySelectorAll('#grn-lines-body tr[data-line-index]')];
+            const selectedRows = rows.filter((row) => row.querySelector('.grn-row-selected')?.checked);
+            const allValid = rows.every((row) => syncSingleGrnRow(row));
             if (grnSubmitBtn) {
-                grnSubmitBtn.disabled = blocked;
+                grnSubmitBtn.disabled = selectedRows.length === 0 || !allValid;
             }
         };
 
-        poSelect?.addEventListener('change', syncPo);
-        grnLineSelect?.addEventListener('change', () => {
-            syncPoLine();
-            syncGrnQtyGuard();
-        });
-        grnQtyInput?.addEventListener('input', () => {
-            syncGrnQtyGuard();
-            syncGrnConversion();
-        });
-        grnUnitSelect?.addEventListener('change', syncGrnConversion);
-        grnOverrideRate?.addEventListener('change', syncGrnRateMode);
+        const bindGrnRowEvents = () => {
+            document.querySelectorAll('.grn-row-selected, .grn-row-qty, .grn-row-unit, .grn-row-cost, .grn-row-override, .grn-row-override-reason').forEach((el) => {
+                el.addEventListener('change', syncGrnRowsState);
+                el.addEventListener('input', syncGrnRowsState);
+            });
+        };
+
+        poSelect?.addEventListener('change', renderGrnRows);
 
         const bindBulkSelection = ({ selectAllId, rowSelector, countId, submitId, formId }) => {
             const selectAll = document.getElementById(selectAllId);
@@ -908,7 +842,7 @@
         });
 
         document.getElementById('grn-form')?.addEventListener('submit', (event) => {
-            syncGrnQtyGuard();
+            syncGrnRowsState();
             if (grnSubmitBtn?.disabled) {
                 event.preventDefault();
                 return;
@@ -932,9 +866,7 @@
             formId: 'grn-bulk-form',
         });
 
-        syncPo();
-        syncGrnRateMode();
-        syncGrnQtyGuard();
+        renderGrnRows();
     })();
 </script>
 @endpush

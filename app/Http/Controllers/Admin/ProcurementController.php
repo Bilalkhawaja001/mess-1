@@ -151,167 +151,86 @@ class ProcurementController extends Controller
     {
         $d = $r->validate([
             'purchase_order_id' => 'required|exists:purchase_orders,id',
-            'purchase_order_line_id' => 'required|exists:purchase_order_lines,id',
-            'item_id' => 'required|exists:items,id',
             'received_date' => 'required|date',
-            'qty_received' => 'required|numeric|gt:0',
-            'unit_cost' => 'required|numeric|gt:0',
-            'unit_code' => 'required|string|max:20',
-            'override_po_rate' => 'nullable|boolean',
-            'override_reason' => 'nullable|string|max:500',
+            'receive_rows' => 'required|array|min:1',
+            'receive_rows.*' => 'nullable|array',
+            'receive_rows.*.selected' => 'nullable|boolean',
+            'receive_rows.*.purchase_order_line_id' => 'required_with:receive_rows.*.selected|exists:purchase_order_lines,id',
+            'receive_rows.*.item_id' => 'required_with:receive_rows.*.selected|exists:items,id',
+            'receive_rows.*.qty_received' => 'nullable|numeric|gt:0',
+            'receive_rows.*.unit_cost' => 'nullable|numeric|gt:0',
+            'receive_rows.*.unit_code' => 'nullable|string|max:20',
+            'receive_rows.*.override_po_rate' => 'nullable|boolean',
+            'receive_rows.*.override_reason' => 'nullable|string|max:500',
+            'receive_rows.*.remarks' => 'nullable|string|max:1000',
         ]);
 
-        $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
-        $poLine = $po->lines->firstWhere('id', (int) $d['purchase_order_line_id']);
+        $selectedRows = collect($d['receive_rows'] ?? [])->filter(fn (array $row) => (bool) ($row['selected'] ?? false))->values();
 
-        if (! $poLine) {
-            return back()->withErrors(['purchase_order_line_id' => 'Selected PO line is invalid.'])->withInput();
+        if ($selectedRows->isEmpty()) {
+            return back()->withErrors(['receive_rows' => 'Select at least one PO row to receive.'])->withInput();
         }
 
-        $poUnitPrice = round((float) $poLine->unit_price, 2);
-        $grnUnitCost = round((float) $d['unit_cost'], 2);
-        $overridePoRate = (bool) ($d['override_po_rate'] ?? false);
+        $po = PurchaseOrder::query()->with(['lines.item.units', 'goodsReceipts.lines'])->findOrFail($d['purchase_order_id']);
 
-        if (! $overridePoRate && $grnUnitCost !== $poUnitPrice) {
-            return back()->withErrors(['unit_cost' => 'GRN unit cost must match the selected PO line rate unless override is enabled.'])->withInput();
+        try {
+            $validatedRows = $this->buildValidatedGrnRows($po, $selectedRows);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['receive_rows' => $e->getMessage()])->withInput();
         }
 
-        if ($overridePoRate && blank($d['override_reason'] ?? null)) {
-            return back()->withErrors(['override_reason' => 'Override reason is required when PO rate override is enabled.'])->withInput();
-        }
-
-        if ((int) $poLine->item_id !== (int) $d['item_id']) {
-            return back()->withErrors(['item_id' => 'Selected item does not match the PO item.'])->withInput();
-        }
-
-        $poHasPendingLines = $po->lines->contains(function (PurchaseOrderLine $line) use ($po): bool {
-            $receivedQty = (float) $po->goodsReceipts
-                ->flatMap->lines
-                ->where('item_id', (int) $line->item_id)
-                ->sum('qty_received');
-
-            return max((float) $line->qty_ordered - $receivedQty, 0) > 0;
-        });
-
-        if (! $poHasPendingLines) {
-            return back()->withErrors(['purchase_order_id' => 'Selected PO is already fully received.'])->withInput();
-        }
-
-        $lineReceivedQty = (float) $po->goodsReceipts
-            ->flatMap->lines
-            ->where('item_id', (int) $poLine->item_id)
-            ->sum('qty_received');
-        $orderedQty = (float) $poLine->qty_ordered;
-        $pendingQty = max($orderedQty - $lineReceivedQty, 0);
-
-        if ($pendingQty <= 0) {
-            return back()->withErrors(['qty_received' => 'This PO line is already fully received.'])->withInput();
-        }
-
-        if ((float) $d['qty_received'] > $pendingQty) {
-            return back()->withErrors(['qty_received' => 'Receive quantity cannot exceed pending quantity.'])->withInput();
-        }
-
-        $item = Item::query()->with('units')->findOrFail($d['item_id']);
-        $unitCode = trim($d['unit_code']);
-        $unit = $item->units->firstWhere('unit_code', $unitCode);
-
-        if (! $unit) {
-            return back()->withErrors(['unit_code' => 'Invalid unit for item'])->withInput();
-        }
-
-        DB::transaction(function () use ($d, $r, $item, $unit, $overridePoRate, $poUnitPrice, $grnUnitCost, &$grn) {
-            $po = PurchaseOrder::query()->with(['lines', 'goodsReceipts.lines'])->lockForUpdate()->findOrFail($d['purchase_order_id']);
-            $poLine = $po->lines->firstWhere('id', (int) $d['purchase_order_line_id']);
-
-            if (! $poLine) {
-                throw new \RuntimeException('Selected PO line is invalid.');
-            }
-
-            $poHasPendingLines = $po->lines->contains(function (PurchaseOrderLine $line) use ($po): bool {
-                $receivedQty = (float) $po->goodsReceipts
-                    ->flatMap->lines
-                    ->where('item_id', (int) $line->item_id)
-                    ->sum('qty_received');
-
-                return max((float) $line->qty_ordered - $receivedQty, 0) > 0;
-            });
-
-            if (! $poHasPendingLines) {
-                throw new \RuntimeException('Selected PO is already fully received.');
-            }
-
-            $lockedPoUnitPrice = round((float) $poLine->unit_price, 2);
-            $lockedGrnUnitCost = round((float) $d['unit_cost'], 2);
-
-            if (! $overridePoRate && $lockedGrnUnitCost !== $lockedPoUnitPrice) {
-                throw new \RuntimeException('GRN unit cost must match the selected PO line rate unless override is enabled.');
-            }
-
-            if ($overridePoRate && blank($d['override_reason'] ?? null)) {
-                throw new \RuntimeException('Override reason is required when PO rate override is enabled.');
-            }
-
-            if ((int) $poLine->item_id !== (int) $d['item_id']) {
-                throw new \RuntimeException('Selected item does not match the PO item.');
-            }
-
-            $lineReceivedQty = (float) $po->goodsReceipts
-                ->flatMap->lines
-                ->where('item_id', (int) $poLine->item_id)
-                ->sum('qty_received');
-            $orderedQty = (float) $poLine->qty_ordered;
-            $pendingQty = max($orderedQty - $lineReceivedQty, 0);
-
-            if ($pendingQty <= 0) {
-                throw new \RuntimeException('This PO line is already fully received.');
-            }
-
-            if ((float) $d['qty_received'] > $pendingQty) {
-                throw new \RuntimeException('Receive quantity cannot exceed pending quantity.');
-            }
+        DB::transaction(function () use ($d, $po, $validatedRows, &$grn) {
+            $lockedPo = PurchaseOrder::query()->with(['lines.item.units', 'goodsReceipts.lines'])->lockForUpdate()->findOrFail($po->id);
+            $lockedRows = $this->buildValidatedGrnRows($lockedPo, $validatedRows->map(fn (array $row) => $row['request'])->values());
 
             $grn = GoodsReceipt::create([
-                'purchase_order_id' => $d['purchase_order_id'],
+                'purchase_order_id' => $lockedPo->id,
                 'grn_number' => 'GRN-'.now()->format('YmdHis'),
                 'received_date' => $d['received_date'],
-                'remarks' => $overridePoRate
-                    ? 'GRN rate override. PO rate: '.number_format($poUnitPrice, 2, '.', '').'; Actual GRN rate: '.number_format($grnUnitCost, 2, '.', '').'; Reason: '.trim((string) ($d['override_reason'] ?? ''))
-                    : $r->input('remarks'),
+                'remarks' => $lockedRows->pluck('request.remarks')->filter()->implode(' | ') ?: null,
             ]);
 
-            GoodsReceiptLine::create([
-                'goods_receipt_id' => $grn->id,
-                'item_id' => $d['item_id'],
-                'qty_received' => $d['qty_received'],
-                'unit_cost' => $d['unit_cost'],
-            ]);
-            $transQty = (float) $d['qty_received'];
-            $baseQty = $transQty * (float) $unit->factor_to_base;
+            foreach ($lockedRows as $row) {
+                $meta = $row['meta'];
+                $requestRow = $row['request'];
 
-            StockTransaction::create([
-                'item_id' => $d['item_id'],
-                'txn_type' => 'GRN',
-                'quantity' => $baseQty,
-                'unit_cost' => $d['unit_cost'],
-                'trans_unit_code' => $unit->unit_code,
-                'trans_quantity' => $transQty,
-                'reference_type' => GoodsReceipt::class,
-                'reference_id' => $grn->id,
-                'txn_at' => $d['received_date'],
-                'remarks' => 'GRN posting (stock posted on create)',
-            ]);
+                GoodsReceiptLine::create([
+                    'goods_receipt_id' => $grn->id,
+                    'item_id' => $meta['item']->id,
+                    'qty_received' => $meta['qty_received'],
+                    'unit_cost' => $meta['unit_cost'],
+                ]);
 
-            $po->load(['lines', 'goodsReceipts.lines']);
-            $totalOrderedQty = (float) $po->lines->sum('qty_ordered');
-            $totalReceivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+                $baseQty = $meta['qty_received'] * (float) $meta['unit']->factor_to_base;
 
-            PurchaseOrder::whereKey($d['purchase_order_id'])->update([
+                StockTransaction::create([
+                    'item_id' => $meta['item']->id,
+                    'txn_type' => 'GRN',
+                    'quantity' => $baseQty,
+                    'unit_cost' => $meta['unit_cost'],
+                    'trans_unit_code' => $meta['unit']->unit_code,
+                    'trans_quantity' => $meta['qty_received'],
+                    'reference_type' => GoodsReceipt::class,
+                    'reference_id' => $grn->id,
+                    'txn_at' => $d['received_date'],
+                    'remarks' => trim(implode(' | ', array_filter([
+                        'GRN posting (stock posted on create)',
+                        $requestRow['remarks'] ?? null,
+                        $meta['override_note'] ?? null,
+                    ]))),
+                ]);
+            }
+
+            $lockedPo->load(['lines', 'goodsReceipts.lines']);
+            $totalOrderedQty = (float) $lockedPo->lines->sum('qty_ordered');
+            $totalReceivedQty = (float) $lockedPo->goodsReceipts->flatMap->lines->sum('qty_received');
+
+            PurchaseOrder::whereKey($lockedPo->id)->update([
                 'status' => $totalReceivedQty < $totalOrderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
             ]);
         });
 
-        return back()->with('success', 'GRN posted');
+        return back()->with('success', 'GRN posted for selected PO rows.');
     }
 
     public function approveGrn(GoodsReceipt $grn): RedirectResponse
@@ -341,6 +260,99 @@ class ProcurementController extends Controller
     {
         $po->status = 'APPROVED';
         $po->save();
+    }
+
+    private function buildValidatedGrnRows(PurchaseOrder $po, $selectedRows)
+    {
+        $selectedRows = collect($selectedRows)->values();
+
+        if ($selectedRows->isEmpty()) {
+            throw new \RuntimeException('Select at least one PO row to receive.');
+        }
+
+        $poHasPendingLines = $po->lines->contains(function (PurchaseOrderLine $line) use ($po): bool {
+            $receivedQty = (float) $po->goodsReceipts
+                ->flatMap->lines
+                ->where('item_id', (int) $line->item_id)
+                ->sum('qty_received');
+
+            return max((float) $line->qty_ordered - $receivedQty, 0) > 0;
+        });
+
+        if (! $poHasPendingLines) {
+            throw new \RuntimeException('Selected PO is already fully received.');
+        }
+
+        return $selectedRows->map(function (array $row) use ($po) {
+            $poLine = $po->lines->firstWhere('id', (int) ($row['purchase_order_line_id'] ?? 0));
+            if (! $poLine) {
+                throw new \RuntimeException('Selected PO line is invalid.');
+            }
+
+            if ((int) $poLine->item_id !== (int) ($row['item_id'] ?? 0)) {
+                throw new \RuntimeException('Selected item does not match the PO item.');
+            }
+
+            $lineReceivedQty = (float) $po->goodsReceipts
+                ->flatMap->lines
+                ->where('item_id', (int) $poLine->item_id)
+                ->sum('qty_received');
+            $orderedQty = (float) $poLine->qty_ordered;
+            $pendingQty = max($orderedQty - $lineReceivedQty, 0);
+
+            if ($pendingQty <= 0) {
+                throw new \RuntimeException('One selected PO row is already fully received.');
+            }
+
+            $qtyReceived = (float) ($row['qty_received'] ?? 0);
+            if ($qtyReceived <= 0) {
+                throw new \RuntimeException('Received quantity must be greater than zero for each selected row.');
+            }
+
+            if ($qtyReceived > $pendingQty) {
+                throw new \RuntimeException('Receive quantity cannot exceed pending quantity.');
+            }
+
+            $item = Item::query()->with('units')->findOrFail((int) $row['item_id']);
+            $unitCode = trim((string) ($row['unit_code'] ?? ''));
+            $unit = $item->units->firstWhere('unit_code', $unitCode);
+            if (! $unit) {
+                throw new \RuntimeException('Invalid unit for selected item.');
+            }
+
+            $poUnitPrice = round((float) $poLine->unit_price, 2);
+            $unitCost = round((float) ($row['unit_cost'] ?? 0), 2);
+            $overridePoRate = (bool) ($row['override_po_rate'] ?? false);
+
+            if ($unitCost <= 0) {
+                throw new \RuntimeException('Unit cost must be greater than zero for each selected row.');
+            }
+
+            if (! $overridePoRate && $unitCost !== $poUnitPrice) {
+                throw new \RuntimeException('GRN unit cost must match the selected PO line rate unless override is enabled.');
+            }
+
+            if ($overridePoRate && blank($row['override_reason'] ?? null)) {
+                throw new \RuntimeException('Override reason is required when PO rate override is enabled.');
+            }
+
+            $overrideNote = $overridePoRate
+                ? 'GRN rate override. PO rate: '.number_format($poUnitPrice, 2, '.', '').'; Actual GRN rate: '.number_format($unitCost, 2, '.', '').'; Reason: '.trim((string) ($row['override_reason'] ?? ''))
+                : null;
+
+            return [
+                'request' => $row,
+                'meta' => [
+                    'po_line' => $poLine,
+                    'item' => $item,
+                    'unit' => $unit,
+                    'qty_received' => $qtyReceived,
+                    'unit_cost' => $unitCost,
+                    'pending_qty' => $pendingQty,
+                    'override_note' => $overrideNote,
+                ],
+            ];
+        });
     }
 
     private function acknowledgeGoodsReceiptRecord(GoodsReceipt $grn): void

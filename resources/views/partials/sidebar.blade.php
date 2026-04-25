@@ -3,6 +3,59 @@
     $path = request()->path();
 @endphp
 <aside class="sidebar sidebar-root">
+    <style>
+        .sidebar.sidebar-root {
+            background: #0f172a !important;
+            background-image: none !important;
+            opacity: 1 !important;
+            filter: none !important;
+            backdrop-filter: none !important;
+            mix-blend-mode: normal !important;
+            color: #f8fafc !important;
+        }
+        .sidebar.sidebar-root::before,
+        .sidebar.sidebar-root::after,
+        .sidebar.sidebar-root *::before,
+        .sidebar.sidebar-root *::after {
+            display: none !important;
+            content: none !important;
+        }
+        .sidebar.sidebar-root .sb-brand,
+        .sidebar.sidebar-root .sb-group,
+        .sidebar.sidebar-root .sb-powered {
+            background: #172554 !important;
+            background-image: none !important;
+            opacity: 1 !important;
+            filter: none !important;
+            backdrop-filter: none !important;
+            border: 1px solid rgba(148,163,184,0.22) !important;
+            box-shadow: none !important;
+        }
+        .sidebar.sidebar-root .sb-title,
+        .sidebar.sidebar-root .sb-sub,
+        .sidebar.sidebar-root .sb-label,
+        .sidebar.sidebar-root .sb-powered-text,
+        .sidebar.sidebar-root .nav-link,
+        .sidebar.sidebar-root .nav-link span,
+        .sidebar.sidebar-root .nav-link i {
+            color: #f8fafc !important;
+            opacity: 1 !important;
+            filter: none !important;
+            text-shadow: none !important;
+        }
+        .sidebar.sidebar-root .nav-link.active,
+        .sidebar.sidebar-root .nav-link:hover {
+            background: #2563eb !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+        .sidebar.sidebar-root .sb-brand-mark,
+        .sidebar.sidebar-root .sb-powered-logo {
+            background: #2563eb !important;
+            box-shadow: none !important;
+        }
+    </style>
     <div class="sb-brand sidebar-panel-block">
         <div class="sb-brand-mark sb-brand-mark-generic" aria-hidden="true">
             <span>MB</span>

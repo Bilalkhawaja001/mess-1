@@ -78,7 +78,7 @@ a { text-decoration: none; }
     width: 58px;
     height: 58px;
     border-radius: 18px;
-    background: rgba(255,255,255,0.96);
+    background: linear-gradient(135deg, #2563eb, #0ea5e9);
     display: grid;
     place-items: center;
     overflow: hidden;
@@ -97,7 +97,6 @@ a { text-decoration: none; }
     letter-spacing: 0.06em;
 }
 
-.sb-brand-mark img,
 .brand-logo img,
 .auth-brand img,
 .sb-powered-logo img,

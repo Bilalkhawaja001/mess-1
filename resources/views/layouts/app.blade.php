@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @stack('styles')
-    <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}?v=rollback-v3">
+    <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}?v=fix-v4-sidebar">
 </head>
 <body>
 <div class="app-shell" id="appShell">

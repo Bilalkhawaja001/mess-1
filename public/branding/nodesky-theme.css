@@ -1033,3 +1033,115 @@ a { text-decoration: none; }
 .sidebar-scroll::-webkit-scrollbar-thumb {
     background: rgba(34,211,238,0.65) !important;
 }
+
+/* FIX V4 - spacing, collapse, font normalization */
+
+:root{
+    --fix4-sidebar-width: 268px;
+    --fix4-sidebar-collapsed: 78px;
+}
+
+/* sidebar width normal */
+.sidebar{
+    width: var(--fix4-sidebar-width) !important;
+}
+
+/* page/sidebar gap kam */
+.content-wrap{
+    margin-left: var(--fix4-sidebar-width) !important;
+    padding-left: 14px !important;
+}
+
+/* sidebar inner thora compact */
+.sidebar-inner{
+    border-radius: 26px !important;
+    padding: 14px 12px !important;
+}
+
+/* brand card thora compact */
+.sb-brand{
+    min-height: auto !important;
+    padding: 12px 14px !important;
+    border-radius: 22px !important;
+}
+
+/* fonts normal size */
+.sidebar .nav-link{
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    min-height: 44px !important;
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+}
+
+.sidebar .nav-link span:last-child{
+    font-size: 15px !important;
+    line-height: 1.2 !important;
+}
+
+.sb-label{
+    font-size: 11px !important;
+    letter-spacing: 0.18em !important;
+    margin: 14px 10px 10px !important;
+}
+
+.sb-title,
+.sb-brand-title{
+    font-size: 15px !important;
+    line-height: 1.2 !important;
+}
+
+.sb-sub{
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+}
+
+.sidebar-icon-wrap{
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 12px !important;
+}
+
+.sidebar-scroll{
+    padding-right: 4px !important;
+}
+
+/* collapsed state stronger */
+.app-shell.sidebar-collapsed .sidebar{
+    width: var(--fix4-sidebar-collapsed) !important;
+    padding: 10px 8px !important;
+}
+
+.app-shell.sidebar-collapsed .content-wrap{
+    margin-left: var(--fix4-sidebar-collapsed) !important;
+    padding-left: 12px !important;
+}
+
+.app-shell.sidebar-collapsed .sidebar-inner{
+    padding: 12px 8px !important;
+    border-radius: 22px !important;
+}
+
+.app-shell.sidebar-collapsed .sb-brand-copy,
+.app-shell.sidebar-collapsed .sb-label,
+.app-shell.sidebar-collapsed .sidebar .nav-link span:last-child,
+.app-shell.sidebar-collapsed .sb-powered-text{
+    display: none !important;
+}
+
+.app-shell.sidebar-collapsed .sidebar .nav-link{
+    justify-content: center !important;
+    padding: 8px !important;
+}
+
+.app-shell.sidebar-collapsed .sidebar-icon-wrap{
+    margin: 0 !important;
+}
+
+/* optional: top content thora left lao */
+.main-content,
+.page-content,
+.content-area{
+    padding-left: 0 !important;
+}

@@ -58,10 +58,10 @@ a { text-decoration: none; }
     width: var(--sb-width);
     height: 100vh;
     flex: 0 0 var(--sb-width);
-    background: var(--sb-bg);
+    background: linear-gradient(180deg, #0f172a 0%, #111827 42%, #172033 100%);
     color: var(--sb-text);
-    border-right: 1px solid var(--sb-border);
-    box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
+    border-right: 1px solid rgba(148,163,184,0.10);
+    box-shadow: inset -1px 0 0 rgba(255,255,255,0.03), 12px 0 32px rgba(15,23,42,0.10);
     transition: width .22s ease, flex-basis .22s ease, transform .22s ease;
     position: sticky;
     top: 0;
@@ -72,14 +72,15 @@ a { text-decoration: none; }
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 18px 14px 14px;
-    gap: 14px;
+    padding: 18px 12px 14px;
+    gap: 12px;
 }
 
 .sidebar-scroll {
     overflow-y: auto;
-    max-height: calc(100vh - 170px);
+    max-height: calc(100vh - 156px);
     padding-right: 2px;
+    padding-bottom: 12px;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -284,26 +285,31 @@ a { text-decoration: none; }
 .sidebar-toggle {
     width: 42px;
     height: 42px;
-    border: 1px solid rgba(148,163,184,0.18);
+    border: 1px solid rgba(148,163,184,0.16);
     border-radius: 14px;
     background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     color: #475569;
-    display: inline-grid;
-    place-items: center;
-    box-shadow: 0 10px 22px rgba(15,23,42,0.06);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    box-shadow: 0 8px 18px rgba(15,23,42,0.06);
     appearance: none;
+    padding: 0;
 }
 
 .sidebar-toggle i {
-    font-size: 1.05rem;
+    font-size: 1.12rem;
     line-height: 1;
+    pointer-events: none;
 }
 
 .sidebar-toggle:hover {
-    background: #eff6ff;
+    background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
     color: #1d4ed8;
-    border-color: rgba(37,99,235,0.20);
+    border-color: rgba(37,99,235,0.22);
     box-shadow: 0 12px 24px rgba(37,99,235,0.10);
+    transform: translateY(-1px);
 }
 
 .sidebar-toggle:focus-visible {
@@ -679,6 +685,15 @@ a { text-decoration: none; }
 .app-shell.sidebar-collapsed .sidebar {
     width: var(--sb-width-collapsed);
     flex-basis: var(--sb-width-collapsed);
+}
+
+.app-shell.sidebar-collapsed .sidebar-inner {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.app-shell.sidebar-collapsed .sidebar-scroll {
+    max-height: calc(100vh - 128px);
 }
 
 .app-shell.sidebar-collapsed .sb-brand-copy,

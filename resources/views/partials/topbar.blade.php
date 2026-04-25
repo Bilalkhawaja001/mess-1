@@ -2,6 +2,7 @@
     <div class="topbar-meta">
         <button class="sidebar-toggle" type="button" id="sidebarToggle" aria-label="Toggle sidebar" aria-controls="appSidebar" aria-expanded="true" title="Toggle sidebar">
             <i class="bi bi-list"></i>
+            <span class="visually-hidden">Toggle sidebar</span>
         </button>
         <div>
             <div class="tb-title">@yield('page_title', 'Dashboard')</div>

@@ -228,6 +228,32 @@
         font-size: 0.88rem;
     }
 
+    .procurement-import-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .procurement-import-summary {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 0.85rem;
+    }
+
+    .procurement-import-summary .badge {
+        padding: 0.6rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+    }
+
+    @media (max-width: 1199.98px) {
+        .procurement-import-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
     .procurement-section-kicker {
         font-size: 0.7rem;
         text-transform: uppercase;
@@ -427,6 +453,86 @@
                 <div class="card procurement-table-card">
                     <div class="card-header"><span>Purchase Orders</span><span class="text-muted small">Draft &amp; approved</span></div>
                     <div class="card-body">
+                        <div class="procurement-import-grid">
+                            <div class="card procurement-form-card h-100">
+                                <div class="card-header"><span>Bulk PO Upload</span><span class="text-muted small">CSV workflow</span></div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2 mb-3">
+                                        <a href="{{ route('admin.procurement.po.template') }}" class="btn btn-outline-primary">Download PO Template</a>
+                                    </div>
+                                    <form method="POST" action="{{ route('admin.procurement.po.import.preview') }}" enctype="multipart/form-data" class="row g-3">
+                                        @csrf
+                                        <div class="col-12">
+                                            <label class="form-label">Upload PO Items CSV</label>
+                                            <input type="file" name="po_import_file" accept=".csv,text/csv" class="form-control" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <button class="btn btn-primary w-100">Preview uploaded PO lines</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="card procurement-table-card h-100">
+                                <div class="card-header"><span>PO Import Preview</span><span class="text-muted small">Validate before save</span></div>
+                                <div class="card-body">
+                                    @if($poImportPreview)
+                                        <div class="procurement-import-summary">
+                                            <span class="badge text-bg-success">Valid rows: {{ $poImportPreview['valid_count'] ?? 0 }}</span>
+                                            <span class="badge text-bg-danger">Error rows: {{ $poImportPreview['error_count'] ?? 0 }}</span>
+                                            @if(!empty($poImportPreview['vendor_name']))
+                                                <span class="badge text-bg-light">Vendor: {{ $poImportPreview['vendor_name'] }}</span>
+                                            @endif
+                                            @if(!empty($poImportPreview['po_date']))
+                                                <span class="badge text-bg-light">PO Date: {{ $poImportPreview['po_date'] }}</span>
+                                            @endif
+                                        </div>
+
+                                        @if(!empty($poImportPreview['valid_rows']))
+                                            <div class="table-responsive mb-3">
+                                                <table class="table table-sm align-middle">
+                                                    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Remarks</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach($poImportPreview['valid_rows'] as $row)
+                                                            <tr>
+                                                                <td>{{ $row['line_number'] }}</td>
+                                                                <td>{{ $row['item_sku'] }}</td>
+                                                                <td>{{ $row['item_name'] }}</td>
+                                                                <td>{{ number_format((float) $row['qty_ordered'], 3) }}</td>
+                                                                <td>{{ number_format((float) $row['unit_price'], 2) }}</td>
+                                                                <td>{{ $row['remarks'] ?: '-' }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <form method="POST" action="{{ route('admin.procurement.po.import.store') }}">
+                                                @csrf
+                                                <button class="btn btn-success">Create PO from uploaded lines</button>
+                                            </form>
+                                        @endif
+
+                                        @if(!empty($poImportPreview['error_rows']))
+                                            <div class="table-responsive mt-3">
+                                                <table class="table table-sm align-middle">
+                                                    <thead><tr><th>#</th><th>Row Data</th><th>Errors</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach($poImportPreview['error_rows'] as $row)
+                                                            <tr>
+                                                                <td>{{ $row['line_number'] }}</td>
+                                                                <td><code>{{ json_encode($row['data']) }}</code></td>
+                                                                <td>{{ implode('; ', $row['errors']) }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @endif
+                                    @else
+                                        <div class="procurement-empty">Upload CSV to preview PO lines before saving.</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
                         <form method="POST" action="{{ route('admin.procurement.po.bulk-approve') }}?tab=po" id="po-bulk-form">
                             @csrf
                             <div class="bulk-action-bar">
@@ -546,6 +652,99 @@
                 <div class="card procurement-table-card">
                     <div class="card-header"><span>GRNs</span><span class="text-muted small">Posted on create</span></div>
                     <div class="card-body">
+                        <div class="procurement-import-grid">
+                            <div class="card procurement-form-card h-100">
+                                <div class="card-header"><span>Bulk GRN Upload</span><span class="text-muted small">CSV workflow</span></div>
+                                <div class="card-body">
+                                    <form method="GET" action="{{ route('admin.procurement.grn.template') }}" class="row g-3 mb-3">
+                                        <div class="col-12">
+                                            <label class="form-label">PO for template (optional)</label>
+                                            <select name="purchase_order_id" class="form-select">
+                                                <option value="">Blank GRN template</option>
+                                                @foreach($grnEligiblePos as $po)
+                                                    <option value="{{ $po->id }}" @selected((string) $selectedGrnTemplatePo === (string) $po->id)>{{ $po->po_number }} — {{ $po->vendor->name ?? 'Vendor' }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <button class="btn btn-outline-primary w-100">Download GRN Template</button>
+                                        </div>
+                                    </form>
+                                    <form method="POST" action="{{ route('admin.procurement.grn.import.preview') }}" enctype="multipart/form-data" class="row g-3">
+                                        @csrf
+                                        <div class="col-12">
+                                            <label class="form-label">Upload GRN Items CSV</label>
+                                            <input type="file" name="grn_import_file" accept=".csv,text/csv" class="form-control" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <button class="btn btn-primary w-100">Preview uploaded GRN lines</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="card procurement-table-card h-100">
+                                <div class="card-header"><span>GRN Import Preview</span><span class="text-muted small">Validate before post</span></div>
+                                <div class="card-body">
+                                    @if($grnImportPreview)
+                                        <div class="procurement-import-summary">
+                                            <span class="badge text-bg-success">Valid rows: {{ $grnImportPreview['valid_count'] ?? 0 }}</span>
+                                            <span class="badge text-bg-danger">Error rows: {{ $grnImportPreview['error_count'] ?? 0 }}</span>
+                                            @if(!empty($grnImportPreview['po_number']))
+                                                <span class="badge text-bg-light">PO: {{ $grnImportPreview['po_number'] }}</span>
+                                            @endif
+                                            @if(!empty($grnImportPreview['received_date']))
+                                                <span class="badge text-bg-light">Receive Date: {{ $grnImportPreview['received_date'] }}</span>
+                                            @endif
+                                        </div>
+
+                                        @if(!empty($grnImportPreview['valid_rows']))
+                                            <div class="table-responsive mb-3">
+                                                <table class="table table-sm align-middle">
+                                                    <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Pending</th><th>Receive Qty</th><th>Unit Cost</th><th>Unit</th><th>Remarks</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach($grnImportPreview['valid_rows'] as $row)
+                                                            <tr>
+                                                                <td>{{ $row['line_number'] }}</td>
+                                                                <td>{{ $row['item_sku'] }}</td>
+                                                                <td>{{ $row['item_name'] }}</td>
+                                                                <td>{{ number_format((float) $row['pending_qty'], 3) }}</td>
+                                                                <td>{{ number_format((float) $row['qty_received'], 3) }}</td>
+                                                                <td>{{ number_format((float) $row['unit_cost'], 2) }}</td>
+                                                                <td>{{ $row['unit_code'] }}</td>
+                                                                <td>{{ $row['remarks'] ?: '-' }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <form method="POST" action="{{ route('admin.procurement.grn.import.store') }}">
+                                                @csrf
+                                                <button class="btn btn-success">Post GRN from uploaded lines</button>
+                                            </form>
+                                        @endif
+
+                                        @if(!empty($grnImportPreview['error_rows']))
+                                            <div class="table-responsive mt-3">
+                                                <table class="table table-sm align-middle">
+                                                    <thead><tr><th>#</th><th>Row Data</th><th>Errors</th></tr></thead>
+                                                    <tbody>
+                                                        @foreach($grnImportPreview['error_rows'] as $row)
+                                                            <tr>
+                                                                <td>{{ $row['line_number'] }}</td>
+                                                                <td><code>{{ json_encode($row['data']) }}</code></td>
+                                                                <td>{{ implode('; ', $row['errors']) }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @endif
+                                    @else
+                                        <div class="procurement-empty">Download a blank or PO-based template, then upload CSV to preview GRN received rows.</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
                         <form method="POST" action="{{ route('admin.procurement.grn.bulk-approve') }}?tab=grn" id="grn-bulk-form">
                             @csrf
                             <div class="bulk-action-bar">

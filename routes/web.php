@@ -166,12 +166,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::middleware('permission:procurement.manage')->group(function () {
         Route::get('/procurement', [ProcurementController::class, 'index'])->name('procurement.index');
         Route::get('/procurement/vendors', fn () => redirect()->route('admin.procurement.index', ['tab' => 'vendors']));
-    Route::get('/procurement/po', fn () => redirect()->route('admin.procurement.index', ['tab' => 'po']));
-    Route::get('/procurement/grn', fn () => redirect()->route('admin.procurement.index', ['tab' => 'grn']));
-    Route::post('/procurement/vendors', [ProcurementController::class, 'storeVendor'])->name('procurement.vendors.store');
+        Route::get('/procurement/po', fn () => redirect()->route('admin.procurement.index', ['tab' => 'po']));
+        Route::get('/procurement/grn', fn () => redirect()->route('admin.procurement.index', ['tab' => 'grn']));
+        Route::post('/procurement/vendors', [ProcurementController::class, 'storeVendor'])->name('procurement.vendors.store');
+        Route::get('/procurement/po/template', [ProcurementController::class, 'downloadPoTemplate'])->name('procurement.po.template');
+        Route::post('/procurement/po/import/preview', [ProcurementController::class, 'previewPoImport'])->name('procurement.po.import.preview');
+        Route::post('/procurement/po/import/store', [ProcurementController::class, 'storePoImport'])->name('procurement.po.import.store');
         Route::post('/procurement/po', [ProcurementController::class, 'storePo'])->name('procurement.po.store');
         Route::post('/procurement/po/bulk-approve', [ProcurementController::class, 'bulkApprovePo'])->name('procurement.po.bulk-approve');
         Route::post('/procurement/po/{po}/approve', [ProcurementController::class, 'approvePo'])->name('procurement.po.approve');
+        Route::get('/procurement/grn/template', [ProcurementController::class, 'downloadGrnTemplate'])->name('procurement.grn.template');
+        Route::post('/procurement/grn/import/preview', [ProcurementController::class, 'previewGrnImport'])->name('procurement.grn.import.preview');
+        Route::post('/procurement/grn/import/store', [ProcurementController::class, 'storeGrnImport'])->name('procurement.grn.import.store');
         Route::post('/procurement/grn', [ProcurementController::class, 'storeGrn'])->name('procurement.grn.store');
         Route::post('/procurement/grn/bulk-approve', [ProcurementController::class, 'bulkApproveGrn'])->name('procurement.grn.bulk-approve');
         Route::post('/procurement/grn/{grn}/approve', [ProcurementController::class, 'approveGrn'])->name('procurement.grn.approve');

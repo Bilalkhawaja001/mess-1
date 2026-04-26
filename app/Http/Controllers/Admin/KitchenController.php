@@ -268,8 +268,7 @@ class KitchenController extends Controller
             ->where('quantity', $baseQuantity)
             ->where('issue_type', $d['issue_type'])
             ->where('mess_id', $d['mess_id'])
-            ->where('unit_code', $unitCode)
-            ->where('remarks', $request->input('remarks'))
+                        ->where('remarks', $request->input('remarks'))
             ->where('created_at', '>=', now()->subMinutes(2))
             ->exists();
 
@@ -281,7 +280,6 @@ class KitchenController extends Controller
             'issue_date' => $d['issue_date'],
             'item_id' => $item->id,
             'quantity' => $baseQuantity,
-            'unit_code' => $unitCode,
             'mess_id' => $d['mess_id'],
             'issue_type' => $d['issue_type'],
             'remarks' => $request->input('remarks'),
@@ -357,8 +355,8 @@ class KitchenController extends Controller
                     'txn_type' => StockTransaction::TXN_TYPE_KITCHEN_ISSUE,
                     'quantity' => $lockedIssue->quantity,
                     'unit_cost' => $unitCost,
-                    'trans_unit_code' => $lockedIssue->unit_code,
-                    'trans_quantity' => $lockedIssue->unit_code ? (float) $lockedIssue->quantity : null,
+                    'trans_unit_code' => null,
+                    'trans_quantity' => null,
                     'reference_type' => KitchenIssue::class,
                     'reference_id' => $lockedIssue->id,
                     'txn_at' => $lockedIssue->issue_date,

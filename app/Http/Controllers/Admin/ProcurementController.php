@@ -194,7 +194,7 @@ class ProcurementController extends Controller
                 $meta = $row['meta'];
                 $requestRow = $row['request'];
 
-                GoodsReceiptLine::create([
+                $grnLine = GoodsReceiptLine::create([
                     'goods_receipt_id' => $grn->id,
                     'item_id' => $meta['item']->id,
                     'qty_received' => $meta['qty_received'],
@@ -210,8 +210,8 @@ class ProcurementController extends Controller
                     'unit_cost' => $meta['unit_cost'],
                     'trans_unit_code' => $meta['unit']->unit_code,
                     'trans_quantity' => $meta['qty_received'],
-                    'reference_type' => GoodsReceipt::class,
-                    'reference_id' => $grn->id,
+                    'reference_type' => GoodsReceiptLine::class,
+                    'reference_id' => $grnLine->id,
                     'txn_at' => $d['received_date'],
                     'remarks' => trim(implode(' | ', array_filter([
                         'GRN posting (stock posted on create)',

@@ -195,6 +195,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/kitchen/plans/{plan}/edit', [KitchenController::class, 'updatePlan'])->name('kitchen.plans.edit.legacy');
         Route::post('/kitchen/plans/{plan}/approve', [KitchenController::class, 'approvePlan'])->name('kitchen.plans.approve.legacy');
         Route::post('/kitchen/issues', [KitchenController::class, 'issue'])->name('kitchen.issues.store');
+        Route::get('/kitchen/ledger/export', [KitchenController::class, 'exportLedgerConsumption'])->name('kitchen.ledger.export');
+        Route::get('/kitchen/ledger/export-summary', [KitchenController::class, 'exportLedgerConsumptionSummary'])->name('kitchen.ledger.export-summary');
         Route::post('/kitchen/issues/{issue}/approve', [KitchenController::class, 'approveIssue'])->name('kitchen.issues.approve.legacy');
     });
 

@@ -270,11 +270,11 @@
                                 @foreach($issues as $i)
                                     <tr>
                                         <td>{{ $i->issue_date }}</td>
-                                        <td>{{ $i->mess?->name ?? '—' }}</td>
+                                        <td>{{ $i->mess?->name ?? '-' }}</td>
                                         <td>{{ $items->firstWhere('id', $i->item_id)?->name ?? $i->item_id }}</td>
                                         <td>{{ rtrim(rtrim(number_format((float) $i->quantity, 3, '.', ''), '0'), '.') }}</td>
                                         <td>{{ $i->issue_type ?? 'CONSUMPTION' }}</td>
-                                        <td>{{ $i->unit_code ?: ($items->firstWhere('id', $i->item_id)?->uom ?? '—') }}</td>
+                                        <td>{{ $i->unit_code ?: ($items->firstWhere('id', $i->item_id)?->uom ?? '-') }}</td>
                                         <td>
                                             @if($i->status === \App\Models\KitchenIssue::STATUS_APPROVED)
                                                 <span class="badge text-bg-success">Approved</span>
@@ -331,26 +331,48 @@
                 <div class="col-12 col-xl-7">
                     <div class="card kitchen-card h-100">
                         <div class="card-header">Kitchen Ledger</div>
-                        <div class="card-body table-responsive">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>Date</th><th>Mess</th><th>Reference</th><th>Item</th><th>Qty Out</th><th>Type</th><th>Unit</th><th>Remarks</th></tr></thead>
-                                <tbody>
-                                @forelse($kitchenLedgerRows as $row)
-                                    <tr>
-                                        <td>{{ optional($row->txn_at)->format('Y-m-d H:i') }}</td>
-                                        <td>{{ $row->mess_name ?? '—' }}</td>
-                                        <td>{{ class_basename($row->reference_type) }} #{{ $row->reference_id }}</td>
-                                        <td>{{ $row->item_name }}</td>
-                                        <td>{{ rtrim(rtrim(number_format((float) $row->quantity, 3, '.', ''), '0'), '.') }} {{ $row->item_uom }}</td>
-                                        <td>{{ $row->issue_type ?? 'CONSUMPTION' }}</td>
-                                        <td>{{ $row->item_uom }}</td>
-                                        <td>{{ $row->remarks }}</td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="8" class="text-muted">No ledger rows available.</td></tr>
-                                @endforelse
-                                </tbody>
-                            </table>
+                        <div class="card-body">
+                            <form method="GET" action="{{ route('admin.kitchen.index') }}" class="row g-2 align-items-end mb-3">
+                                <input type="hidden" name="tab" value="ledger">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">From Date</label>
+                                    <input type="date" name="from_date" value="{{ $fromDate }}" class="form-control">
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label">To Date</label>
+                                    <input type="date" name="to_date" value="{{ $toDate }}" class="form-control">
+                                </div>
+                                <div class="col-12 col-md-2 d-grid">
+                                    <button class="btn btn-primary">Apply Filter</button>
+                                </div>
+                                <div class="col-12 col-md-2 d-grid">
+                                    <a href="{{ route('admin.kitchen.ledger.export', ['from_date' => $fromDate, 'to_date' => $toDate]) }}" class="btn btn-outline-primary">Download Detailed Consumption</a>
+                                </div>
+                                <div class="col-12 col-md-2 d-grid">
+                                    <a href="{{ route('admin.kitchen.ledger.export-summary', ['from_date' => $fromDate, 'to_date' => $toDate]) }}" class="btn btn-outline-primary">Download Item Summary</a>
+                                </div>
+                            </form>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead><tr><th>Date</th><th>Mess</th><th>Reference</th><th>Item</th><th>Qty Out</th><th>Type</th><th>Unit</th><th>Remarks</th></tr></thead>
+                                    <tbody>
+                                    @forelse($kitchenLedgerRows as $row)
+                                        <tr>
+                                            <td>{{ optional($row->txn_at)->format('Y-m-d H:i') }}</td>
+                                            <td>{{ $row->mess_name ?? '-' }}</td>
+                                            <td>{{ class_basename($row->reference_type) }} #{{ $row->reference_id }}</td>
+                                            <td>{{ $row->item_name }}</td>
+                                            <td>{{ rtrim(rtrim(number_format((float) $row->quantity, 3, '.', ''), '0'), '.') }} {{ $row->item_uom }}</td>
+                                            <td>{{ $row->issue_type ?? 'CONSUMPTION' }}</td>
+                                            <td>{{ $row->item_uom }}</td>
+                                            <td>{{ $row->remarks }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="8" class="text-muted">No ledger rows available.</td></tr>
+                                    @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

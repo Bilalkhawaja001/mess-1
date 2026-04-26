@@ -14,6 +14,8 @@ use App\Services\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -59,12 +61,29 @@ class KitchenController extends Controller
 
         $selectedMonth = (string) ($request->query('month') ?: now()->format('Y-m'));
         try {
-            $monthStart = \Illuminate\Support\Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+            $monthStart = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
         } catch (\Throwable $e) {
             $selectedMonth = now()->format('Y-m');
             $monthStart = now()->startOfMonth();
         }
         $monthEnd = $monthStart->copy()->endOfMonth();
+
+        $fromDate = (string) ($request->query('from_date') ?: $monthStart->toDateString());
+        $toDate = (string) ($request->query('to_date') ?: $monthEnd->toDateString());
+
+        try {
+            $fromDateCarbon = Carbon::parse($fromDate)->startOfDay();
+        } catch (\Throwable $e) {
+            $fromDateCarbon = $monthStart->copy()->startOfDay();
+            $fromDate = $fromDateCarbon->toDateString();
+        }
+
+        try {
+            $toDateCarbon = Carbon::parse($toDate)->endOfDay();
+        } catch (\Throwable $e) {
+            $toDateCarbon = $monthEnd->copy()->endOfDay();
+            $toDate = $toDateCarbon->toDateString();
+        }
 
         $kitchenLedgerBase = StockTransaction::query()
             ->from('stock_transactions as st')
@@ -80,7 +99,7 @@ class KitchenController extends Controller
             ->whereNotNull('ki.approved_stock_txn_id');
 
         $kitchenLedgerRows = (clone $kitchenLedgerBase)
-            ->whereBetween('st.txn_at', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->whereBetween('st.txn_at', [$fromDateCarbon->toDateTimeString(), $toDateCarbon->toDateTimeString()])
             ->orderByDesc('st.txn_at')
             ->orderByDesc('st.id')
             ->limit(200)
@@ -124,10 +143,101 @@ class KitchenController extends Controller
             'consumption',
             'messes',
             'selectedMonth',
+            'fromDate',
+            'toDate',
             'kitchenMonthlySummary',
             'kitchenLedgerRows',
             'activeTab'
         ));
+    }
+
+    public function exportLedgerConsumption(Request $request): Response
+    {
+        [$fromDate, $toDate] = $this->resolveLedgerDateRange($request);
+
+        $rows = $this->kitchenLedgerExportBaseQuery($fromDate, $toDate)
+            ->orderBy('st.txn_at')
+            ->orderBy('st.id')
+            ->get([
+                'st.txn_at',
+                'ki.issue_date',
+                'ki.issue_type',
+                'm.name as mess_name',
+                'i.sku as item_sku',
+                'i.name as item_name',
+                'i.category as item_category',
+                'i.uom as item_uom',
+                'st.unit_cost',
+                'st.quantity',
+                DB::raw('(ABS(st.quantity) * st.unit_cost) as total_amount'),
+                'st.remarks',
+            ]);
+
+        $csvRows = [[
+            'Issue Date', 'Ledger Date', 'Mess', 'Issue Type', 'Item Code / SKU', 'Item Name', 'Category', 'Unit', 'Quantity', 'Unit Cost', 'Total Amount', 'Remarks',
+        ]];
+
+        foreach ($rows as $row) {
+            $csvRows[] = [
+                optional($row->issue_date)->format('Y-m-d') ?: (string) $row->issue_date,
+                optional($row->txn_at)->format('Y-m-d H:i:s'),
+                $row->mess_name,
+                $row->issue_type,
+                $row->item_sku,
+                $row->item_name,
+                $row->item_category,
+                $row->item_uom,
+                number_format(abs((float) $row->quantity), 3, '.', ''),
+                number_format((float) $row->unit_cost, 2, '.', ''),
+                number_format((float) $row->total_amount, 2, '.', ''),
+                $row->remarks,
+            ];
+        }
+
+        return $this->csvDownloadResponse('kitchen_detailed_consumption.csv', $csvRows);
+    }
+
+    public function exportLedgerConsumptionSummary(Request $request): Response
+    {
+        [$fromDate, $toDate] = $this->resolveLedgerDateRange($request);
+
+        $rows = $this->kitchenLedgerExportBaseQuery($fromDate, $toDate)
+            ->groupBy('i.id', 'i.sku', 'i.name', 'i.category', 'i.uom')
+            ->orderBy('i.name')
+            ->get([
+                'i.sku as item_sku',
+                'i.name as item_name',
+                'i.category as item_category',
+                'i.uom as item_uom',
+                DB::raw('SUM(ABS(st.quantity)) as total_quantity'),
+                DB::raw('SUM(ABS(st.quantity) * st.unit_cost) as total_amount'),
+                DB::raw('MIN(DATE(ki.issue_date)) as first_issue_date'),
+                DB::raw('MAX(DATE(ki.issue_date)) as last_issue_date'),
+            ]);
+
+        $csvRows = [[
+            'Item Code / SKU', 'Item Name', 'Category', 'Unit', 'Total Quantity', 'Average Unit Cost', 'Total Amount', 'First Issue Date', 'Last Issue Date',
+        ]];
+
+        foreach ($rows as $row) {
+            $totalQty = (float) $row->total_quantity;
+            $totalAmount = (float) $row->total_amount;
+            $avgCost = $totalQty > 0 ? ($totalAmount / $totalQty) : 0;
+
+            $csvRows[] = [
+                $row->item_sku,
+                $row->item_name,
+                $row->item_category,
+                $row->item_uom,
+                number_format($totalQty, 3, '.', ''),
+                number_format($avgCost, 2, '.', ''),
+                number_format($totalAmount, 2, '.', ''),
+                $row->first_issue_date,
+                $row->last_issue_date,
+            ];
+        }
+
+        return $this->csvDownloadResponse('kitchen_item_summary_consumption.csv', $csvRows);
     }
 
     public function apiMenus(): JsonResponse
@@ -378,6 +488,63 @@ class KitchenController extends Controller
         }
 
         return $this->redirectToKitchenTab($returnTab)->with('success', 'Kitchen issue approved and stock posted successfully.');
+    }
+
+    private function kitchenLedgerExportBaseQuery(Carbon $fromDate, Carbon $toDate)
+    {
+        return StockTransaction::query()
+            ->from('stock_transactions as st')
+            ->join('items as i', 'i.id', '=', 'st.item_id')
+            ->join('kitchen_issues as ki', function ($join) {
+                $join->on('ki.id', '=', 'st.reference_id')
+                    ->where('st.reference_type', '=', KitchenIssue::class);
+            })
+            ->leftJoin('messes as m', 'm.id', '=', 'ki.mess_id')
+            ->where('st.txn_type', StockTransaction::TXN_TYPE_KITCHEN_ISSUE)
+            ->where('st.reference_type', KitchenIssue::class)
+            ->where('ki.status', KitchenIssue::STATUS_APPROVED)
+            ->whereNotNull('ki.approved_stock_txn_id')
+            ->whereBetween('st.txn_at', [$fromDate->toDateTimeString(), $toDate->toDateTimeString()]);
+    }
+
+    private function resolveLedgerDateRange(Request $request): array
+    {
+        $defaultStart = now()->startOfMonth();
+        $defaultEnd = now()->endOfMonth();
+
+        try {
+            $fromDate = Carbon::parse((string) $request->query('from_date', $defaultStart->toDateString()))->startOfDay();
+        } catch (\Throwable $e) {
+            $fromDate = $defaultStart;
+        }
+
+        try {
+            $toDate = Carbon::parse((string) $request->query('to_date', $defaultEnd->toDateString()))->endOfDay();
+        } catch (\Throwable $e) {
+            $toDate = $defaultEnd;
+        }
+
+        if ($toDate->lt($fromDate)) {
+            [$fromDate, $toDate] = [$toDate->copy()->startOfDay(), $fromDate->copy()->endOfDay()];
+        }
+
+        return [$fromDate, $toDate];
+    }
+
+    private function csvDownloadResponse(string $filename, array $rows): Response
+    {
+        $handle = fopen('php://temp', 'r+');
+        foreach ($rows as $row) {
+            fputcsv($handle, $row);
+        }
+        rewind($handle);
+        $content = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($content, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     private function normalizeKitchenTab(string $tab): string

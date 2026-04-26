@@ -4,15 +4,102 @@
 
 @push('styles')
 <style>
-    .procurement-search-result {
-        color: #64748b;
-        font-size: 0.85rem;
-        margin-top: 6px;
-    }
-
     .procurement-note {
         font-size: 0.84rem;
         color: #64748b;
+    }
+
+    .procurement-page-shell {
+        max-width: 1400px;
+    }
+
+    .procurement-toolbar {
+        border-radius: 20px;
+        padding: 1rem 1rem 0.95rem;
+        background: linear-gradient(135deg, rgba(15,23,42,0.02), rgba(37,99,235,0.05));
+        border: 1px solid rgba(148,163,184,0.28);
+        margin-bottom: 1rem;
+    }
+
+    .procurement-tab-nav {
+        gap: 0.65rem;
+        margin-top: 0.9rem;
+        flex-wrap: wrap;
+    }
+
+    .procurement-tab-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0.65rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.35);
+        background: #fff;
+        color: #334155;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .procurement-tab-link.active {
+        background: #0f172a;
+        color: #fff;
+        border-color: #0f172a;
+        box-shadow: 0 10px 24px rgba(15,23,42,0.16);
+    }
+
+    .procurement-tab-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .procurement-form-card,
+    .procurement-table-card,
+    .procurement-vendor-table-card {
+        border: 1px solid rgba(148,163,184,0.22);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+    }
+
+    .procurement-form-card .card-header,
+    .procurement-table-card .card-header,
+    .procurement-vendor-table-card .card-header {
+        padding: 0.9rem 1rem;
+        background: #fff;
+        border-bottom: 1px solid rgba(148,163,184,0.18);
+        font-size: 0.94rem;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .procurement-form-card .card-body,
+    .procurement-table-card .card-body,
+    .procurement-vendor-table-card .card-body {
+        padding: 1rem;
+        background: #fff;
+    }
+
+    .procurement-form-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .procurement-group-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+        padding-top: 0.45rem;
+        margin-bottom: 0.35rem;
+        border-top: 1px dashed rgba(148,163,184,0.45);
     }
 
     .procurement-kpi {
@@ -20,21 +107,18 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 10px;
         margin-top: 12px;
-        padding: 0.55rem 0.75rem;
-        border-radius: 999px;
+        padding: 0.65rem 0.75rem;
+        border-radius: 16px;
         background: rgba(15,23,42,0.02);
         border: 1px solid rgba(148,163,184,0.35);
     }
 
     .procurement-kpi div {
-        padding: 0 10px;
-        border-radius: 0;
-        background: transparent;
-        border: none;
         font-size: 0.82rem;
         display: flex;
         justify-content: space-between;
-        align-items: baseline;
+        gap: 10px;
+        color: #475569;
     }
 
     .procurement-kpi strong {
@@ -59,6 +143,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 12px;
         margin-bottom: 10px;
         font-size: 0.85rem;
         font-weight: 700;
@@ -67,14 +152,32 @@
 
     .procurement-line-grid {
         display: grid;
-        grid-template-columns: 1.7fr 0.7fr 0.7fr auto;
+        grid-template-columns: minmax(0, 1.7fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) auto;
         gap: 12px;
         align-items: end;
     }
 
-    .procurement-line-grid .form-label {
-        font-size: 0.78rem;
-        margin-bottom: 0.15rem;
+    .procurement-line-grid .form-label,
+    .procurement-form-card .form-label {
+        font-size: 0.82rem;
+        margin-bottom: 0.35rem;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .procurement-form-card .form-control,
+    .procurement-form-card .form-select,
+    .procurement-form-card .btn,
+    .procurement-table-card .btn,
+    .procurement-vendor-table-card .btn {
+        min-height: 42px;
+        border-radius: 12px;
+    }
+
+    .procurement-form-card .btn,
+    .procurement-table-card .btn,
+    .procurement-vendor-table-card .btn {
+        font-weight: 600;
     }
 
     .procurement-mini-result {
@@ -96,58 +199,9 @@
         font-size: 0.8rem;
     }
 
-    .procurement-primary-card .card-header {
-        padding-top: 0.6rem;
-        padding-bottom: 0.5rem;
-        font-size: 0.92rem;
-        font-weight: 700;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid rgba(148,163,184,0.32);
-    }
-
-    .procurement-primary-card .card-body {
-        padding-top: 0.95rem;
-        padding-bottom: 1rem;
-        background: radial-gradient(circle at top left, rgba(37,99,235,0.06), transparent 55%);
-    }
-
-    .procurement-table-card .card-header {
-        padding-top: 0.6rem;
-        padding-bottom: 0.5rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .procurement-table-card .table {
-        font-size: 0.82rem;
-    }
-
-    .procurement-section-kicker {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: #64748b;
-    }
-
-    .procurement-section-title {
-        font-size: 1rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-
-    .procurement-section-sub {
-        font-size: 0.82rem;
-        color: #64748b;
-    }
-
     .bulk-action-bar {
-        padding: 0.4rem 0.75rem;
-        border-radius: 999px;
+        padding: 0.55rem 0.8rem;
+        border-radius: 14px;
         background: rgba(15,23,42,0.02);
         border: 1px dashed rgba(148,163,184,0.45);
         display: flex;
@@ -158,26 +212,45 @@
         flex-wrap: wrap;
     }
 
-    .bulk-action-count strong {
-        font-weight: 600;
-        color: #0f172a;
+    .procurement-table-card .table,
+    .procurement-vendor-table-card .table {
+        font-size: 0.82rem;
+        margin-bottom: 0;
     }
 
-    .procurement-ops-shell {
-        border-radius: 18px;
-        padding: 0.85rem 1rem 1rem;
-        background: linear-gradient(135deg, rgba(15,23,42,0.02), rgba(37,99,235,0.04));
-        border: 1px solid rgba(148,163,184,0.35);
-    }
-
-    .procurement-group-label {
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
+    .procurement-empty {
+        padding: 1rem;
+        border-radius: 14px;
+        background: rgba(248,250,252,0.8);
+        border: 1px dashed rgba(148,163,184,0.4);
         color: #64748b;
-        padding-top: 0.45rem;
-        margin-bottom: 0.25rem;
-        border-top: 1px dashed rgba(148,163,184,0.5);
+        text-align: center;
+        font-size: 0.88rem;
+    }
+
+    .procurement-section-kicker {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #64748b;
+    }
+
+    .procurement-section-title {
+        font-size: 1.06rem;
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+    }
+
+    .procurement-section-sub {
+        font-size: 0.84rem;
+        color: #64748b;
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 1199.98px) {
+        .procurement-form-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     @media (max-width: 991.98px) {
@@ -185,11 +258,28 @@
             grid-template-columns: 1fr;
         }
     }
+
+    @media (max-width: 575.98px) {
+        .procurement-toolbar {
+            padding: 0.9rem 0.85rem;
+        }
+
+        .procurement-form-card .card-body,
+        .procurement-table-card .card-body,
+        .procurement-vendor-table-card .card-body {
+            padding: 0.85rem;
+        }
+    }
 </style>
 @endpush
 
 @section('content')
 @php
+    $activeTab = request('tab', 'po');
+    if (! in_array($activeTab, ['vendors', 'po', 'grn'], true)) {
+        $activeTab = 'po';
+    }
+
     $procurementPoLinesJson = $grnEligiblePos->mapWithKeys(function ($po) {
         return [
             $po->id => $po->lines->map(function ($line) {
@@ -223,193 +313,272 @@
         ];
     })->values()->all();
 @endphp
-<div class="row g-3 mb-2">
-    <div class="col-12 d-flex justify-content-between align-items-end flex-wrap gap-2">
-        <div>
-            <div class="procurement-section-kicker">Procurement workspace</div>
-            <div class="procurement-section-title">Vendors, Purchase Orders &amp; GRNs</div>
-            <div class="procurement-section-sub">Create vendors, raise purchase orders and post GRNs into auditable store stock.</div>
+
+<div class="procurement-page-shell">
+    <div class="procurement-toolbar">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+                <div class="procurement-section-kicker">Procurement workspace</div>
+                <div class="procurement-section-title">Vendors, Purchase Orders &amp; GRNs</div>
+                <p class="procurement-section-sub">Manage vendors separately, raise purchase orders cleanly, and receive stock through a focused GRN workflow.</p>
+            </div>
+        </div>
+
+        <div class="d-flex procurement-tab-nav">
+            <a href="{{ route('admin.procurement.index', ['tab' => 'vendors']) }}" class="procurement-tab-link {{ $activeTab === 'vendors' ? 'active' : '' }}">Vendors</a>
+            <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="procurement-tab-link {{ $activeTab === 'po' ? 'active' : '' }}">Purchase Orders</a>
+            <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}" class="procurement-tab-link {{ $activeTab === 'grn' ? 'active' : '' }}">GRNs / Receiving</a>
         </div>
     </div>
-</div>
 
-<div class="procurement-ops-shell mb-3">
-    <div class="row g-3">
-        <div class="col-lg-4"><div class="card shadow-sm procurement-primary-card"><div class="card-header"><span>Create Vendor</span><span class="text-muted small">Vendor master</span></div><div class="card-body">
-            <form method="POST" action="{{ route('admin.procurement.vendors.store') }}" class="row g-2">@csrf
-                <div class="col-12"><input name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Vendor name" required value="{{ old('name') }}"></div>
-                @error('name')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary">Create Vendor</button></div>
-            </form>
-        </div></div></div>
-
-        <div class="col-lg-4"><div class="card shadow-sm procurement-primary-card"><div class="card-header"><span>Create PO</span><span class="text-muted small">Order lines</span></div><div class="card-body">
-            <form method="POST" action="{{ route('admin.procurement.po.store') }}" class="row g-2" id="po-form">@csrf
-                <div class="col-12">
-                    <div class="procurement-group-label">Vendor</div>
-                    <select name="vendor_id" class="form-select @error('vendor_id') is-invalid @enderror" required><option value="">Select vendor</option>@foreach($vendors as $v)<option value="{{ $v->id }}" @selected((string) old('vendor_id') === (string) $v->id)>{{ $v->name }}</option>@endforeach</select>
-                </div>
-                @error('vendor_id')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                <div class="col-12">
-                    <div class="procurement-group-label">PO lines</div>
-                    <div class="po-lines" id="po-lines"></div>
-                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-po-line">Add Line</button>
-                </div>
-                <div class="col-12">
-                    <div class="procurement-group-label">PO date &amp; action</div>
-                </div>
-                <div class="col-6"><input type="date" name="po_date" class="form-control @error('po_date') is-invalid @enderror" required value="{{ old('po_date') }}"></div>
-                @error('po_date')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                @error('lines')
-                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                @enderror
-                <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary" id="po-submit-btn">Create PO</button></div>
-            </form>
-        </div></div></div>
-
-        <div class="col-lg-4"><div class="card shadow-sm procurement-primary-card"><div class="card-header"><span>Create GRN</span><span class="text-muted small">Receive into stock</span></div><div class="card-body">
-            <form method="POST" action="{{ route('admin.procurement.grn.store') }}" class="row g-2" id="grn-form">@csrf
-                <div class="col-12">
-                    <div class="procurement-group-label">Purchase order</div>
-                    <label class="form-label">Purchase Order</label>
-                    <select name="purchase_order_id" id="grn-po-select" class="form-select @error('purchase_order_id') is-invalid @enderror" required>
-                        <option value="">Select PO</option>
-                        @foreach($grnEligiblePos as $po)
-                            <option value="{{ $po->id }}" data-lines='@json($procurementPoLinesJson[$po->id] ?? [])' @selected((string) old('purchase_order_id') === (string) $po->id)>
-                                {{ $po->po_number }} — {{ $po->vendor->name ?? 'Vendor' }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('purchase_order_id')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-                <div class="col-12">
-                    <div class="procurement-group-label">Receive date</div>
-                    <input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}">
-                    @error('received_date')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-                <div class="col-12">
-                    <div class="procurement-group-label">PO lines to receive</div>
-                    <div class="procurement-note mb-2">Tick only the rows received now. Unchecked rows stay pending. Qty defaults to pending and can be edited for partial receive.</div>
-                    @error('receive_rows')
-                        <div class="text-danger small mb-2">{{ $message }}</div>
-                    @enderror
-                    <div class="table-responsive grn-line-table">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Receive?</th>
-                                    <th>Item</th>
-                                    <th>Ordered</th>
-                                    <th>Received</th>
-                                    <th>Pending</th>
-                                    <th>Receive Qty</th>
-                                    <th>Unit</th>
-                                    <th>Unit Cost</th>
-                                    <th>Override</th>
-                                    <th>Remarks</th>
-                                </tr>
-                            </thead>
-                            <tbody id="grn-lines-body">
-                                <tr>
-                                    <td colspan="10" class="text-muted text-center">Select PO to load pending lines.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="procurement-note mt-2">Stock is posted immediately when GRN is created. Approval does not post stock again.</div>
-                </div>
-                <div class="col-12 d-flex justify-content-end"><button class="btn btn-primary" id="grn-submit-btn">Receive Selected Items</button></div>
-            </form>
-        </div></div></div>
-    </div>
-</div>
-
-<div class="row g-3">
-    <div class="col-lg-6"><div class="card shadow-sm procurement-table-card"><div class="card-header"><span>Purchase Orders</span><span class="text-muted small">Draft &amp; approved</span></div><div class="card-body table-responsive">
-        <form method="POST" action="{{ route('admin.procurement.po.bulk-approve') }}" id="po-bulk-form">
-            @csrf
-            <div class="bulk-action-bar">
-                <div class="bulk-action-count"><span id="po-selected-count">0</span> PO(s) selected</div>
-                <button type="submit" class="btn btn-sm btn-outline-success" id="po-bulk-submit" disabled>Bulk Approve</button>
-            </div>
-            <table class="table table-sm"><thead><tr><th><input type="checkbox" id="po-select-all"></th><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-                @foreach($pos as $po)
-                    @php
-                        $poSelectable = $po->status !== 'APPROVED';
-                    @endphp
-                    <tr>
-                        <td>
-                            @if($poSelectable)
-                                <input type="checkbox" class="po-row-check" name="po_ids[]" value="{{ $po->id }}">
-                            @endif
-                        </td>
-                        <td>{{ $po->po_number }}</td>
-                        <td>{{ $po->po_date }}</td>
-                        <td>
-                            <div>{{ $po->vendor->name ?? '-' }}</div>
-                            <div class="po-summary-list">
-                                @foreach($po->lines->take(3) as $line)
-                                    <span>{{ $line->item?->sku }} {{ $line->item?->name ? '— '.$line->item->name : '' }}</span>
-                                @endforeach
+    @if($activeTab === 'vendors')
+        <div class="procurement-tab-panel">
+            <div class="card procurement-form-card">
+                <div class="card-header"><span>Create Vendor</span><span class="text-muted small">Vendor master</span></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-xl-5">
+                            <form method="POST" action="{{ route('admin.procurement.vendors.store') }}" class="row g-3">
+                                @csrf
+                                <div class="col-12">
+                                    <label class="form-label">Vendor Name</label>
+                                    <input name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Vendor name" required value="{{ old('name') }}">
+                                </div>
+                                @error('name')
+                                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+                                @enderror
+                                <div class="col-12">
+                                    <button class="btn btn-primary w-100">Create Vendor</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-xl-7">
+                            <div class="card procurement-vendor-table-card h-100">
+                                <div class="card-header"><span>Vendor List</span><span class="text-muted small">{{ $vendors->count() }} total</span></div>
+                                <div class="card-body">
+                                    @if($vendors->isEmpty())
+                                        <div class="procurement-empty">No vendors added yet.</div>
+                                    @else
+                                        <div class="table-responsive">
+                                            <table class="table table-sm align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Name</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($vendors as $vendor)
+                                                        <tr>
+                                                            <td>{{ $vendor->name }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
-                        </td>
-                        <td>{{ $po->total_lines }}</td>
-                        <td>{{ number_format((float) ($po->total_qty ?? 0), 3) }}</td>
-                        <td>{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
-                        <td>{{ number_format((float) ($po->received_qty ?? 0), 3) }}</td>
-                        <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
-                        <td>{{ $po->status }}</td>
-                        <td class="text-end">
-                            @if($poSelectable)
-                                <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}" formmethod="POST" class="btn btn-sm btn-outline-success">Approve</button>
-                            @else
-                                <span class="text-muted small">Approved</span>
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody></table>
-        </form>
-    </div></div></div>
-
-    <div class="col-lg-6"><div class="card shadow-sm procurement-table-card"><div class="card-header"><span>GRNs</span><span class="text-muted small">Posted on create</span></div><div class="card-body table-responsive">
-        <form method="POST" action="{{ route('admin.procurement.grn.bulk-approve') }}" id="grn-bulk-form">
-            @csrf
-            <div class="bulk-action-bar">
-                <div class="bulk-action-count"><span id="grn-selected-count">0</span> GRN(s) selected</div>
-                <button type="submit" class="btn btn-sm btn-outline-success" id="grn-bulk-submit" disabled>Bulk Acknowledge</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <table class="table table-sm"><thead><tr><th><input type="checkbox" id="grn-select-all"></th><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-                @foreach($grns as $grn)
-                    @php
-                        $grnLine = $grn->lines->first();
-                    @endphp
-                    <tr>
-                        <td><input type="checkbox" class="grn-row-check" name="grn_ids[]" value="{{ $grn->id }}"></td>
-                        <td>{{ $grn->grn_number }}</td>
-                        <td>{{ $grn->received_date }}</td>
-                        <td>{{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}</td>
-                        <td>{{ $grn->purchaseOrder->vendor->name ?? '-' }}</td>
-                        <td>{{ $grnLine?->item?->sku }} {{ $grnLine?->item?->name ? '— '.$grnLine->item->name : '' }}</td>
-                        <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
-                        <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
-                        <td>Posted on Create</td>
-                        <td class="text-end"><button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button></td>
-                    </tr>
-                @endforeach
-            </tbody></table>
-        </form>
-    </div></div></div>
+        </div>
+    @elseif($activeTab === 'po')
+        <div class="procurement-tab-panel">
+            <div class="procurement-form-grid">
+                <div class="card procurement-form-card">
+                    <div class="card-header"><span>Create PO</span><span class="text-muted small">Order lines</span></div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.procurement.po.store') }}?tab=po" class="row g-3" id="po-form">@csrf
+                            <div class="col-12">
+                                <label class="form-label">Vendor</label>
+                                <select name="vendor_id" class="form-select @error('vendor_id') is-invalid @enderror" required>
+                                    <option value="">Select vendor</option>
+                                    @foreach($vendors as $v)
+                                        <option value="{{ $v->id }}" @selected((string) old('vendor_id') === (string) $v->id)>{{ $v->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @error('vendor_id')
+                                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+                            @enderror
+                            <div class="col-12">
+                                <div class="procurement-group-label">PO lines</div>
+                                <div class="po-lines" id="po-lines"></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-po-line">Add Line</button>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">PO Date</label>
+                                <input type="date" name="po_date" class="form-control @error('po_date') is-invalid @enderror" required value="{{ old('po_date') }}">
+                            </div>
+                            @error('po_date')
+                                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+                            @enderror
+                            @error('lines')
+                                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
+                            @enderror
+                            <div class="col-12 d-flex justify-content-end">
+                                <button class="btn btn-primary px-4" id="po-submit-btn">Create PO</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card procurement-table-card">
+                    <div class="card-header"><span>Purchase Orders</span><span class="text-muted small">Draft &amp; approved</span></div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.procurement.po.bulk-approve') }}?tab=po" id="po-bulk-form">
+                            @csrf
+                            <div class="bulk-action-bar">
+                                <div><span id="po-selected-count">0</span> PO(s) selected</div>
+                                <button type="submit" class="btn btn-sm btn-outline-success" id="po-bulk-submit" disabled>Bulk Approve</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle"><thead><tr><th><input type="checkbox" id="po-select-all"></th><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+                                    @forelse($pos as $po)
+                                        @php $poSelectable = $po->status !== 'APPROVED'; @endphp
+                                        <tr>
+                                            <td>
+                                                @if($poSelectable)
+                                                    <input type="checkbox" class="po-row-check" name="po_ids[]" value="{{ $po->id }}">
+                                                @endif
+                                            </td>
+                                            <td>{{ $po->po_number }}</td>
+                                            <td>{{ $po->po_date }}</td>
+                                            <td>
+                                                <div>{{ $po->vendor->name ?? '-' }}</div>
+                                                <div class="po-summary-list">
+                                                    @foreach($po->lines->take(3) as $line)
+                                                        <span>{{ $line->item?->sku }} {{ $line->item?->name ? '— '.$line->item->name : '' }}</span>
+                                                    @endforeach
+                                                </div>
+                                            </td>
+                                            <td>{{ $po->total_lines }}</td>
+                                            <td>{{ number_format((float) ($po->total_qty ?? 0), 3) }}</td>
+                                            <td>{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
+                                            <td>{{ number_format((float) ($po->received_qty ?? 0), 3) }}</td>
+                                            <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
+                                            <td>{{ $po->status }}</td>
+                                            <td class="text-end">
+                                                @if($poSelectable)
+                                                    <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}?tab=po" formmethod="POST" class="btn btn-sm btn-outline-success">Approve</button>
+                                                @else
+                                                    <span class="text-muted small">Approved</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="11" class="text-center text-muted py-4">No purchase orders found.</td></tr>
+                                    @endforelse
+                                </tbody></table>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="procurement-tab-panel">
+            <div class="procurement-form-grid">
+                <div class="card procurement-form-card">
+                    <div class="card-header"><span>Create GRN</span><span class="text-muted small">Receive into stock</span></div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.procurement.grn.store') }}?tab=grn" class="row g-3" id="grn-form">@csrf
+                            <div class="col-12">
+                                <label class="form-label">Purchase Order</label>
+                                <select name="purchase_order_id" id="grn-po-select" class="form-select @error('purchase_order_id') is-invalid @enderror" required>
+                                    <option value="">Select PO</option>
+                                    @foreach($grnEligiblePos as $po)
+                                        <option value="{{ $po->id }}" data-lines='@json($procurementPoLinesJson[$po->id] ?? [])' @selected((string) old('purchase_order_id') === (string) $po->id)>
+                                            {{ $po->po_number }} — {{ $po->vendor->name ?? 'Vendor' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('purchase_order_id')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Receive date</label>
+                                <input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}">
+                                @error('received_date')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-12">
+                                <div class="procurement-group-label">PO lines to receive</div>
+                                <div class="procurement-note mb-2">Tick only the rows received now. Unchecked rows stay pending. Qty defaults to pending and can be edited for partial receive.</div>
+                                @error('receive_rows')
+                                    <div class="text-danger small mb-2">{{ $message }}</div>
+                                @enderror
+                                <div class="table-responsive grn-line-table">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Receive?</th>
+                                                <th>Item</th>
+                                                <th>Ordered</th>
+                                                <th>Received</th>
+                                                <th>Pending</th>
+                                                <th>Receive Qty</th>
+                                                <th>Unit</th>
+                                                <th>Unit Cost</th>
+                                                <th>Override</th>
+                                                <th>Remarks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="grn-lines-body">
+                                            <tr>
+                                                <td colspan="10" class="text-muted text-center">Select PO to load pending lines.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="procurement-note mt-2">Stock is posted immediately when GRN is created. Approval does not post stock again.</div>
+                            </div>
+                            <div class="col-12 d-flex justify-content-end">
+                                <button class="btn btn-primary px-4" id="grn-submit-btn">Receive Selected Items</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card procurement-table-card">
+                    <div class="card-header"><span>GRNs</span><span class="text-muted small">Posted on create</span></div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.procurement.grn.bulk-approve') }}?tab=grn" id="grn-bulk-form">
+                            @csrf
+                            <div class="bulk-action-bar">
+                                <div><span id="grn-selected-count">0</span> GRN(s) selected</div>
+                                <button type="submit" class="btn btn-sm btn-outline-success" id="grn-bulk-submit" disabled>Bulk Acknowledge</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle"><thead><tr><th><input type="checkbox" id="grn-select-all"></th><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+                                    @forelse($grns as $grn)
+                                        @php $grnLine = $grn->lines->first(); @endphp
+                                        <tr>
+                                            <td><input type="checkbox" class="grn-row-check" name="grn_ids[]" value="{{ $grn->id }}"></td>
+                                            <td>{{ $grn->grn_number }}</td>
+                                            <td>{{ $grn->received_date }}</td>
+                                            <td>{{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}</td>
+                                            <td>{{ $grn->purchaseOrder->vendor->name ?? '-' }}</td>
+                                            <td>{{ $grnLine?->item?->sku }} {{ $grnLine?->item?->name ? '— '.$grnLine->item->name : '' }}</td>
+                                            <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
+                                            <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
+                                            <td>Posted on Create</td>
+                                            <td class="text-end"><button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}?tab=grn" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button></td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="10" class="text-center text-muted py-4">No GRNs found.</td></tr>
+                                    @endforelse
+                                </tbody></table>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
 
 <datalist id="procurement-items-list">
@@ -448,16 +617,18 @@
             const duplicates = new Set(values.filter((v, idx) => values.indexOf(v) !== idx));
             hiddenInputs.forEach((input) => {
                 const note = input.closest('.po-line-card')?.querySelector('.procurement-mini-result');
-                if (input.value && duplicates.has(input.value)) {
+                if (note && input.value && duplicates.has(input.value)) {
                     note.textContent = 'Same item cannot be added twice in the same PO.';
                     note.style.color = '#dc2626';
-                } else if (input.value) {
+                } else if (note && input.value) {
                     note.style.color = '#64748b';
                 }
             });
         };
 
         const createPoLine = () => {
+            if (!poLinesWrap) return;
+
             const line = document.createElement('div');
             line.className = 'po-line-card';
             line.dataset.index = poLineIndex;
@@ -518,7 +689,9 @@
         };
 
         addPoLineBtn?.addEventListener('click', createPoLine);
-        createPoLine();
+        if (poLinesWrap) {
+            createPoLine();
+        }
 
         const poSelect = document.getElementById('grn-po-select');
         const grnLinesBody = document.getElementById('grn-lines-body');
@@ -535,7 +708,9 @@
         };
 
         const renderGrnRows = () => {
-            const option = poSelect?.selectedOptions?.[0];
+            if (!poSelect || !grnLinesBody) return;
+
+            const option = poSelect.selectedOptions?.[0];
             if (!option || !option.value) {
                 grnLinesBody.innerHTML = '<tr><td colspan="10" class="text-muted text-center">Select PO to load pending lines.</td></tr>';
                 if (grnSubmitBtn) grnSubmitBtn.disabled = true;
@@ -750,7 +925,9 @@
             formId: 'grn-bulk-form',
         });
 
-        renderGrnRows();
+        if (poSelect && grnLinesBody) {
+            renderGrnRows();
+        }
     })();
 </script>
 @endpush

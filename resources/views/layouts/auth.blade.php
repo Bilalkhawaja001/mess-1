@@ -11,41 +11,55 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}">
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+        }
+
+        .auth-shell {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 38%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+        }
+
+        .auth-panel {
+            width: 100%;
+            max-width: 460px;
+        }
+
+        .auth-card {
+            border-radius: 20px;
+            background: #ffffff;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+        }
+
+        .auth-card .card-body {
+            padding: 28px;
+        }
+
+        @media (max-width: 575.98px) {
+            .auth-shell {
+                padding: 16px;
+            }
+
+            .auth-card .card-body {
+                padding: 22px;
+            }
+        }
+    </style>
     @stack('styles')
 </head>
 <body>
 <div class="auth-shell">
-    <aside class="auth-aside">
-        <div>
-            <div class="auth-brand">
-                <img src="{{ asset('branding/login_logo.png') }}" alt="Mess Billing logo">
-            </div>
-            <div class="section-kicker mb-3 text-white"><i class="bi bi-stars"></i> Premium Corporate Light</div>
-            <h1 class="display-6 fw-bold mb-3 text-white">Mess Billing Portal</h1>
-            <p class="mb-4 text-white-75">Modern operations interface for billing, attendance, finance workflows, and member services with enterprise-grade clarity.</p>
-            <div class="row g-3">
-                <div class="col-sm-6">
-                    <div class="p-3 rounded-4 border border-light border-opacity-25 bg-white bg-opacity-10 h-100">
-                        <div class="fw-semibold mb-1 text-white">Operational Control</div>
-                        <div class="small text-white-75">Manage cycles, collections, attendance, and member activities from one clean system.</div>
-                    </div>
-                </div>
-                <div class="col-sm-6">
-                    <div class="p-3 rounded-4 border border-light border-opacity-25 bg-white bg-opacity-10 h-100">
-                        <div class="fw-semibold mb-1 text-white">Member Workflows</div>
-                        <div class="small text-white-75">One clean access surface for sign-in, registration, recovery, and member account actions.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="auth-powered">
-            <div class="powered-by-logo powered-by-logo-lg">
-                <img src="{{ asset('branding/nodesky_logo.png') }}" alt="NodeSky logo">
-            </div>
-            <div class="powered-by-text">Powered by NodeSky(smc-Private)Limited</div>
-        </div>
-    </aside>
-
     <main class="auth-panel">
         <div class="auth-card card border-0">
             <div class="card-body">

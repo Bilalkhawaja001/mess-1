@@ -69,7 +69,7 @@ class ProcurementController extends Controller
     {
         Vendor::create($r->validate(['name' => 'required']));
 
-        return back()->with('success', 'Vendor created');
+        return redirect()->route('admin.procurement.index', ['tab' => 'vendors'])->with('success', 'Vendor created');
     }
 
     public function storePo(Request $r): RedirectResponse
@@ -121,7 +121,7 @@ class ProcurementController extends Controller
             }
         });
 
-        return back()->with('success', 'PO created');
+        return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('success', 'PO created');
     }
 
     public function approvePo(PurchaseOrder $po): RedirectResponse
@@ -230,7 +230,7 @@ class ProcurementController extends Controller
             ]);
         });
 
-        return back()->with('success', 'GRN posted for selected PO rows.');
+        return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('success', 'GRN posted for selected PO rows.');
     }
 
     public function approveGrn(GoodsReceipt $grn): RedirectResponse

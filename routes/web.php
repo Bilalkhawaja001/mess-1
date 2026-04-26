@@ -33,6 +33,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+    Route::view('/password-recovery', 'auth.password_reset_request')->name('password-reset.request.form');
+    Route::view('/password-recovery/reset', 'auth.password_reset')->name('password-reset.consume.form');
     Route::post('/password-reset/request', [AuthController::class, 'requestPasswordReset'])->name('password-reset.request.public');
     Route::post('/password-reset/consume', [AuthController::class, 'consumePasswordReset'])->name('password-reset.consume.public');
 

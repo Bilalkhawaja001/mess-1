@@ -669,6 +669,22 @@
                 <div class="card procurement-form-card bulk-grn-upload">
                     <div class="card-header"><span>Bulk GRN Upload</span><span class="text-muted small">CSV workflow</span></div>
                     <div class="card-body">
+                        <form method="GET" action="{{ route('admin.procurement.index') }}" class="row g-3 mb-3">
+                            <input type="hidden" name="tab" value="grn">
+                            <div class="col-md-6">
+                                <label class="form-label">From Date</label>
+                                <input type="date" name="from_date" value="{{ $grnFromDate }}" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">To Date</label>
+                                <input type="date" name="to_date" value="{{ $grnToDate }}" class="form-control">
+                            </div>
+                            <div class="col-12 d-grid gap-2">
+                                <button class="btn btn-outline-secondary">Apply</button>
+                                <a href="{{ route('admin.procurement.grn.export.detail', ['from_date' => $grnFromDate, 'to_date' => $grnToDate]) }}" class="btn btn-outline-primary">Download GRN Detail CSV</a>
+                                <a href="{{ route('admin.procurement.grn.export.summary', ['from_date' => $grnFromDate, 'to_date' => $grnToDate]) }}" class="btn btn-outline-primary">Download Item Summary CSV</a>
+                            </div>
+                        </form>
                         <form method="GET" action="{{ route('admin.procurement.grn.template') }}" class="row g-3 mb-3">
                             <div class="col-12">
                                 <label class="form-label">PO for template (optional)</label>

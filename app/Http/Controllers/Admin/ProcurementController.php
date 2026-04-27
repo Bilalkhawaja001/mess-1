@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
 
 class ProcurementController extends Controller
@@ -68,6 +69,7 @@ class ProcurementController extends Controller
         $poImportPreview = session('procurement_po_import_preview');
         $grnImportPreview = session('procurement_grn_import_preview');
         $selectedGrnTemplatePo = $request->integer('template_po_id');
+        [$grnFromDate, $grnToDate] = $this->resolveGrnDateRange($request);
 
         return view('admin.procurement.index', compact(
             'vendors',
@@ -77,7 +79,9 @@ class ProcurementController extends Controller
             'grns',
             'poImportPreview',
             'grnImportPreview',
-            'selectedGrnTemplatePo'
+            'selectedGrnTemplatePo',
+            'grnFromDate',
+            'grnToDate'
         ));
     }
 
@@ -216,6 +220,98 @@ class ProcurementController extends Controller
         $request->session()->forget('procurement_po_import_preview');
 
         return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('success', 'PO created from uploaded lines.');
+    }
+
+    public function exportGrnDetail(Request $request): StreamedResponse
+    {
+        [$fromDate, $toDate] = $this->resolveGrnDateRange($request, true);
+
+        $rows = GoodsReceiptLine::query()
+            ->select([
+                'goods_receipt_lines.qty_received',
+                'goods_receipt_lines.unit_cost',
+                'goods_receipt_lines.created_at',
+                'goods_receipts.received_date',
+                'goods_receipts.grn_number',
+                'goods_receipts.remarks as grn_remarks',
+                'purchase_orders.po_number',
+                'vendors.name as vendor_name',
+                'items.sku',
+                'items.name as item_name',
+                'items.uom',
+            ])
+            ->join('goods_receipts', 'goods_receipts.id', '=', 'goods_receipt_lines.goods_receipt_id')
+            ->join('purchase_orders', 'purchase_orders.id', '=', 'goods_receipts.purchase_order_id')
+            ->join('vendors', 'vendors.id', '=', 'purchase_orders.vendor_id')
+            ->join('items', 'items.id', '=', 'goods_receipt_lines.item_id')
+            ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate])
+            ->orderBy('goods_receipts.received_date')
+            ->orderBy('goods_receipts.grn_number')
+            ->orderBy('goods_receipt_lines.id');
+
+        $filename = sprintf('grn_detail_%s_to_%s.csv', $fromDate, $toDate);
+
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Date', 'GRN No', 'PO No', 'Vendor', 'Item Code / SKU', 'Description / Item Name', 'Qty', 'UOM', 'Unit Price', 'Total Amount', 'Remarks']);
+
+            $rows->chunk(500, function ($chunk) use ($handle) {
+                foreach ($chunk as $row) {
+                    $qty = (float) $row->qty_received;
+                    $unitPrice = (float) $row->unit_cost;
+                    fputcsv($handle, [
+                        $row->received_date,
+                        $row->grn_number,
+                        $row->po_number,
+                        $row->vendor_name,
+                        $row->sku,
+                        $row->item_name,
+                        number_format($qty, 3, '.', ''),
+                        $row->uom,
+                        number_format($unitPrice, 2, '.', ''),
+                        number_format($qty * $unitPrice, 2, '.', ''),
+                        $row->grn_remarks,
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportGrnSummary(Request $request): StreamedResponse
+    {
+        [$fromDate, $toDate] = $this->resolveGrnDateRange($request, true);
+
+        $rows = GoodsReceiptLine::query()
+            ->selectRaw('items.id as item_id, items.sku, items.name as item_name, items.uom, SUM(goods_receipt_lines.qty_received) as total_qty_received, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_amount, CASE WHEN SUM(goods_receipt_lines.qty_received) > 0 THEN SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) / SUM(goods_receipt_lines.qty_received) ELSE 0 END as weighted_avg_price')
+            ->join('goods_receipts', 'goods_receipts.id', '=', 'goods_receipt_lines.goods_receipt_id')
+            ->join('items', 'items.id', '=', 'goods_receipt_lines.item_id')
+            ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate])
+            ->groupBy('items.id', 'items.sku', 'items.name', 'items.uom')
+            ->orderBy('items.sku');
+
+        $filename = sprintf('grn_item_summary_%s_to_%s.csv', $fromDate, $toDate);
+
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Item Code / SKU', 'Description / Item Name', 'UOM', 'Total Qty Received', 'Weighted Average Unit Price', 'Total Amount']);
+
+            $rows->chunk(500, function ($chunk) use ($handle) {
+                foreach ($chunk as $row) {
+                    fputcsv($handle, [
+                        $row->sku,
+                        $row->item_name,
+                        $row->uom,
+                        number_format((float) $row->total_qty_received, 3, '.', ''),
+                        number_format((float) $row->weighted_avg_price, 2, '.', ''),
+                        number_format((float) $row->total_amount, 2, '.', ''),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     public function previewGrnImport(Request $request): RedirectResponse
@@ -810,6 +906,29 @@ class ProcurementController extends Controller
         }
 
         return $mapped;
+    }
+
+    private function resolveGrnDateRange(Request $request, bool $validate = false): array
+    {
+        $defaultFrom = now()->startOfMonth()->toDateString();
+        $defaultTo = now()->endOfMonth()->toDateString();
+
+        $data = [
+            'from_date' => $request->input('from_date', $defaultFrom),
+            'to_date' => $request->input('to_date', $defaultTo),
+        ];
+
+        if ($validate) {
+            validator($data, [
+                'from_date' => 'required|date',
+                'to_date' => 'required|date|after_or_equal:from_date',
+            ])->validate();
+        }
+
+        $fromDate = date('Y-m-d', strtotime((string) $data['from_date']));
+        $toDate = date('Y-m-d', strtotime((string) $data['to_date']));
+
+        return [$fromDate, $toDate];
     }
 
     private function csvDownloadResponse(string $filename, array $rows): Response

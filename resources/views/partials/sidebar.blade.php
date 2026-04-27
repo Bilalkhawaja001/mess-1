@@ -20,6 +20,15 @@
                     <div class="sb-label sidebar-label">Member</div>
                     <nav class="nav flex-column gap-1">
                         <a class="nav-link sidebar-link {{ request()->routeIs('member.dashboard') ? 'active' : '' }}" href="{{ route('member.dashboard') }}" title="Member Dashboard"><span class="sidebar-icon-wrap"><i class="bi bi-speedometer2 sidebar-icon"></i></span><span>Member Dashboard</span></a>
+                        @if(auth()->user()->hasPermission('payments.view_own'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.payments.*') ? 'active' : '' }}" href="{{ route('member.payments.index') }}" title="My Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>My Payments</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('complaint.view_own'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.complaints.*') ? 'active' : '' }}" href="{{ route('member.complaints.index') }}" title="My Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>My Complaints</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('menu.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.menu.*') ? 'active' : '' }}" href="{{ route('member.menu.index') }}" title="Menu"><span class="sidebar-icon-wrap"><i class="bi bi-card-list sidebar-icon"></i></span><span>Menu</span></a>
+                        @endif
                     </nav>
                 </div>
             @else
@@ -39,6 +48,12 @@
                         @if(auth()->user()->hasPermission('attendance.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.index') }}" title="Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar-check sidebar-icon"></i></span><span>Attendance</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance-monthly.*') ? 'active' : '' }}" href="{{ route('admin.attendance-monthly.index') }}" title="Monthly Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar3 sidebar-icon"></i></span><span>Monthly Attendance</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('complaint.view_all'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.complaints.*') ? 'active' : '' }}" href="{{ route('admin.complaints.index') }}" title="Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>Complaints</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('menu.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.menu.*') ? 'active' : '' }}" href="{{ route('admin.menu.index') }}" title="Menu"><span class="sidebar-icon-wrap"><i class="bi bi-card-list sidebar-icon"></i></span><span>Menu</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('member.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.extras.*') ? 'active' : '' }}" href="{{ route('admin.extras.index') }}" title="Extras"><span class="sidebar-icon-wrap"><i class="bi bi-plus-square sidebar-icon"></i></span><span>Extras</span></a>

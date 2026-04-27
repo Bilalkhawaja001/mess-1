@@ -96,6 +96,11 @@ class Member extends Model
         return $this->hasMany(MemberRegistrationOtp::class);
     }
 
+    public function complaints(): HasMany
+    {
+        return $this->hasMany(Complaint::class, 'user_id', 'user_id');
+    }
+
     public function removalDependencies(): Collection
     {
         return collect([

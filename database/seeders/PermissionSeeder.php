@@ -47,7 +47,7 @@ class PermissionSeeder extends Seeder
 
         $this->syncRolePermissions('DATA_ENTRY', [
             'member.manage', 'attendance.manage', 'payment.create', 'inventory.manage', 'procurement.manage',
-            'kitchen.manage', 'guest.manage', 'complaint.manage', 'menu.view', 'menu.manage',
+            'kitchen.manage', 'guest.manage', 'complaint.manage', 'menu.view',
         ]);
 
         $this->syncRolePermissions('AUDITOR', [

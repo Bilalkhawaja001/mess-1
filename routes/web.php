@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\ExtraController;
 use App\Http\Controllers\Admin\GuestController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\KitchenController;
+use App\Http\Controllers\Admin\ComplaintController as AdminComplaintController;
+use App\Http\Controllers\Admin\MenuController as AdminMenuController;
 use App\Http\Controllers\Admin\LedgerController;
 use App\Http\Controllers\Admin\LedgerToolchainController;
 use App\Http\Controllers\Admin\MemberController;
@@ -26,7 +28,9 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\MemberAccountController;
 use App\Http\Controllers\Auth\MemberRegistrationController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Member\ComplaintController as MemberComplaintController;
 use App\Http\Controllers\Member\DashboardController as MemberDashboardController;
+use App\Http\Controllers\Member\MenuController as MemberMenuController;
 use App\Http\Controllers\Member\PaymentController as MemberPaymentController;
 use Illuminate\Support\Facades\Route;
 
@@ -197,6 +201,22 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::get('/procurement/grn/export/summary', [ProcurementController::class, 'exportGrnSummary'])->name('procurement.grn.export.summary');
     });
 
+    Route::middleware('permission:complaint.view_all')->group(function () {
+        Route::get('/complaints', [AdminComplaintController::class, 'index'])->name('complaints.index');
+        Route::get('/complaints/{complaint}', [AdminComplaintController::class, 'show'])->name('complaints.show');
+    });
+    Route::post('/complaints/{complaint}/status', [AdminComplaintController::class, 'updateStatus'])->middleware('permission:complaint.manage')->name('complaints.status');
+    Route::get('/complaints/export', [AdminComplaintController::class, 'export'])->middleware('permission:complaint.export')->name('complaints.export');
+
+    Route::middleware('permission:menu.view')->group(function () {
+        Route::get('/menu', [AdminMenuController::class, 'index'])->name('menu.index');
+    });
+    Route::post('/menu', [AdminMenuController::class, 'store'])->middleware('permission:menu.manage')->name('menu.store');
+    Route::put('/menu/{menu}', [AdminMenuController::class, 'update'])->middleware('permission:menu.manage')->name('menu.update');
+    Route::post('/menu/{menu}/approve', [AdminMenuController::class, 'approve'])->middleware('permission:menu.approve')->name('menu.approve');
+    Route::post('/menu/{menu}/inactive', [AdminMenuController::class, 'inactive'])->middleware('permission:menu.approve')->name('menu.inactive');
+    Route::get('/menu/export', [AdminMenuController::class, 'export'])->middleware('permission:menu.export')->name('menu.export');
+
     Route::middleware('permission:kitchen.manage')->group(function () {
         Route::get('/kitchen', [KitchenController::class, 'index'])->name('kitchen.index');
         Route::post('/kitchen/menus', [KitchenController::class, 'storeMenu'])->name('kitchen.menus.store');
@@ -268,5 +288,16 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
     });
     Route::middleware('permission:payments.initiate_own')->group(function () {
         Route::post('/payments/initiate', [MemberPaymentController::class, 'initiate'])->name('payments.initiate');
+    });
+    Route::middleware('permission:complaint.view_own')->group(function () {
+        Route::get('/complaints', [MemberComplaintController::class, 'index'])->name('complaints.index');
+        Route::get('/complaints/{complaint}', [MemberComplaintController::class, 'show'])->name('complaints.show');
+    });
+    Route::middleware('permission:complaint.submit_own')->group(function () {
+        Route::get('/complaints/create', [MemberComplaintController::class, 'create'])->name('complaints.create');
+        Route::post('/complaints', [MemberComplaintController::class, 'store'])->name('complaints.store');
+    });
+    Route::middleware('permission:menu.view')->group(function () {
+        Route::get('/menu', [MemberMenuController::class, 'index'])->name('menu.index');
     });
 });

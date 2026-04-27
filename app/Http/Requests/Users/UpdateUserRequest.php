@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Users;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,7 +15,8 @@ class UpdateUserRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = (int) $this->route('user');
+        $routeUser = $this->route('user');
+        $userId = $routeUser instanceof User ? $routeUser->id : (int) $routeUser;
 
         return [
             'username' => ['required', 'string', 'max:50', Rule::unique('users', 'username')->ignore($userId)],

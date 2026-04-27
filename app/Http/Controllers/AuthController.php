@@ -45,30 +45,27 @@ class AuthController extends Controller
     public function requestPasswordReset(Request $request, PasswordResetService $service): RedirectResponse
     {
         $payload = $request->validate([
-            'username' => ['required', 'string'],
+            'identifier' => ['required', 'string'],
         ]);
 
-        $token = $service->issueToken((string) $payload['username']);
-        if (! $token) {
-            return back()->with('error', 'Unknown username.');
-        }
+        $service->issueToken((string) $payload['identifier']);
 
-        return back()->with('reset_token', $token)->with('success', 'Password reset token issued.');
+        return back()->with('success', 'If this account exists and has a valid email, reset instructions have been sent.');
     }
 
     public function consumePasswordReset(Request $request, PasswordResetService $service): RedirectResponse
     {
         $payload = $request->validate([
             'token' => ['required', 'string'],
-            'new_password' => ['required', 'string', 'min:8'],
+            'new_password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $ok = $service->consumeToken((string) $payload['token'], (string) $payload['new_password']);
         if (! $ok) {
-            return back()->with('error', 'Invalid/expired token.');
+            return back()->with('error', 'Invalid or expired reset link.');
         }
 
-        return back()->with('success', 'Password reset completed.');
+        return redirect()->route('login')->with('success', 'Password reset completed. You can now login with your new password.');
     }
 
     public function changePassword(Request $request, PasswordChangeService $service): RedirectResponse

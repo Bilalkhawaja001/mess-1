@@ -2,10 +2,12 @@
 
 namespace App\Services\Auth;
 
+use App\Mail\PasswordResetLinkMail;
 use App\Models\PasswordResetToken;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PasswordResetService
@@ -14,23 +16,32 @@ class PasswordResetService
     {
     }
 
-    public function issueToken(string $username): ?string
+    public function issueToken(string $identifier): ?string
     {
-        $user = User::query()->where('username', $username)->first();
-        if (! $user) {
+        $user = User::query()
+            ->where('username', $identifier)
+            ->orWhere('email', $identifier)
+            ->first();
+
+        if (! $user || blank($user->email)) {
             return null;
         }
 
         $token = Str::random(64);
+        $expiryMinutes = (int) config('auth.passwords.users.expire', 60);
+
         PasswordResetToken::query()->create([
             'user_id' => $user->id,
             'token_hash' => Hash::make($token),
-            'expires_at' => now()->addMinutes(30),
+            'expires_at' => now()->addMinutes($expiryMinutes),
         ]);
+
+        $resetUrl = route('password-reset.form', ['token' => $token]);
+        Mail::to($user->email)->send(new PasswordResetLinkMail($resetUrl, $expiryMinutes));
 
         $this->auditLogService->log('password.reset.requested', User::class, (int) $user->id);
 
-        return $token;
+        return 'issued';
     }
 
     public function consumeToken(string $token, string $password): bool

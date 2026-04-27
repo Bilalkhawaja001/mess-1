@@ -34,9 +34,9 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
     Route::view('/password-recovery', 'auth.password_reset_request')->name('password-reset.request.form');
-    Route::view('/password-recovery/reset', 'auth.password_reset')->name('password-reset.consume.form');
-    Route::post('/password-reset/request', [AuthController::class, 'requestPasswordReset'])->name('password-reset.request.public');
-    Route::post('/password-reset/consume', [AuthController::class, 'consumePasswordReset'])->name('password-reset.consume.public');
+    Route::view('/password-recovery/reset', 'auth.password_reset')->name('password-reset.form');
+    Route::post('/password-reset/request', [AuthController::class, 'requestPasswordReset'])->middleware('throttle:3,1')->name('password-reset.request');
+    Route::post('/password-reset/consume', [AuthController::class, 'consumePasswordReset'])->name('password-reset.consume');
 
     Route::get('/register/member', [MemberRegistrationController::class, 'showStart'])->name('member.register.start');
     Route::post('/register/member', [MemberRegistrationController::class, 'start'])->middleware('throttle:3,1')->name('member.register.start.submit');

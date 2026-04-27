@@ -59,6 +59,48 @@ class ProcurementHardeningTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseCount('purchase_orders', 1);
         $this->assertDatabaseCount('purchase_order_lines', 1);
+        $this->assertDatabaseHas('purchase_orders', [
+            'vendor_id' => $vendor->id,
+            'po_date' => '2026-04-10',
+            'status' => 'DRAFT',
+        ]);
+    }
+
+    public function test_bulk_po_import_creates_draft_po_and_lines(): void
+    {
+        $admin = $this->adminUser();
+        $vendor = Vendor::query()->create(['name' => 'Akash']);
+        $freshCream = Item::query()->create(['name' => 'Fresh Cream', 'sku' => 'ITM-225', 'uom' => 'kg', 'is_active' => true]);
+        $garamMasala = Item::query()->create(['name' => 'Garam Masala', 'sku' => 'ITM-046', 'uom' => 'kg', 'is_active' => true]);
+        $tea = Item::query()->create(['name' => 'Tea', 'sku' => 'ITM-245', 'uom' => 'kg', 'is_active' => true]);
+
+        $preview = [
+            'vendor_id' => $vendor->id,
+            'vendor_name' => 'Akash',
+            'po_date' => '2026-04-13',
+            'valid_rows' => [
+                ['item_id' => $freshCream->id, 'qty_ordered' => 1, 'unit_price' => 100, 'remarks' => ''],
+                ['item_id' => $garamMasala->id, 'qty_ordered' => 2, 'unit_price' => 200, 'remarks' => ''],
+                ['item_id' => $tea->id, 'qty_ordered' => 3, 'unit_price' => 300, 'remarks' => ''],
+            ],
+            'error_rows' => [],
+            'valid_count' => 3,
+            'error_count' => 0,
+        ];
+
+        $response = $this->actingAs($admin)
+            ->withSession(['procurement_po_import_preview' => $preview])
+            ->post('/admin/procurement/po/import/store');
+
+        $response->assertRedirect('/admin/procurement?tab=po');
+        $response->assertSessionHas('success', 'PO created from uploaded lines.');
+
+        $po = PurchaseOrder::query()->latest('id')->first();
+        $this->assertNotNull($po);
+        $this->assertSame('DRAFT', $po->status);
+        $this->assertSame('2026-04-13', $po->po_date);
+        $this->assertSame($vendor->id, $po->vendor_id);
+        $this->assertSame(3, PurchaseOrderLine::query()->where('purchase_order_id', $po->id)->count());
     }
 
     public function test_invalid_po_creation_without_vendor_item_qty_price(): void

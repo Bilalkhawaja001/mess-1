@@ -560,7 +560,7 @@
                             <div class="table-responsive">
                                 <table class="table table-sm align-middle"><thead><tr><th><input type="checkbox" id="po-select-all"></th><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
                                     @forelse($pos as $po)
-                                        @php $poSelectable = $po->status !== 'APPROVED'; @endphp
+                                        @php $poSelectable = in_array($po->status, ['DRAFT', 'ISSUED'], true); @endphp
                                         <tr>
                                             <td>
                                                 @if($poSelectable)

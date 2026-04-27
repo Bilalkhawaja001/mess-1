@@ -171,12 +171,15 @@ class ProcurementController extends Controller
             return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'PO preview data is incomplete.');
         }
 
-        DB::transaction(function () use ($vendorId, $poDate, $remarks, $validRows, &$po) {
+        $po = null;
+        $createdLineCount = 0;
+
+        DB::transaction(function () use ($vendorId, $poDate, $remarks, $validRows, &$po, &$createdLineCount) {
             $po = PurchaseOrder::create([
                 'vendor_id' => $vendorId,
                 'po_number' => 'PO-'.now()->format('YmdHis'),
                 'po_date' => $poDate,
-                'status' => 'ISSUED',
+                'status' => 'DRAFT',
                 'remarks' => $remarks !== '' ? $remarks : null,
             ]);
 
@@ -187,6 +190,11 @@ class ProcurementController extends Controller
                     'qty_ordered' => (float) $line['qty_ordered'],
                     'unit_price' => (float) $line['unit_price'],
                 ]);
+                $createdLineCount++;
+            }
+
+            if (! $po || $createdLineCount <= 0) {
+                throw new \RuntimeException('PO import create failed before any PO lines were saved.');
             }
         });
 
@@ -318,12 +326,14 @@ class ProcurementController extends Controller
             return back()->withErrors(['lines' => 'Same item cannot be added twice in the same PO.'])->withInput();
         }
 
+        $po = null;
+
         DB::transaction(function () use ($d, $r, $linePayloads, &$po) {
             $po = PurchaseOrder::create([
                 'vendor_id' => $d['vendor_id'],
                 'po_number' => 'PO-'.now()->format('YmdHis'),
                 'po_date' => $d['po_date'],
-                'status' => 'ISSUED',
+                'status' => 'DRAFT',
                 'remarks' => $r->input('remarks'),
             ]);
 

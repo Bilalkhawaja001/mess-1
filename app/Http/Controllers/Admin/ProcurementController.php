@@ -143,9 +143,10 @@ class ProcurementController extends Controller
         $rows = $this->readCsvRows($request->file('po_import_file')->getRealPath());
         $preview = $this->buildPoImportPreview($rows);
 
+        $request->session()->put('procurement_po_import_preview', $preview);
+
         return redirect()->route('admin.procurement.index', ['tab' => 'po'])
             ->withInput()
-            ->with('procurement_po_import_preview', $preview)
             ->with($preview['error_count'] > 0 ? 'warning' : 'success', $preview['error_count'] > 0
                 ? 'PO import preview generated with validation errors.'
                 : 'PO import preview ready. Review and create PO.');
@@ -153,7 +154,15 @@ class ProcurementController extends Controller
 
     public function storePoImport(Request $request): RedirectResponse
     {
-        $preview = session('procurement_po_import_preview');
+        \Log::info('PO_IMPORT_STORE_HIT', [
+            'time' => now()->toDateTimeString(),
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'all_keys' => array_keys($request->all()),
+            'session_keys' => array_keys($request->session()->all()),
+        ]);
+
+        $preview = $request->session()->get('procurement_po_import_preview');
         if (! is_array($preview) || empty($preview['valid_rows'])) {
             return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'No PO import preview data available. Upload and preview again.');
         }
@@ -197,6 +206,12 @@ class ProcurementController extends Controller
                 throw new \RuntimeException('PO import create failed before any PO lines were saved.');
             }
         });
+
+        \Log::info('PO_IMPORT_STORE_RESULT', [
+            'valid_rows_count' => $validRows->count(),
+            'po_id' => $po->id ?? null,
+            'line_count' => isset($po) ? $po->lines()->count() : null,
+        ]);
 
         $request->session()->forget('procurement_po_import_preview');
 

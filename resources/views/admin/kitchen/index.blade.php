@@ -386,6 +386,7 @@
 
             <div class="row g-3">
                 <div class="col-12 col-xl-5">
+                    @if(auth()->user()->hasPermission('menu.manage'))
                     <div class="card kitchen-card mb-3">
                         <div class="card-header">Create Menu</div>
                         <div class="card-body">
@@ -397,6 +398,7 @@
                             </form>
                         </div>
                     </div>
+                    @endif
 
                     <div class="card kitchen-card">
                         <div class="card-header">Menus</div>
@@ -410,12 +412,16 @@
                                         <td>{{ $m->name }}</td>
                                         <td>{{ $m->meal_type }}</td>
                                         <td class="d-flex gap-1">
+                                            @if(auth()->user()->hasPermission('menu.manage'))
                                             <form method="POST" action="{{ route('admin.kitchen.menus.edit.legacy',$m) }}" class="d-flex gap-1">@csrf
                                                 <input type="hidden" name="name" value="{{ $m->name }}">
                                                 <input type="hidden" name="meal_type" value="{{ $m->meal_type }}">
                                                 <button class="btn btn-sm btn-outline-secondary">Save</button>
                                             </form>
+                                            @endif
+                                            @if(auth()->user()->hasPermission('menu.approve'))
                                             <form method="POST" action="{{ route('admin.kitchen.menus.delete.legacy',$m) }}">@csrf<button class="btn btn-sm btn-outline-danger">Delete</button></form>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach

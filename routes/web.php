@@ -71,20 +71,24 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::get('/auth/password-change', [AuthController::class, 'showChangePasswordForm'])->name('auth.password-change.form');
     Route::post('/auth/password-change', [AuthController::class, 'changePassword'])->name('auth.password-change');
 
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    });
+    Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->middleware('permission:users.toggle')->name('users.toggle-active');
 
-    Route::get('/members', [MemberController::class, 'index'])->name('members.index');
-    Route::post('/members', [MemberController::class, 'store'])->name('members.store');
-    Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
-    Route::post('/members/{member}/toggle-active', [MemberController::class, 'toggleActive'])->name('members.toggle-active');
-    Route::post('/members/{member}/deactivate', [MemberController::class, 'deactivate'])->name('members.deactivate');
-    Route::post('/members/{member}/reactivate', [MemberController::class, 'reactivate'])->name('members.reactivate');
-    Route::post('/members/{member}/remove', [MemberController::class, 'remove'])->name('members.remove');
-    Route::post('/members/import', [MemberController::class, 'import'])->name('members.import');
-    Route::get('/members/sample-csv', [MemberController::class, 'sampleCsv'])->name('members.sample-csv');
+    Route::middleware('permission:member.manage')->group(function () {
+        Route::get('/members', [MemberController::class, 'index'])->name('members.index');
+        Route::post('/members', [MemberController::class, 'store'])->name('members.store');
+        Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
+        Route::post('/members/{member}/toggle-active', [MemberController::class, 'toggleActive'])->name('members.toggle-active');
+        Route::post('/members/{member}/deactivate', [MemberController::class, 'deactivate'])->name('members.deactivate');
+        Route::post('/members/{member}/reactivate', [MemberController::class, 'reactivate'])->name('members.reactivate');
+        Route::post('/members/{member}/remove', [MemberController::class, 'remove'])->name('members.remove');
+        Route::post('/members/import', [MemberController::class, 'import'])->name('members.import');
+        Route::get('/members/sample-csv', [MemberController::class, 'sampleCsv'])->name('members.sample-csv');
+    });
 
     Route::prefix('/member-accounts')->name('member-accounts.')->middleware('permission:superadmin.member_account_create')->group(function () {
         Route::get('/', [MemberAccountController::class, 'index'])->name('index');
@@ -96,29 +100,33 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/{member}/mark-mobile-verified', [MemberAccountController::class, 'markMobileVerified'])->middleware('permission:superadmin.member_account_activate')->name('mark-mobile-verified');
     });
 
-    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
-    Route::post('/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
-    Route::get('/attendance-monthly', [MonthlyAttendanceController::class, 'index'])->name('attendance-monthly.index');
-    Route::post('/attendance-monthly', [MonthlyAttendanceController::class, 'store'])->name('attendance-monthly.store');
-    Route::post('/attendance-monthly/approve', [MonthlyAttendanceController::class, 'approve'])->name('attendance-monthly.approve');
-    Route::post('/attendance-monthly/unlock', [MonthlyAttendanceController::class, 'unlock'])->name('attendance-monthly.unlock');
-    Route::get('/attendance-monthly/export', [MonthlyAttendanceController::class, 'export'])->name('attendance-monthly.export');
+    Route::middleware('permission:attendance.manage')->group(function () {
+        Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+        Route::post('/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+        Route::get('/attendance-monthly', [MonthlyAttendanceController::class, 'index'])->name('attendance-monthly.index');
+        Route::post('/attendance-monthly', [MonthlyAttendanceController::class, 'store'])->name('attendance-monthly.store');
+        Route::post('/attendance-monthly/approve', [MonthlyAttendanceController::class, 'approve'])->name('attendance-monthly.approve');
+        Route::post('/attendance-monthly/unlock', [MonthlyAttendanceController::class, 'unlock'])->name('attendance-monthly.unlock');
+        Route::get('/attendance-monthly/export', [MonthlyAttendanceController::class, 'export'])->name('attendance-monthly.export');
+    });
 
     Route::get('/extras', [ExtraController::class, 'index'])->name('extras.index');
     Route::post('/extras', [ExtraController::class, 'store'])->name('extras.store');
 
-    Route::get('/rates', [RateController::class, 'index'])->name('rates.index');
-    Route::post('/rates', [RateController::class, 'store'])->name('rates.store');
-    Route::post('/rates/{rate}/toggle-approve', [RateController::class, 'toggleApprove'])->name('rates.toggle-approve');
-    Route::post('/rates/{rate}/toggle-active', [RateController::class, 'toggleActive'])->name('rates.toggle-active');
-    Route::post('/rates/{rate}/toggle-lock', [RateController::class, 'toggleLock'])->name('rates.toggle-lock');
-    Route::post('/rates/{rate}/update', [RateController::class, 'update'])->name('rates.update.legacy');
-    Route::post('/rates/{rate}/delete', [RateController::class, 'destroy'])->name('rates.delete.legacy');
-    Route::post('/rates/import', [RateController::class, 'import'])->name('rates.import');
+    Route::middleware('permission:rates.manage')->group(function () {
+        Route::get('/rates', [RateController::class, 'index'])->name('rates.index');
+        Route::post('/rates', [RateController::class, 'store'])->name('rates.store');
+        Route::post('/rates/{rate}/toggle-approve', [RateController::class, 'toggleApprove'])->name('rates.toggle-approve');
+        Route::post('/rates/{rate}/toggle-active', [RateController::class, 'toggleActive'])->name('rates.toggle-active');
+        Route::post('/rates/{rate}/toggle-lock', [RateController::class, 'toggleLock'])->name('rates.toggle-lock');
+        Route::post('/rates/{rate}/update', [RateController::class, 'update'])->name('rates.update.legacy');
+        Route::post('/rates/{rate}/delete', [RateController::class, 'destroy'])->name('rates.delete.legacy');
+        Route::post('/rates/import', [RateController::class, 'import'])->name('rates.import');
+    });
 
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
-    Route::post('/billing/generate', [BillingController::class, 'generate'])->name('billing.generate');
-    Route::post('/billing/{billing}/correct', [BillingController::class, 'correct'])->name('billing.correct');
+    Route::post('/billing/generate', [BillingController::class, 'generate'])->middleware('permission:billing.generate')->name('billing.generate');
+    Route::post('/billing/{billing}/correct', [BillingController::class, 'correct'])->middleware('permission:billing.correct')->name('billing.correct');
 
     Route::middleware('permission:payments.view_admin')->group(function () {
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
@@ -137,21 +145,23 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/payments/reconciliations/{reconciliation}/reconcile', [PaymentController::class, 'reconcile'])->name('payments.reconciliations.reconcile');
     });
 
-    Route::get('/month-governance', [MonthGovernanceController::class, 'index'])->name('month.index');
-    Route::post('/month-governance/close', [MonthGovernanceController::class, 'close'])->name('month.close');
-    Route::post('/month-governance/reopen', [MonthGovernanceController::class, 'reopen'])->name('month.reopen');
-    Route::post('/month-governance/hard-reset', [MonthGovernanceController::class, 'hardReset'])->name('month.hard-reset');
+    Route::middleware('permission:report.view')->group(function () {
+        Route::get('/month-governance', [MonthGovernanceController::class, 'index'])->name('month.index');
+        Route::get('/summary', [SummaryController::class, 'index'])->name('summary.index');
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/overall-recovery', [ReportController::class, 'overallRecovery'])->name('reports.overall-recovery');
+        Route::get('/statement', [StatementController::class, 'index'])->name('statement.index');
+    });
+    Route::post('/month-governance/close', [MonthGovernanceController::class, 'close'])->middleware('permission:month.close')->name('month.close');
+    Route::post('/month-governance/reopen', [MonthGovernanceController::class, 'reopen'])->middleware('permission:month.reopen')->name('month.reopen');
+    Route::post('/month-governance/hard-reset', [MonthGovernanceController::class, 'hardReset'])->middleware('permission:month.reset_hard')->name('month.hard-reset');
 
     Route::get('/ledger', [LedgerController::class, 'index'])->name('ledger.index');
-    Route::post('/ledger/adjustments', [LedgerController::class, 'storeAdjustment'])->name('ledger.adjustments.store');
-    Route::post('/ledger/import', [LedgerToolchainController::class, 'importLedger'])->name('ledger.import');
-    Route::post('/ledger/recompute', [LedgerToolchainController::class, 'recompute'])->name('ledger.recompute');
+    Route::post('/ledger/adjustments', [LedgerController::class, 'storeAdjustment'])->middleware('permission:ledger.adjust')->name('ledger.adjustments.store');
+    Route::post('/ledger/import', [LedgerToolchainController::class, 'importLedger'])->middleware('permission:ledger.adjust')->name('ledger.import');
+    Route::post('/ledger/recompute', [LedgerToolchainController::class, 'recompute'])->middleware('permission:ledger.recompute')->name('ledger.recompute');
 
-    Route::get('/summary', [SummaryController::class, 'index'])->name('summary.index');
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('/overall-recovery', [ReportController::class, 'overallRecovery'])->name('reports.overall-recovery');
-    Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
-    Route::get('/statement', [StatementController::class, 'index'])->name('statement.index');
+    Route::get('/audit-log', [AuditLogController::class, 'index'])->middleware('permission:audit.view')->name('audit-log.index');
 
     Route::middleware('permission:inventory.manage')->group(function () {
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
@@ -176,13 +186,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/procurement/po/bulk-approve', [ProcurementController::class, 'bulkApprovePo'])->name('procurement.po.bulk-approve');
         Route::post('/procurement/po/{po}/approve', [ProcurementController::class, 'approvePo'])->name('procurement.po.approve');
         Route::get('/procurement/grn/template', [ProcurementController::class, 'downloadGrnTemplate'])->name('procurement.grn.template');
-    Route::get('/procurement/grn/export/detail', [ProcurementController::class, 'exportGrnDetail'])->name('procurement.grn.export.detail');
-    Route::get('/procurement/grn/export/summary', [ProcurementController::class, 'exportGrnSummary'])->name('procurement.grn.export.summary');
         Route::post('/procurement/grn/import/preview', [ProcurementController::class, 'previewGrnImport'])->name('procurement.grn.import.preview');
         Route::post('/procurement/grn/import/store', [ProcurementController::class, 'storeGrnImport'])->name('procurement.grn.import.store');
         Route::post('/procurement/grn', [ProcurementController::class, 'storeGrn'])->name('procurement.grn.store');
         Route::post('/procurement/grn/bulk-approve', [ProcurementController::class, 'bulkApproveGrn'])->name('procurement.grn.bulk-approve');
         Route::post('/procurement/grn/{grn}/approve', [ProcurementController::class, 'approveGrn'])->name('procurement.grn.approve');
+    });
+    Route::middleware('permission:report.export')->group(function () {
+        Route::get('/procurement/grn/export/detail', [ProcurementController::class, 'exportGrnDetail'])->name('procurement.grn.export.detail');
+        Route::get('/procurement/grn/export/summary', [ProcurementController::class, 'exportGrnSummary'])->name('procurement.grn.export.summary');
     });
 
     Route::middleware('permission:kitchen.manage')->group(function () {
@@ -230,9 +242,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::get('/exports/department-ledger', [ExportCenterController::class, 'departmentLedger'])->name('exports.department-ledger');
     });
 
-    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
-    Route::post('/settings/{setting}/toggle', [SettingController::class, 'toggle'])->name('settings.toggle');
+    Route::middleware('permission:settings.dangerous')->group(function () {
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+        Route::post('/settings/{setting}/toggle', [SettingController::class, 'toggle'])->name('settings.toggle');
+    });
 
     Route::middleware('permission:accounting.manage')->group(function () {
         Route::post('/settings/departments', [SettingController::class, 'storeDepartment'])->name('settings.departments.store');

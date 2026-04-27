@@ -11,9 +11,12 @@ class DashboardController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+        $member = $user?->resolvedMemberProfile();
 
         return view('member.dashboard', [
             'user' => $user,
+            'member' => $member,
+            'memberProfileMissing' => $user?->isMemberRole() && ! $member,
         ]);
     }
 }

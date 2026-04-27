@@ -15,11 +15,14 @@ use Illuminate\View\View;
 
 class PaymentController extends Controller
 {
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         $user = Auth::user();
-        $member = $user?->linkedMember ?: $user?->member;
-        abort_unless($member, 403, 'Member profile missing.');
+        $member = $user?->resolvedMemberProfile();
+
+        if (! $member) {
+            return redirect()->route('member.dashboard')->with('warning', 'Your member profile is not linked yet. Please contact admin.');
+        }
 
         $bills = Billing::query()
             ->where('member_id', $member->id)
@@ -50,8 +53,11 @@ class PaymentController extends Controller
         ]);
 
         $user = Auth::user();
-        $member = $user?->linkedMember ?: $user?->member;
-        abort_unless($member, 403, 'Member profile missing.');
+        $member = $user?->resolvedMemberProfile();
+
+        if (! $member) {
+            return redirect()->route('member.dashboard')->with('warning', 'Your member profile is not linked yet. Please contact admin.');
+        }
 
         $bill = Billing::query()->whereKey((int) $payload['bill_id'])->where('member_id', $member->id)->first();
         abort_unless($bill, 403, 'Bill access denied.');

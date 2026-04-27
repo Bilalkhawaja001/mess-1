@@ -56,6 +56,16 @@ class User extends Authenticatable
         return $this->hasMany(Complaint::class);
     }
 
+    public function resolvedMemberProfile(): ?Member
+    {
+        return $this->linkedMember ?: $this->member;
+    }
+
+    public function hasLinkedMemberProfile(): bool
+    {
+        return $this->resolvedMemberProfile() !== null;
+    }
+
     public function isAdminLike(): bool
     {
         return in_array(optional($this->role)->code, ['SUPER_ADMIN', 'ADMIN'], true);

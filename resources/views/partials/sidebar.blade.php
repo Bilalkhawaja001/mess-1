@@ -20,7 +20,7 @@
                     <div class="sb-label sidebar-label">Member</div>
                     <nav class="nav flex-column gap-1">
                         <a class="nav-link sidebar-link {{ request()->routeIs('member.dashboard') ? 'active' : '' }}" href="{{ route('member.dashboard') }}" title="Member Dashboard"><span class="sidebar-icon-wrap"><i class="bi bi-speedometer2 sidebar-icon"></i></span><span>Member Dashboard</span></a>
-                        @if(auth()->user()->hasPermission('payments.view_own'))
+                        @if(auth()->user()->hasPermission('payments.view_own') && auth()->user()->hasLinkedMemberProfile())
                             <a class="nav-link sidebar-link {{ request()->routeIs('member.payments.*') ? 'active' : '' }}" href="{{ route('member.payments.index') }}" title="My Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>My Payments</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('complaint.view_own'))

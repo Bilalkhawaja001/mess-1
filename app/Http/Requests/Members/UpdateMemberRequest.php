@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Members;
 
+use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,7 +15,8 @@ class UpdateMemberRequest extends FormRequest
 
     public function rules(): array
     {
-        $memberId = (int) $this->route('member');
+        $routeMember = $this->route('member');
+        $memberId = $routeMember instanceof Member ? $routeMember->id : (int) $routeMember;
 
         return [
             'member_code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/', Rule::unique('members', 'member_code')->ignore($memberId)],

@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ExportCenterController;
 use App\Http\Controllers\Admin\ExtraController;
 use App\Http\Controllers\Admin\GuestController;
+use App\Http\Controllers\Admin\HubController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\KitchenController;
 use App\Http\Controllers\Admin\ComplaintController as AdminComplaintController;
@@ -69,6 +70,10 @@ Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/hubs/operations', [HubController::class, 'operations'])->name('hubs.operations');
+    Route::get('/hubs/reports', [HubController::class, 'reports'])->name('hubs.reports');
+    Route::get('/hubs/inventory', [HubController::class, 'inventory'])->name('hubs.inventory');
+    Route::get('/hubs/meals', [HubController::class, 'meals'])->name('hubs.meals');
 
     Route::post('/auth/password-reset/request', [AuthController::class, 'requestPasswordReset'])->name('auth.password-reset.request');
     Route::post('/auth/password-reset/consume', [AuthController::class, 'consumePasswordReset'])->name('auth.password-reset.consume');

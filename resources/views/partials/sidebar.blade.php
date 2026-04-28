@@ -83,6 +83,16 @@
                 </div>
 
                 <div class="sb-group sidebar-group">
+                    <div class="sb-label sidebar-label">Hubs</div>
+                    <nav class="nav flex-column gap-1">
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.operations') ? 'active' : '' }}" href="{{ route('admin.hubs.operations') }}" title="Operations Hub"><span class="sidebar-icon-wrap"><i class="bi bi-columns-gap sidebar-icon"></i></span><span>Operations Hub</span></a>
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.reports') ? 'active' : '' }}" href="{{ route('admin.hubs.reports') }}" title="Reports Hub"><span class="sidebar-icon-wrap"><i class="bi bi-bar-chart-steps sidebar-icon"></i></span><span>Reports Hub</span></a>
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.inventory') ? 'active' : '' }}" href="{{ route('admin.hubs.inventory') }}" title="Inventory Hub"><span class="sidebar-icon-wrap"><i class="bi bi-boxes sidebar-icon"></i></span><span>Inventory Hub</span></a>
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.meals') ? 'active' : '' }}" href="{{ route('admin.hubs.meals') }}" title="Meals Hub"><span class="sidebar-icon-wrap"><i class="bi bi-grid-3x3-gap sidebar-icon"></i></span><span>Meals Hub</span></a>
+                    </nav>
+                </div>
+
+                <div class="sb-group sidebar-group">
                     <div class="sb-label sidebar-label">Billing & Finance</div>
                     <nav class="nav flex-column gap-1">
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.billing.*') ? 'active' : '' }}" href="{{ route('admin.billing.index') }}" title="Billing"><span class="sidebar-icon-wrap"><i class="bi bi-receipt sidebar-icon"></i></span><span>Billing</span></a>

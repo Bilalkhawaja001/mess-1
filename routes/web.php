@@ -175,6 +175,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/inventory/vendor-returns', [InventoryController::class, 'storeVendorReturn'])->name('inventory.vendor-returns.store');
         Route::post('/inventory/items/import', [InventoryController::class, 'importItems'])->name('inventory.items.import');
         Route::get('/inventory/stock-ledger/export', [InventoryController::class, 'exportStockLedger'])->name('inventory.stock-ledger.export');
+        Route::post('/inventory/stock-counts', [InventoryController::class, 'storeStockCount'])->name('inventory.stock-counts.store');
+        Route::get('/inventory/stock-counts/{stockCount}', [InventoryController::class, 'showStockCount'])->name('inventory.stock-counts.show');
+        Route::post('/inventory/stock-counts/{stockCount}/post', [InventoryController::class, 'postStockCount'])->name('inventory.stock-counts.post');
         Route::get('/inventory/items/{item}/trail', [InventoryController::class, 'trail'])->name('inventory.items.trail');
     });
 

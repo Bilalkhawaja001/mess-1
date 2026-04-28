@@ -103,6 +103,7 @@
                         <option value="store-stock" @selected(($activeTab ?? 'items') === 'store-stock')>Store Stock</option>
                         <option value="vendor-return" @selected(($activeTab ?? 'items') === 'vendor-return')>Vendor Return</option>
                         <option value="stock-ledger" @selected(($activeTab ?? 'items') === 'stock-ledger')>Stock Ledger</option>
+                        <option value="stock-count" @selected(($activeTab ?? 'items') === 'stock-count')>Stock Count</option>
                     </select>
                 </div>
                 <div class="col-lg-2 d-flex gap-2">
@@ -128,6 +129,9 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link {{ ($activeTab ?? 'items') === 'stock-ledger' ? 'active' : '' }}" id="stock-ledger-tab" data-bs-toggle="pill" data-bs-target="#stock-ledger-pane" type="button" role="tab" aria-controls="stock-ledger-pane" aria-selected="{{ ($activeTab ?? 'items') === 'stock-ledger' ? 'true' : 'false' }}">Stock Ledger</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ ($activeTab ?? 'items') === 'stock-count' ? 'active' : '' }}" id="stock-count-tab" data-bs-toggle="pill" data-bs-target="#stock-count-pane" type="button" role="tab" aria-controls="stock-count-pane" aria-selected="{{ ($activeTab ?? 'items') === 'stock-count' ? 'true' : 'false' }}">Stock Count</button>
         </li>
     </ul>
 
@@ -629,6 +633,129 @@
                 </div>
             </div>
         </div>
+
+        <div class="tab-pane fade {{ ($activeTab ?? 'items') === 'stock-count' ? 'show active' : '' }}" id="stock-count-pane" role="tabpanel" aria-labelledby="stock-count-tab" tabindex="0">
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <div class="card shadow-sm">
+                        <div class="card-header"><h5 class="mb-0">Create Physical Stock Count</h5></div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('admin.inventory.stock-counts.store') }}">
+                                @csrf
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Count Date</label>
+                                        <input type="date" name="count_date" class="form-control" value="{{ old('count_date', now()->toDateString()) }}" required>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label">Session Remarks</label>
+                                        <input type="text" name="remarks" class="form-control" value="{{ old('remarks') }}" placeholder="optional remarks">
+                                    </div>
+                                </div>
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-sm table-striped align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th>Item Code</th>
+                                                <th>Item Name</th>
+                                                <th>System Qty</th>
+                                                <th>Counted Qty</th>
+                                                <th>Variance</th>
+                                                <th>Remarks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($items as $item)
+                                                @php
+                                                    $balanceRow = collect($balances ?? [])->firstWhere('item.id', $item->id) ?? null;
+                                                    $systemQty = (float)($balanceRow['balance'] ?? 0);
+                                                    $countedQty = (float)old('counted_qty.'.$item->id, $systemQty);
+                                                @endphp
+                                                <tr>
+                                                    <td>{{ $item->sku }}</td>
+                                                    <td>{{ $item->name }}</td>
+                                                    <td>{{ number_format($systemQty, 3) }} {{ $item->uom }}</td>
+                                                    <td><input type="number" step="0.001" min="0" name="counted_qty[{{ $item->id }}]" value="{{ number_format($countedQty, 3, '.', '') }}" class="form-control form-control-sm"></td>
+                                                    <td>{{ number_format($countedQty - $systemQty, 3) }}</td>
+                                                    <td><input type="text" name="line_remarks[{{ $item->id }}]" value="{{ old('line_remarks.'.$item->id) }}" class="form-control form-control-sm"></td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3 d-flex justify-content-end">
+                                    <button class="btn btn-primary" type="submit">Create DRAFT Count</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header"><h5 class="mb-0">Count History</h5></div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                @forelse(($stockCountHistory ?? collect()) as $count)
+                                    <a href="{{ route('admin.inventory.stock-counts.show', $count) }}" class="list-group-item list-group-item-action {{ optional($selectedStockCount)->id === $count->id ? 'active' : '' }}">
+                                        <div class="d-flex justify-content-between">
+                                            <strong>#{{ $count->id }} - {{ $count->count_date?->format('Y-m-d') }}</strong>
+                                            <span class="badge {{ $count->status === 'POSTED' ? 'bg-success' : 'bg-warning text-dark' }}">{{ $count->status }}</span>
+                                        </div>
+                                        <div class="small">Created by: {{ optional($count->createdBy)->name ?? 'N/A' }}</div>
+                                        @if($count->posted_by)
+                                            <div class="small">Posted by: {{ optional($count->postedBy)->name ?? 'N/A' }}</div>
+                                        @endif
+                                    </a>
+                                @empty
+                                    <div class="list-group-item text-muted">No stock count sessions yet.</div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($selectedStockCount)
+                        <div class="card shadow-sm">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Count Detail #{{ $selectedStockCount->id }}</h5>
+                                @if($selectedStockCount->status !== 'POSTED')
+                                    <form method="POST" action="{{ route('admin.inventory.stock-counts.post', $selectedStockCount) }}">
+                                        @csrf
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Mark POSTED</button>
+                                    </form>
+                                @endif
+                            </div>
+                            <div class="card-body">
+                                <div class="small text-muted mb-2">Posting only changes status. No stock transaction or inventory adjustment will be created.</div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>System Qty</th>
+                                                <th>Counted Qty</th>
+                                                <th>Variance</th>
+                                                <th>Remarks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($selectedStockCount->lines as $line)
+                                                <tr>
+                                                    <td>{{ $line->item->sku }} - {{ $line->item->name }}</td>
+                                                    <td>{{ number_format((float)$line->system_qty, 3) }} {{ $line->item->uom }}</td>
+                                                    <td>{{ number_format((float)$line->counted_qty, 3) }} {{ $line->item->uom }}</td>
+                                                    <td>{{ number_format((float)$line->variance_qty, 3) }} {{ $line->item->uom }}</td>
+                                                    <td>{{ $line->remarks }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
@@ -680,6 +807,7 @@
             'store-stock-tab': 'store-stock',
             'vendor-return-tab': 'vendor-return',
             'stock-ledger-tab': 'stock-ledger',
+            'stock-count-tab': 'stock-count',
         };
 
         const items = @json($inventoryItemsJson);

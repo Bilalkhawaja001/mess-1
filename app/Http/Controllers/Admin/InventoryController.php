@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\GoodsReceipt;
 use App\Models\Item;
+use App\Models\StockCount;
+use App\Models\StockCountLine;
 use App\Models\StockTransaction;
 use App\Models\VendorReturn;
 use App\Services\InventoryService;
@@ -31,8 +33,9 @@ class InventoryController extends Controller
         $stockLedgerReferenceType = trim((string) $request->query('reference_type', ''));
         $stockLedgerItemId = trim((string) $request->query('item_id', ''));
         $stockLedgerCategory = trim((string) $request->query('category', ''));
+        $selectedStockCountId = (int) $request->query('stock_count_id', 0);
 
-        if (! in_array($activeTab, ['items', 'store-stock', 'vendor-return', 'stock-ledger'], true)) {
+        if (! in_array($activeTab, ['items', 'store-stock', 'vendor-return', 'stock-ledger', 'stock-count'], true)) {
             $activeTab = 'items';
         }
 
@@ -246,6 +249,17 @@ class InventoryController extends Controller
             ->orderBy('reference_type')
             ->pluck('reference_type');
 
+        $stockCountHistory = StockCount::query()
+            ->with(['createdBy', 'postedBy'])
+            ->orderByDesc('count_date')
+            ->orderByDesc('id')
+            ->limit(30)
+            ->get();
+
+        $selectedStockCount = $selectedStockCountId > 0
+            ? StockCount::query()->with(['lines.item', 'createdBy', 'postedBy'])->find($selectedStockCountId)
+            : $stockCountHistory->first();
+
         return view('admin.inventory.index', compact(
             'items',
             'ledger',
@@ -264,7 +278,9 @@ class InventoryController extends Controller
             'stockLedgerItemId',
             'stockLedgerCategory',
             'stockLedgerTxnTypes',
-            'stockLedgerReferenceTypes'
+            'stockLedgerReferenceTypes',
+            'stockCountHistory',
+            'selectedStockCount'
         ));
     }
 
@@ -353,6 +369,96 @@ class InventoryController extends Controller
         }, 'stock_ledger.csv', [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    public function storeStockCount(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'count_date' => 'required|date',
+            'remarks' => 'nullable|string|max:1000',
+            'counted_qty' => 'required|array|min:1',
+            'counted_qty.*' => 'nullable|numeric|min:0',
+            'line_remarks' => 'nullable|array',
+            'line_remarks.*' => 'nullable|string|max:1000',
+        ]);
+
+        $balances = collect($this->inventoryService->stockBalances())->keyBy(fn (array $row) => (int) $row['item']->id);
+        $itemIds = array_map('intval', array_keys($data['counted_qty'] ?? []));
+        $items = Item::query()->whereIn('id', $itemIds)->orderBy('name')->get()->keyBy('id');
+
+        if ($items->isEmpty()) {
+            return back()->withErrors(['counted_qty' => 'At least one item is required for stock count.'])->withInput();
+        }
+
+        DB::transaction(function () use ($data, $balances, $items) {
+            $stockCount = StockCount::query()->create([
+                'count_date' => $data['count_date'],
+                'status' => 'DRAFT',
+                'remarks' => $data['remarks'] ?? null,
+                'created_by' => optional(auth()->user())->id,
+            ]);
+
+            foreach ($items as $itemId => $item) {
+                $systemQty = (float) (($balances->get((int) $itemId)['balance'] ?? 0));
+                $countedQty = (float) ($data['counted_qty'][$itemId] ?? 0);
+
+                StockCountLine::query()->create([
+                    'stock_count_id' => $stockCount->id,
+                    'item_id' => $item->id,
+                    'system_qty' => $systemQty,
+                    'counted_qty' => $countedQty,
+                    'variance_qty' => round($countedQty - $systemQty, 3),
+                    'remarks' => $data['line_remarks'][$itemId] ?? null,
+                ]);
+            }
+        });
+
+        return redirect()->route('admin.inventory.index', ['tab' => 'stock-count'])
+            ->with('success', 'Stock count session created in DRAFT status.');
+    }
+
+    public function showStockCount(StockCount $stockCount)
+    {
+        $stockCount->load(['lines.item', 'createdBy', 'postedBy']);
+
+        return view('admin.inventory.index', [
+            'items' => Item::query()->with('units')->orderBy('name')->get(),
+            'ledger' => StockTransaction::query()->latest('txn_at')->limit(100)->get(),
+            'balances' => $this->inventoryService->stockBalances(),
+            'lowStockItems' => $this->inventoryService->lowStockItems(),
+            'storeStockRows' => collect(),
+            'vendorReturnSources' => collect(),
+            'vendorReturns' => collect(),
+            'search' => '',
+            'activeTab' => 'stock-count',
+            'stockLedgerRows' => collect(),
+            'stockLedgerFromDate' => '',
+            'stockLedgerToDate' => '',
+            'stockLedgerTxnType' => '',
+            'stockLedgerReferenceType' => '',
+            'stockLedgerItemId' => '',
+            'stockLedgerCategory' => '',
+            'stockLedgerTxnTypes' => collect(),
+            'stockLedgerReferenceTypes' => collect(),
+            'stockCountHistory' => StockCount::query()->with(['createdBy', 'postedBy'])->orderByDesc('count_date')->orderByDesc('id')->limit(30)->get(),
+            'selectedStockCount' => $stockCount,
+        ]);
+    }
+
+    public function postStockCount(StockCount $stockCount): RedirectResponse
+    {
+        if ($stockCount->status === 'POSTED') {
+            return back()->withErrors(['stock_count' => 'Stock count already posted.']);
+        }
+
+        $stockCount->update([
+            'status' => 'POSTED',
+            'posted_by' => optional(auth()->user())->id,
+            'posted_at' => now(),
+        ]);
+
+        return redirect()->route('admin.inventory.stock-counts.show', $stockCount)
+            ->with('success', 'Stock count marked as POSTED. No stock transaction was created.');
     }
 
     public function storeItem(Request $request): RedirectResponse

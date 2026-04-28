@@ -96,6 +96,7 @@
                     <div class="sb-label sidebar-label">Billing & Finance</div>
                     <nav class="nav flex-column gap-1">
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.billing.*') ? 'active' : '' }}" href="{{ route('admin.billing.index') }}" title="Billing"><span class="sidebar-icon-wrap"><i class="bi bi-receipt sidebar-icon"></i></span><span>Billing</span></a>
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.mess-costing.*') ? 'active' : '' }}" href="{{ route('admin.mess-costing.index') }}" title="Mess Costing"><span class="sidebar-icon-wrap"><i class="bi bi-calculator sidebar-icon"></i></span><span>Mess Costing</span></a>
                         @if(auth()->user()->hasPermission('payments.view_admin'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}" title="Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>Payments</span></a>
                         @endif

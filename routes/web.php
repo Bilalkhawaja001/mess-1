@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\MenuController as AdminMenuController;
 use App\Http\Controllers\Admin\LedgerController;
 use App\Http\Controllers\Admin\LedgerToolchainController;
 use App\Http\Controllers\Admin\MemberController;
+use App\Http\Controllers\Admin\MessCostingController;
 use App\Http\Controllers\Admin\MonthGovernanceController;
 use App\Http\Controllers\Admin\MonthlyAttendanceController;
 use App\Http\Controllers\Admin\PaymentController;
@@ -136,6 +137,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
     Route::post('/billing/generate', [BillingController::class, 'generate'])->middleware('permission:billing.generate')->name('billing.generate');
     Route::post('/billing/{billing}/correct', [BillingController::class, 'correct'])->middleware('permission:billing.correct')->name('billing.correct');
+    Route::get('/mess-costing', [MessCostingController::class, 'index'])->name('mess-costing.index');
+    Route::post('/mess-costing', [MessCostingController::class, 'store'])->name('mess-costing.store');
+    Route::get('/mess-costing/{costing}', [MessCostingController::class, 'show'])->name('mess-costing.show');
+    Route::get('/mess-costing/{costing}/print', [MessCostingController::class, 'print'])->name('mess-costing.print');
+    Route::get('/mess-costing/{costing}/export', [MessCostingController::class, 'export'])->name('mess-costing.export');
 
     Route::middleware('permission:payments.view_admin')->group(function () {
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');

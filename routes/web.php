@@ -257,6 +257,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
 
     Route::middleware('permission:report.export')->group(function () {
         Route::get('/exports', [ExportCenterController::class, 'index'])->name('exports.index');
+        Route::get('/exports/bills', [ExportCenterController::class, 'bills'])->name('exports.bills');
+        Route::get('/exports/payments', [ExportCenterController::class, 'payments'])->name('exports.payments');
+        Route::get('/exports/member-ledger', [ExportCenterController::class, 'memberLedger'])->name('exports.member-ledger');
+        Route::get('/exports/statement', [ExportCenterController::class, 'statement'])->name('exports.statement');
         Route::get('/exports/stock-ledger', [ExportCenterController::class, 'stockLedger'])->name('exports.stock-ledger');
         Route::get('/exports/guest-meals', [ExportCenterController::class, 'guestMeals'])->name('exports.guest-meals');
         Route::get('/exports/department-ledger', [ExportCenterController::class, 'departmentLedger'])->name('exports.department-ledger');

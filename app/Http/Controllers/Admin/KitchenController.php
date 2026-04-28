@@ -28,7 +28,7 @@ class KitchenController extends Controller
     public function index(Request $request)
     {
         $activeTab = trim((string) $request->query('tab', 'issue'));
-        if (! in_array($activeTab, ['issue', 'issues', 'ledger', 'menu', 'plans'], true)) {
+        if (! in_array($activeTab, ['issue', 'issues', 'ledger', 'menu', 'plans', 'consumption-report'], true)) {
             $activeTab = 'issue';
         }
         if ($activeTab === 'issues') {
@@ -85,6 +85,9 @@ class KitchenController extends Controller
             $toDate = $toDateCarbon->toDateString();
         }
 
+        $consumptionItemId = trim((string) $request->query('item_id', ''));
+        $consumptionCategory = trim((string) $request->query('category', ''));
+
         $kitchenLedgerBase = StockTransaction::query()
             ->from('stock_transactions as st')
             ->join('items as i', 'i.id', '=', 'st.item_id')
@@ -133,6 +136,34 @@ class KitchenController extends Controller
                 DB::raw('SUM(st.quantity * st.unit_cost) as total_amount'),
             ]);
 
+        $consumptionReportBase = (clone $kitchenLedgerBase)
+            ->join('items as ci', 'ci.id', '=', 'st.item_id')
+            ->whereBetween('st.txn_at', [$fromDateCarbon->toDateTimeString(), $toDateCarbon->toDateTimeString()]);
+
+        if ($consumptionItemId !== '') {
+            $consumptionReportBase->where('ci.id', (int) $consumptionItemId);
+        }
+        if ($consumptionCategory !== '') {
+            $consumptionReportBase->where('ci.category', 'like', "%{$consumptionCategory}%");
+        }
+
+        $consumptionReportRows = (clone $consumptionReportBase)
+            ->groupBy('ci.id', 'ci.sku', 'ci.name', 'ci.category', 'ci.uom')
+            ->orderBy('ci.name')
+            ->get([
+                'ci.id as item_id',
+                'ci.sku as item_sku',
+                'ci.name as item_name',
+                'ci.category as item_category',
+                'ci.uom as item_uom',
+                DB::raw('SUM(ABS(st.quantity)) as total_quantity'),
+                DB::raw('SUM(ABS(st.quantity) * st.unit_cost) as total_amount'),
+                DB::raw('MIN(st.unit_cost) as min_unit_cost'),
+                DB::raw('MAX(st.unit_cost) as max_unit_cost'),
+                DB::raw('MIN(ki.id) as first_issue_id'),
+                DB::raw('MIN(st.id) as first_stock_txn_id'),
+            ]);
+
         return view('admin.kitchen.index', compact(
             'items',
             'issueItems',
@@ -147,6 +178,9 @@ class KitchenController extends Controller
             'toDate',
             'kitchenMonthlySummary',
             'kitchenLedgerRows',
+            'consumptionReportRows',
+            'consumptionItemId',
+            'consumptionCategory',
             'activeTab'
         ));
     }
@@ -238,6 +272,60 @@ class KitchenController extends Controller
         }
 
         return $this->csvDownloadResponse('kitchen_item_summary_consumption.csv', $csvRows);
+    }
+
+    public function exportConsumptionReport(Request $request): Response
+    {
+        [$fromDate, $toDate] = $this->resolveLedgerDateRange($request);
+        $itemId = trim((string) $request->query('item_id', ''));
+        $category = trim((string) $request->query('category', ''));
+
+        $rows = $this->kitchenLedgerExportBaseQuery($fromDate, $toDate)
+            ->join('items as ci', 'ci.id', '=', 'st.item_id');
+
+        if ($itemId !== '') {
+            $rows->where('ci.id', (int) $itemId);
+        }
+        if ($category !== '') {
+            $rows->where('ci.category', 'like', "%{$category}%");
+        }
+
+        $rows = $rows
+            ->groupBy('ci.id', 'ci.sku', 'ci.name', 'ci.category', 'ci.uom')
+            ->orderBy('ci.name')
+            ->get([
+                'ci.sku as item_sku',
+                'ci.name as item_name',
+                'ci.category as item_category',
+                'ci.uom as item_uom',
+                DB::raw('SUM(ABS(st.quantity)) as total_quantity'),
+                DB::raw('SUM(ABS(st.quantity) * st.unit_cost) as total_amount'),
+                DB::raw('MIN(st.unit_cost) as min_unit_cost'),
+                DB::raw('MAX(st.unit_cost) as max_unit_cost'),
+                DB::raw('MIN(ki.id) as first_issue_id'),
+                DB::raw('MIN(st.id) as first_stock_txn_id'),
+            ]);
+
+        $csvRows = [[
+            'Item Code / SKU', 'Item Name', 'Category', 'UOM', 'Qty Consumed', 'Min Unit Cost', 'Max Unit Cost', 'Total Amount', 'Kitchen Issue Ref', 'Stock Txn Ref',
+        ]];
+
+        foreach ($rows as $row) {
+            $csvRows[] = [
+                $row->item_sku,
+                $row->item_name,
+                $row->item_category,
+                $row->item_uom,
+                number_format((float) $row->total_quantity, 3, '.', ''),
+                number_format((float) $row->min_unit_cost, 2, '.', ''),
+                number_format((float) $row->max_unit_cost, 2, '.', ''),
+                number_format((float) $row->total_amount, 2, '.', ''),
+                $row->first_issue_id ? 'KitchenIssue #'.$row->first_issue_id : '',
+                $row->first_stock_txn_id ? 'StockTransaction #'.$row->first_stock_txn_id : '',
+            ];
+        }
+
+        return $this->csvDownloadResponse('consumption_report.csv', $csvRows);
     }
 
     public function apiMenus(): JsonResponse
@@ -553,6 +641,7 @@ class KitchenController extends Controller
 
         return match ($tab) {
             'issues', 'ledger' => 'ledger',
+            'consumption-report' => 'consumption-report',
             'menu' => 'menu',
             'plans' => 'plans',
             default => 'issue',

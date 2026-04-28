@@ -102,6 +102,7 @@
                         <option value="items" @selected(($activeTab ?? 'items') === 'items')>Items</option>
                         <option value="store-stock" @selected(($activeTab ?? 'items') === 'store-stock')>Store Stock</option>
                         <option value="vendor-return" @selected(($activeTab ?? 'items') === 'vendor-return')>Vendor Return</option>
+                        <option value="stock-ledger" @selected(($activeTab ?? 'items') === 'stock-ledger')>Stock Ledger</option>
                     </select>
                 </div>
                 <div class="col-lg-2 d-flex gap-2">
@@ -124,6 +125,9 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link {{ ($activeTab ?? 'items') === 'vendor-return' ? 'active' : '' }}" id="vendor-return-tab" data-bs-toggle="pill" data-bs-target="#vendor-return-pane" type="button" role="tab" aria-controls="vendor-return-pane" aria-selected="{{ ($activeTab ?? 'items') === 'vendor-return' ? 'true' : 'false' }}">Vendor Return</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ ($activeTab ?? 'items') === 'stock-ledger' ? 'active' : '' }}" id="stock-ledger-tab" data-bs-toggle="pill" data-bs-target="#stock-ledger-pane" type="button" role="tab" aria-controls="stock-ledger-pane" aria-selected="{{ ($activeTab ?? 'items') === 'stock-ledger' ? 'true' : 'false' }}">Stock Ledger</button>
         </li>
     </ul>
 
@@ -568,6 +572,63 @@
                 </div>
             </div>
         </div>
+
+        <div class="tab-pane fade {{ ($activeTab ?? 'items') === 'stock-ledger' ? 'show active' : '' }}" id="stock-ledger-pane" role="tabpanel" aria-labelledby="stock-ledger-tab" tabindex="0">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Stock Ledger</h5>
+                    <a href="{{ route('admin.inventory.stock-ledger.export', ['tab' => 'stock-ledger', 'q' => $search ?? '', 'from_date' => $stockLedgerFromDate ?? '', 'to_date' => $stockLedgerToDate ?? '', 'item_id' => $stockLedgerItemId ?? '', 'category' => $stockLedgerCategory ?? '', 'txn_type' => $stockLedgerTxnType ?? '', 'reference_type' => $stockLedgerReferenceType ?? '', 'remarks' => request('remarks', '')]) }}" class="btn btn-sm btn-outline-primary">Download CSV</a>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.inventory.index') }}" class="row g-2 align-items-end mb-3">
+                        <input type="hidden" name="tab" value="stock-ledger">
+                        <div class="col-md-2"><label class="form-label">From</label><input type="date" name="from_date" class="form-control" value="{{ $stockLedgerFromDate ?? '' }}"></div>
+                        <div class="col-md-2"><label class="form-label">To</label><input type="date" name="to_date" class="form-control" value="{{ $stockLedgerToDate ?? '' }}"></div>
+                        <div class="col-md-2"><label class="form-label">Item</label><select name="item_id" class="form-select"><option value="">All</option>@foreach($items as $item)<option value="{{ $item->id }}" @selected((string)($stockLedgerItemId ?? '') === (string)$item->id)>{{ $item->sku }} - {{ $item->name }}</option>@endforeach</select></div>
+                        <div class="col-md-2"><label class="form-label">Category</label><input type="text" name="category" class="form-control" value="{{ $stockLedgerCategory ?? '' }}"></div>
+                        <div class="col-md-2"><label class="form-label">Txn Type</label><select name="txn_type" class="form-select"><option value="">All</option>@foreach(($stockLedgerTxnTypes ?? []) as $type)<option value="{{ $type }}" @selected(($stockLedgerTxnType ?? '') === $type)>{{ $type }}</option>@endforeach</select></div>
+                        <div class="col-md-2"><label class="form-label">Reference Type</label><select name="reference_type" class="form-select"><option value="">All</option>@foreach(($stockLedgerReferenceTypes ?? []) as $type)<option value="{{ $type }}" @selected(($stockLedgerReferenceType ?? '') === $type)>{{ class_basename($type) }}</option>@endforeach</select></div>
+                        <div class="col-md-8"><label class="form-label">Search / Remarks</label><input type="text" name="q" class="form-control" value="{{ $search ?? '' }}" placeholder="item, reference, remarks"></div>
+                        <div class="col-md-2 d-grid"><button class="btn btn-primary">Apply</button></div>
+                        <div class="col-md-2 d-grid"><a href="{{ route('admin.inventory.index', ['tab' => 'stock-ledger']) }}" class="btn btn-outline-secondary">Clear</a></div>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Item Code</th>
+                                    <th>Item Name</th>
+                                    <th>Type</th>
+                                    <th>Qty</th>
+                                    <th>UOM</th>
+                                    <th>Unit Cost</th>
+                                    <th>Reference</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse(($stockLedgerRows ?? collect()) as $row)
+                                    <tr>
+                                        <td>{{ \\Illuminate\\Support\\Carbon::parse($row->txn_at)->format('Y-m-d H:i') }}</td>
+                                        <td>{{ $row->item_sku }}</td>
+                                        <td>{{ $row->item_name }}</td>
+                                        <td>{{ $row->txn_type }}</td>
+                                        <td>{{ number_format((float) $row->quantity, 3) }}</td>
+                                        <td>{{ $row->trans_unit_code ?: $row->item_uom }}</td>
+                                        <td>{{ number_format((float) $row->unit_cost, 2) }}</td>
+                                        <td>{{ class_basename((string) $row->reference_type) }} @if($row->reference_id)#{{ $row->reference_id }}@endif</td>
+                                        <td>{{ $row->remarks }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="9" class="text-center text-muted">No stock ledger rows found</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
@@ -618,6 +679,7 @@
             'items-tab': 'items',
             'store-stock-tab': 'store-stock',
             'vendor-return-tab': 'vendor-return',
+            'stock-ledger-tab': 'stock-ledger',
         };
 
         const items = @json($inventoryItemsJson);

@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InventoryController extends Controller
 {
@@ -24,8 +25,14 @@ class InventoryController extends Controller
     {
         $search = trim((string) $request->query('q', ''));
         $activeTab = trim((string) $request->query('tab', 'items'));
+        $stockLedgerFromDate = trim((string) $request->query('from_date', ''));
+        $stockLedgerToDate = trim((string) $request->query('to_date', ''));
+        $stockLedgerTxnType = trim((string) $request->query('txn_type', ''));
+        $stockLedgerReferenceType = trim((string) $request->query('reference_type', ''));
+        $stockLedgerItemId = trim((string) $request->query('item_id', ''));
+        $stockLedgerCategory = trim((string) $request->query('category', ''));
 
-        if (! in_array($activeTab, ['items', 'store-stock', 'vendor-return'], true)) {
+        if (! in_array($activeTab, ['items', 'store-stock', 'vendor-return', 'stock-ledger'], true)) {
             $activeTab = 'items';
         }
 
@@ -170,7 +177,182 @@ class InventoryController extends Controller
             ->limit(50)
             ->get();
 
-        return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems', 'storeStockRows', 'vendorReturnSources', 'vendorReturns', 'search', 'activeTab'));
+        $stockLedgerQuery = StockTransaction::query()
+            ->from('stock_transactions as st')
+            ->leftJoin('items as i', 'i.id', '=', 'st.item_id')
+            ->select([
+                'st.id',
+                'st.txn_at',
+                'st.txn_type',
+                'st.quantity',
+                'st.unit_cost',
+                'st.trans_unit_code',
+                'st.trans_quantity',
+                'st.reference_type',
+                'st.reference_id',
+                'st.remarks',
+                'i.id as item_id',
+                'i.sku as item_sku',
+                'i.name as item_name',
+                'i.category as item_category',
+                'i.uom as item_uom',
+            ]);
+
+        if ($search !== '') {
+            $stockLedgerQuery->where(function ($query) use ($search) {
+                $query->where('i.sku', 'like', "%{$search}%")
+                    ->orWhere('i.name', 'like', "%{$search}%")
+                    ->orWhere('i.category', 'like', "%{$search}%")
+                    ->orWhere('st.txn_type', 'like', "%{$search}%")
+                    ->orWhere('st.reference_type', 'like', "%{$search}%")
+                    ->orWhere('st.remarks', 'like', "%{$search}%");
+            });
+        }
+        if ($stockLedgerFromDate !== '') {
+            $stockLedgerQuery->whereDate('st.txn_at', '>=', $stockLedgerFromDate);
+        }
+        if ($stockLedgerToDate !== '') {
+            $stockLedgerQuery->whereDate('st.txn_at', '<=', $stockLedgerToDate);
+        }
+        if ($stockLedgerTxnType !== '') {
+            $stockLedgerQuery->where('st.txn_type', $stockLedgerTxnType);
+        }
+        if ($stockLedgerReferenceType !== '') {
+            $stockLedgerQuery->where('st.reference_type', 'like', "%{$stockLedgerReferenceType}%");
+        }
+        if ($stockLedgerItemId !== '') {
+            $stockLedgerQuery->where('i.id', (int) $stockLedgerItemId);
+        }
+        if ($stockLedgerCategory !== '') {
+            $stockLedgerQuery->where('i.category', 'like', "%{$stockLedgerCategory}%");
+        }
+
+        $stockLedgerRows = $stockLedgerQuery
+            ->orderByDesc('st.txn_at')
+            ->orderByDesc('st.id')
+            ->limit(300)
+            ->get();
+
+        $stockLedgerTxnTypes = StockTransaction::query()
+            ->select('txn_type')
+            ->distinct()
+            ->orderBy('txn_type')
+            ->pluck('txn_type');
+
+        $stockLedgerReferenceTypes = StockTransaction::query()
+            ->whereNotNull('reference_type')
+            ->select('reference_type')
+            ->distinct()
+            ->orderBy('reference_type')
+            ->pluck('reference_type');
+
+        return view('admin.inventory.index', compact(
+            'items',
+            'ledger',
+            'balances',
+            'lowStockItems',
+            'storeStockRows',
+            'vendorReturnSources',
+            'vendorReturns',
+            'search',
+            'activeTab',
+            'stockLedgerRows',
+            'stockLedgerFromDate',
+            'stockLedgerToDate',
+            'stockLedgerTxnType',
+            'stockLedgerReferenceType',
+            'stockLedgerItemId',
+            'stockLedgerCategory',
+            'stockLedgerTxnTypes',
+            'stockLedgerReferenceTypes'
+        ));
+    }
+
+    public function exportStockLedger(Request $request): StreamedResponse
+    {
+        $search = trim((string) $request->query('q', ''));
+        $fromDate = trim((string) $request->query('from_date', ''));
+        $toDate = trim((string) $request->query('to_date', ''));
+        $txnType = trim((string) $request->query('txn_type', ''));
+        $referenceType = trim((string) $request->query('reference_type', ''));
+        $itemId = trim((string) $request->query('item_id', ''));
+        $category = trim((string) $request->query('category', ''));
+        $remarks = trim((string) $request->query('remarks', ''));
+
+        $rows = StockTransaction::query()
+            ->from('stock_transactions as st')
+            ->leftJoin('items as i', 'i.id', '=', 'st.item_id')
+            ->select([
+                'st.txn_at',
+                'st.txn_type',
+                'st.quantity',
+                'st.unit_cost',
+                'st.trans_unit_code',
+                'st.reference_type',
+                'st.reference_id',
+                'st.remarks',
+                'i.sku as item_sku',
+                'i.name as item_name',
+                'i.category as item_category',
+                'i.uom as item_uom',
+            ]);
+
+        if ($search !== '') {
+            $rows->where(function ($query) use ($search) {
+                $query->where('i.sku', 'like', "%{$search}%")
+                    ->orWhere('i.name', 'like', "%{$search}%")
+                    ->orWhere('i.category', 'like', "%{$search}%")
+                    ->orWhere('st.txn_type', 'like', "%{$search}%")
+                    ->orWhere('st.reference_type', 'like', "%{$search}%")
+                    ->orWhere('st.remarks', 'like', "%{$search}%");
+            });
+        }
+        if ($fromDate !== '') {
+            $rows->whereDate('st.txn_at', '>=', $fromDate);
+        }
+        if ($toDate !== '') {
+            $rows->whereDate('st.txn_at', '<=', $toDate);
+        }
+        if ($txnType !== '') {
+            $rows->where('st.txn_type', $txnType);
+        }
+        if ($referenceType !== '') {
+            $rows->where('st.reference_type', 'like', "%{$referenceType}%");
+        }
+        if ($itemId !== '') {
+            $rows->where('i.id', (int) $itemId);
+        }
+        if ($category !== '') {
+            $rows->where('i.category', 'like', "%{$category}%");
+        }
+        if ($remarks !== '') {
+            $rows->where('st.remarks', 'like', "%{$remarks}%");
+        }
+
+        $rows = $rows->orderBy('st.txn_at')->orderBy('st.id')->get();
+
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Date', 'Item Code', 'Item Name', 'Type', 'Qty', 'UOM', 'Unit Cost', 'Reference', 'Remarks']);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    optional($row->txn_at)->format('Y-m-d H:i:s'),
+                    $row->item_sku,
+                    $row->item_name,
+                    $row->txn_type,
+                    number_format((float) $row->quantity, 3, '.', ''),
+                    $row->trans_unit_code ?: $row->item_uom,
+                    number_format((float) $row->unit_cost, 2, '.', ''),
+                    trim((string) class_basename((string) $row->reference_type).' #'.((string) $row->reference_id)),
+                    $row->remarks,
+                ]);
+            }
+
+            fclose($handle);
+        }, 'stock_ledger.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function storeItem(Request $request): RedirectResponse

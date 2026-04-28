@@ -149,6 +149,11 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
+            <button class="nav-link {{ ($activeTab ?? 'issue') === 'consumption-report' ? 'active' : '' }}" id="tab-consumption-report-tab" data-bs-toggle="pill" data-bs-target="#tab-consumption-report" type="button" role="tab" aria-controls="tab-consumption-report" aria-selected="{{ ($activeTab ?? 'issue') === 'consumption-report' ? 'true' : 'false' }}">
+                <i class="bi bi-graph-up-arrow me-1"></i> Consumption Report
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
             <button class="nav-link {{ ($activeTab ?? 'issue') === 'menu' ? 'active' : '' }}" id="tab-menu-tab" data-bs-toggle="pill" data-bs-target="#tab-menu" type="button" role="tab" aria-controls="tab-menu" aria-selected="{{ ($activeTab ?? 'issue') === 'menu' ? 'true' : 'false' }}">
                 <i class="bi bi-card-checklist me-1"></i> Menu / Recipes
             </button>
@@ -379,6 +384,52 @@
             </div>
         </div>
 
+        <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'consumption-report' ? 'show active' : '' }} kitchen-tab-pane" id="tab-consumption-report" role="tabpanel" aria-labelledby="tab-consumption-report-tab" tabindex="0">
+            <div class="kitchen-tab-kicker">Reporting</div>
+            <div class="kitchen-tab-title">Consumption Report</div>
+            <div class="kitchen-tab-subtitle">Reporting only, derived from approved kitchen stock transactions.</div>
+
+            <div class="card kitchen-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Item-wise Consumption</span>
+                    <a href="{{ route('admin.kitchen.consumption-report.export', ['from_date' => $fromDate, 'to_date' => $toDate, 'item_id' => $consumptionItemId ?? '', 'category' => $consumptionCategory ?? '']) }}" class="btn btn-sm btn-outline-primary">Download CSV</a>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.kitchen.index') }}" class="row g-2 align-items-end mb-3">
+                        <input type="hidden" name="tab" value="consumption-report">
+                        <div class="col-md-2"><label class="form-label">Month</label><input type="month" name="month" value="{{ $selectedMonth }}" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">From</label><input type="date" name="from_date" value="{{ $fromDate }}" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">To</label><input type="date" name="to_date" value="{{ $toDate }}" class="form-control"></div>
+                        <div class="col-md-3"><label class="form-label">Item</label><select name="item_id" class="form-select"><option value="">All</option>@foreach($items as $item)<option value="{{ $item->id }}" @selected((string)($consumptionItemId ?? '') === (string)$item->id)>{{ $item->sku }} - {{ $item->name }}</option>@endforeach</select></div>
+                        <div class="col-md-2"><label class="form-label">Category</label><input type="text" name="category" value="{{ $consumptionCategory ?? '' }}" class="form-control"></div>
+                        <div class="col-md-1 d-grid"><button class="btn btn-primary">Apply</button></div>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Item Code</th><th>Item Name</th><th>Category</th><th>Qty Consumed</th><th>UOM</th><th>Unit Cost</th><th>Total Amount</th><th>Reference</th></tr></thead>
+                            <tbody>
+                            @forelse(($consumptionReportRows ?? collect()) as $row)
+                                @php $avgUnitCost = (float)$row->total_quantity > 0 ? ((float)$row->total_amount / (float)$row->total_quantity) : 0; @endphp
+                                <tr>
+                                    <td>{{ $row->item_sku }}</td>
+                                    <td>{{ $row->item_name }}</td>
+                                    <td>{{ $row->item_category }}</td>
+                                    <td>{{ number_format((float)$row->total_quantity, 3) }}</td>
+                                    <td>{{ $row->item_uom }}</td>
+                                    <td>{{ number_format($avgUnitCost, 2) }}</td>
+                                    <td>{{ number_format((float)$row->total_amount, 2) }}</td>
+                                    <td>KitchenIssue #{{ $row->first_issue_id }} / StockTxn #{{ $row->first_stock_txn_id }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="8" class="text-muted">No consumption rows available.</td></tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'menu' ? 'show active' : '' }} kitchen-tab-pane" id="tab-menu" role="tabpanel" aria-labelledby="tab-menu-tab" tabindex="0">
             <div class="kitchen-tab-kicker">Recipes</div>
             <div class="kitchen-tab-title">Menu / Recipes</div>
@@ -553,6 +604,7 @@
         const kitchenTabParamMap = {
             'tab-issue-tab': 'issue',
             'tab-ledger-tab': 'ledger',
+            'tab-consumption-report-tab': 'consumption-report',
             'tab-menu-tab': 'menu',
             'tab-plans-tab': 'plans',
         };

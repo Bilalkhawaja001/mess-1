@@ -174,6 +174,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/inventory/transactions', [InventoryController::class, 'storeTxn'])->name('inventory.txns.store');
         Route::post('/inventory/vendor-returns', [InventoryController::class, 'storeVendorReturn'])->name('inventory.vendor-returns.store');
         Route::post('/inventory/items/import', [InventoryController::class, 'importItems'])->name('inventory.items.import');
+        Route::get('/inventory/stock-ledger/export', [InventoryController::class, 'exportStockLedger'])->name('inventory.stock-ledger.export');
         Route::get('/inventory/items/{item}/trail', [InventoryController::class, 'trail'])->name('inventory.items.trail');
     });
 
@@ -231,6 +232,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/kitchen/issues', [KitchenController::class, 'issue'])->name('kitchen.issues.store');
         Route::get('/kitchen/ledger/export', [KitchenController::class, 'exportLedgerConsumption'])->name('kitchen.ledger.export');
         Route::get('/kitchen/ledger/export-summary', [KitchenController::class, 'exportLedgerConsumptionSummary'])->name('kitchen.ledger.export-summary');
+        Route::get('/kitchen/consumption-report/export', [KitchenController::class, 'exportConsumptionReport'])->name('kitchen.consumption-report.export');
         Route::post('/kitchen/issues/{issue}/approve', [KitchenController::class, 'approveIssue'])->name('kitchen.issues.approve.legacy');
     });
 

@@ -22,7 +22,6 @@ class InventoryController extends Controller
 
     public function index(Request $request)
     {
-<<<<<<< Updated upstream
         $search = trim((string) $request->query('q', ''));
         $activeTab = trim((string) $request->query('tab', 'items'));
 
@@ -42,20 +41,10 @@ class InventoryController extends Controller
             })
             ->orderBy('name')
             ->get();
-=======
-        $allowedTabs = ['items', 'store-stock', 'vendor-return', 'stock-ledger'];
-        $activeTab = $request->query('tab', 'items');
-        if (! in_array($activeTab, $allowedTabs, true)) {
-            $activeTab = 'items';
-        }
-
-        $items = Item::query()->with('units')->orderBy('name')->get();
->>>>>>> Stashed changes
         $ledger = StockTransaction::query()->latest('txn_at')->limit(100)->get();
         $balances = $this->inventoryService->stockBalances();
         $lowStockItems = $this->inventoryService->lowStockItems();
 
-<<<<<<< Updated upstream
         $ledgerByItem = $ledger->groupBy('item_id');
         $storeStockRows = collect($balances)
             ->map(function (array $row) use ($ledgerByItem) {
@@ -182,62 +171,6 @@ class InventoryController extends Controller
             ->get();
 
         return view('admin.inventory.index', compact('items', 'ledger', 'balances', 'lowStockItems', 'storeStockRows', 'vendorReturnSources', 'vendorReturns', 'search', 'activeTab'));
-=======
-        $stockLedgerQuery = DB::table('stock_transactions as st')
-            ->leftJoin('items as i', 'i.id', '=', 'st.item_id')
-            ->select([
-                'st.id',
-                'st.txn_at',
-                'st.txn_type',
-                'st.quantity',
-                'st.unit_cost',
-                'st.trans_unit_code',
-                'st.trans_quantity',
-                'st.reference_type',
-                'st.reference_id',
-                'st.remarks',
-                'i.sku as item_sku',
-                'i.name as item_name',
-                'i.category as item_category',
-                'i.uom as item_uom',
-            ]);
-
-        if ($search = trim((string) $request->query('search', ''))) {
-            $stockLedgerQuery->where(function ($query) use ($search) {
-                $like = '%'.$search.'%';
-                $query
-                    ->where('i.sku', 'like', $like)
-                    ->orWhere('i.name', 'like', $like)
-                    ->orWhere('i.category', 'like', $like)
-                    ->orWhere('st.txn_type', 'like', $like)
-                    ->orWhere('st.reference_type', 'like', $like)
-                    ->orWhere('st.remarks', 'like', $like);
-            });
-        }
-
-        if ($fromDate = $request->query('from_date')) {
-            $stockLedgerQuery->whereDate('st.txn_at', '>=', $fromDate);
-        }
-
-        if ($toDate = $request->query('to_date')) {
-            $stockLedgerQuery->whereDate('st.txn_at', '<=', $toDate);
-        }
-
-        $stockLedger = $stockLedgerQuery
-            ->orderByDesc('st.txn_at')
-            ->orderByDesc('st.id')
-            ->paginate(100)
-            ->withQueryString();
-
-        return view('admin.inventory.index', compact(
-            'items',
-            'ledger',
-            'balances',
-            'lowStockItems',
-            'activeTab',
-            'stockLedger'
-        ));
->>>>>>> Stashed changes
     }
 
     public function storeItem(Request $request): RedirectResponse

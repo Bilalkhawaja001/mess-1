@@ -317,7 +317,7 @@
 @section('content')
 @php
     $activeTab = request('tab', 'po');
-    if (! in_array($activeTab, ['vendors', 'po', 'grn'], true)) {
+    if (! in_array($activeTab, ['vendors', 'po', 'grn', 'reports'], true)) {
         $activeTab = 'po';
     }
 
@@ -369,6 +369,7 @@
             <a href="{{ route('admin.procurement.index', ['tab' => 'vendors']) }}" class="procurement-tab-link {{ $activeTab === 'vendors' ? 'active' : '' }}">Vendors</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="procurement-tab-link {{ $activeTab === 'po' ? 'active' : '' }}">Purchase Orders</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}" class="procurement-tab-link {{ $activeTab === 'grn' ? 'active' : '' }}">GRNs / Receiving</a>
+            <a href="{{ route('admin.procurement.index', ['tab' => 'reports']) }}" class="procurement-tab-link {{ $activeTab === 'reports' ? 'active' : '' }}">Purchase Reports</a>
         </div>
     </div>
 
@@ -600,7 +601,7 @@
                 </div>
             </div>
         </div>
-    @else
+    @elseif($activeTab === 'grn')
         <div class="procurement-tab-panel">
             <div class="procurement-grid">
                 <div class="card procurement-form-card">
@@ -809,6 +810,110 @@
                                 </tbody></table>
                             </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="procurement-tab-panel">
+            <div class="card procurement-form-card">
+                <div class="card-header"><span>Purchase Reports</span><span class="text-muted small">GRN-based purchasing analysis</span></div>
+                <div class="card-body">
+                    <form method="GET" action="{{ route('admin.procurement.index') }}" class="row g-3 mb-3">
+                        <input type="hidden" name="tab" value="reports">
+                        <div class="col-md-3">
+                            <label class="form-label">From Date</label>
+                            <input type="date" name="from_date" value="{{ $reportFromDate }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">To Date</label>
+                            <input type="date" name="to_date" value="{{ $reportToDate }}" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Search Item / Category / Vendor</label>
+                            <input type="text" name="q" value="{{ $reportSearch }}" class="form-control" placeholder="e.g. Chicken">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            <button class="btn btn-primary w-100">Apply</button>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end">
+                            <a href="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}" class="btn btn-outline-primary">Download Purchase Reports CSV</a>
+                        </div>
+                    </form>
+
+                    <div class="procurement-kpi" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+                        <div><span>Total Purchasing Cost</span><strong>{{ number_format((float) ($purchaseReportData['totals']->total_cost ?? 0), 2) }}</strong></div>
+                        <div><span>Total Purchased Qty</span><strong>{{ number_format((float) ($purchaseReportData['totals']->total_qty ?? 0), 3) }}</strong></div>
+                        <div><span>Unique Items Purchased</span><strong>{{ (int) ($purchaseReportData['totals']->unique_items ?? 0) }}</strong></div>
+                        <div><span>Vendors Used</span><strong>{{ (int) ($purchaseReportData['totals']->vendors_used ?? 0) }}</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card procurement-table-card">
+                <div class="card-header"><span>Cost by Category</span><span class="text-muted small">Grouped purchase totals</span></div>
+                <div class="card-body table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Category</th><th>Total Qty</th><th>Total Cost</th><th>Avg Cost</th></tr></thead>
+                        <tbody>
+                            @forelse($purchaseReportData['categoryRows'] as $row)
+                                <tr>
+                                    <td>{{ $row->category }}</td>
+                                    <td>{{ number_format((float) $row->total_qty, 3) }}</td>
+                                    <td>{{ number_format((float) $row->total_cost, 2) }}</td>
+                                    <td>{{ number_format((float) $row->avg_cost, 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="text-center text-muted py-4">No category report rows found.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card procurement-table-card">
+                <div class="card-header"><span>Purchasing Cost by Vendor</span><span class="text-muted small">Vendor spend summary</span></div>
+                <div class="card-body table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Vendor</th><th>Total Qty</th><th>Total Cost</th><th>GRN Count</th></tr></thead>
+                        <tbody>
+                            @forelse($purchaseReportData['vendorRows'] as $row)
+                                <tr>
+                                    <td>{{ $row->vendor_name }}</td>
+                                    <td>{{ number_format((float) $row->total_qty, 3) }}</td>
+                                    <td>{{ number_format((float) $row->total_cost, 2) }}</td>
+                                    <td>{{ (int) $row->grn_count }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="text-center text-muted py-4">No vendor report rows found.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card procurement-table-card">
+                <div class="card-header"><span>Item Purchase Summary</span><span class="text-muted small">Item-wise purchased quantity and cost</span></div>
+                <div class="card-body table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Item Code</th><th>Item Name</th><th>Category</th><th>UOM</th><th>Total Qty</th><th>Total Cost</th><th>Avg Cost</th><th>First Date</th><th>Last Date</th></tr></thead>
+                        <tbody>
+                            @forelse($purchaseReportData['itemRows'] as $row)
+                                <tr>
+                                    <td>{{ $row->sku }}</td>
+                                    <td>{{ $row->item_name }}</td>
+                                    <td>{{ $row->category }}</td>
+                                    <td>{{ $row->uom }}</td>
+                                    <td>{{ number_format((float) $row->total_qty, 3) }}</td>
+                                    <td>{{ number_format((float) $row->total_cost, 2) }}</td>
+                                    <td>{{ number_format((float) $row->avg_cost, 2) }}</td>
+                                    <td>{{ $row->first_grn_date }}</td>
+                                    <td>{{ $row->last_grn_date }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="9" class="text-center text-muted py-4">No item purchase summary rows found.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

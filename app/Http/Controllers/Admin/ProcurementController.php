@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
 
@@ -70,6 +71,9 @@ class ProcurementController extends Controller
         $grnImportPreview = session('procurement_grn_import_preview');
         $selectedGrnTemplatePo = $request->integer('template_po_id');
         [$grnFromDate, $grnToDate] = $this->resolveGrnDateRange($request);
+        [$reportFromDate, $reportToDate] = $this->resolvePurchaseReportDateRange($request);
+        $reportSearch = trim((string) $request->input('q', ''));
+        $purchaseReportData = $this->buildPurchaseReportData($reportFromDate, $reportToDate, $reportSearch);
 
         return view('admin.procurement.index', compact(
             'vendors',
@@ -81,7 +85,11 @@ class ProcurementController extends Controller
             'grnImportPreview',
             'selectedGrnTemplatePo',
             'grnFromDate',
-            'grnToDate'
+            'grnToDate',
+            'reportFromDate',
+            'reportToDate',
+            'reportSearch',
+            'purchaseReportData'
         ));
     }
 
@@ -309,6 +317,70 @@ class ProcurementController extends Controller
                     ]);
                 }
             });
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportPurchaseReports(Request $request): StreamedResponse
+    {
+        [$fromDate, $toDate] = $this->resolvePurchaseReportDateRange($request, true);
+        $search = trim((string) $request->input('q', ''));
+        $reportData = $this->buildPurchaseReportData($fromDate, $toDate, $search);
+        $filename = sprintf('purchase_reports_%s_to_%s.csv', $fromDate, $toDate);
+
+        return response()->streamDownload(function () use ($reportData, $fromDate, $toDate, $search) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, ['Overall Totals']);
+            fputcsv($handle, ['From Date', $fromDate]);
+            fputcsv($handle, ['To Date', $toDate]);
+            fputcsv($handle, ['Search', $search !== '' ? $search : 'All']);
+            fputcsv($handle, ['Total Purchasing Cost', number_format((float) ($reportData['totals']->total_cost ?? 0), 2, '.', '')]);
+            fputcsv($handle, ['Total Purchased Qty', number_format((float) ($reportData['totals']->total_qty ?? 0), 3, '.', '')]);
+            fputcsv($handle, ['Unique Items Purchased', (int) ($reportData['totals']->unique_items ?? 0)]);
+            fputcsv($handle, ['Vendors Used', (int) ($reportData['totals']->vendors_used ?? 0)]);
+            fputcsv($handle, []);
+
+            fputcsv($handle, ['Cost by Category']);
+            fputcsv($handle, ['Category', 'Total Qty', 'Total Cost', 'Avg Cost']);
+            foreach ($reportData['categoryRows'] as $row) {
+                fputcsv($handle, [
+                    $row->category,
+                    number_format((float) $row->total_qty, 3, '.', ''),
+                    number_format((float) $row->total_cost, 2, '.', ''),
+                    number_format((float) $row->avg_cost, 2, '.', ''),
+                ]);
+            }
+            fputcsv($handle, []);
+
+            fputcsv($handle, ['Purchasing Cost by Vendor']);
+            fputcsv($handle, ['Vendor', 'Total Qty', 'Total Cost', 'GRN Count']);
+            foreach ($reportData['vendorRows'] as $row) {
+                fputcsv($handle, [
+                    $row->vendor_name,
+                    number_format((float) $row->total_qty, 3, '.', ''),
+                    number_format((float) $row->total_cost, 2, '.', ''),
+                    (int) $row->grn_count,
+                ]);
+            }
+            fputcsv($handle, []);
+
+            fputcsv($handle, ['Item Purchase Summary']);
+            fputcsv($handle, ['Item Code', 'Item Name', 'Category', 'UOM', 'Total Qty', 'Total Cost', 'Avg Cost', 'First Date', 'Last Date']);
+            foreach ($reportData['itemRows'] as $row) {
+                fputcsv($handle, [
+                    $row->sku,
+                    $row->item_name,
+                    $row->category,
+                    $row->uom,
+                    number_format((float) $row->total_qty, 3, '.', ''),
+                    number_format((float) $row->total_cost, 2, '.', ''),
+                    number_format((float) $row->avg_cost, 2, '.', ''),
+                    $row->first_grn_date,
+                    $row->last_grn_date,
+                ]);
+            }
 
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv']);
@@ -906,6 +978,87 @@ class ProcurementController extends Controller
         }
 
         return $mapped;
+    }
+
+    private function buildPurchaseReportBaseQuery(string $fromDate, string $toDate, string $search = '')
+    {
+        $query = GoodsReceiptLine::query()
+            ->join('goods_receipts', 'goods_receipts.id', '=', 'goods_receipt_lines.goods_receipt_id')
+            ->join('purchase_orders', 'purchase_orders.id', '=', 'goods_receipts.purchase_order_id')
+            ->join('vendors', 'vendors.id', '=', 'purchase_orders.vendor_id')
+            ->join('items', 'items.id', '=', 'goods_receipt_lines.item_id')
+            ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate]);
+
+        if (Schema::hasColumn('goods_receipts', 'status')) {
+            $query->whereIn('goods_receipts.status', ['APPROVED', 'POSTED', 'RECEIVED']);
+        }
+
+        if ($search !== '') {
+            $like = '%'.$search.'%';
+            $query->where(function ($inner) use ($like) {
+                $inner->where('items.sku', 'like', $like)
+                    ->orWhere('items.name', 'like', $like)
+                    ->orWhere('items.category', 'like', $like)
+                    ->orWhere('vendors.name', 'like', $like);
+            });
+        }
+
+        return $query;
+    }
+
+    private function buildPurchaseReportData(string $fromDate, string $toDate, string $search = ''): array
+    {
+        $baseTotals = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
+            ->selectRaw('COALESCE(SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost), 0) as total_cost, COALESCE(SUM(goods_receipt_lines.qty_received), 0) as total_qty, COUNT(DISTINCT items.id) as unique_items, COUNT(DISTINCT vendors.id) as vendors_used')
+            ->first();
+
+        $categoryRows = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
+            ->selectRaw("COALESCE(items.category, 'Uncategorized') as category, SUM(goods_receipt_lines.qty_received) as total_qty, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost, CASE WHEN SUM(goods_receipt_lines.qty_received) > 0 THEN SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) / SUM(goods_receipt_lines.qty_received) ELSE 0 END as avg_cost")
+            ->groupBy('items.category')
+            ->orderBy('category')
+            ->get();
+
+        $vendorRows = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
+            ->selectRaw('vendors.name as vendor_name, SUM(goods_receipt_lines.qty_received) as total_qty, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost, COUNT(DISTINCT goods_receipts.id) as grn_count')
+            ->groupBy('vendors.id', 'vendors.name')
+            ->orderBy('vendors.name')
+            ->get();
+
+        $itemRows = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
+            ->selectRaw("items.id as item_id, items.sku, items.name as item_name, COALESCE(items.category, 'Uncategorized') as category, items.uom, SUM(goods_receipt_lines.qty_received) as total_qty, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost, CASE WHEN SUM(goods_receipt_lines.qty_received) > 0 THEN SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) / SUM(goods_receipt_lines.qty_received) ELSE 0 END as avg_cost, MIN(goods_receipts.received_date) as first_grn_date, MAX(goods_receipts.received_date) as last_grn_date")
+            ->groupBy('items.id', 'items.sku', 'items.name', 'items.category', 'items.uom')
+            ->orderBy('items.sku')
+            ->get();
+
+        return [
+            'totals' => $baseTotals,
+            'categoryRows' => $categoryRows,
+            'vendorRows' => $vendorRows,
+            'itemRows' => $itemRows,
+        ];
+    }
+
+    private function resolvePurchaseReportDateRange(Request $request, bool $validate = false): array
+    {
+        $defaultFrom = now()->startOfMonth()->toDateString();
+        $defaultTo = now()->endOfMonth()->toDateString();
+
+        $data = [
+            'from_date' => $request->input('from_date', $defaultFrom),
+            'to_date' => $request->input('to_date', $defaultTo),
+        ];
+
+        if ($validate) {
+            validator($data, [
+                'from_date' => 'required|date',
+                'to_date' => 'required|date|after_or_equal:from_date',
+            ])->validate();
+        }
+
+        $fromDate = date('Y-m-d', strtotime((string) $data['from_date']));
+        $toDate = date('Y-m-d', strtotime((string) $data['to_date']));
+
+        return [$fromDate, $toDate];
     }
 
     private function resolveGrnDateRange(Request $request, bool $validate = false): array

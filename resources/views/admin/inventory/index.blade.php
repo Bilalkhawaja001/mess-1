@@ -228,7 +228,6 @@
                                         <th>UoM</th>
                                         <th>Reorder</th>
                                         <th>Status</th>
-                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -260,57 +259,10 @@
                                                     <span class="badge bg-secondary">Inactive</span>
                                                 @endif
                                             </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editItemRow{{ $item->id }}">
-                                                    Edit
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr class="collapse" id="editItemRow{{ $item->id }}">
-                                            <td colspan="8">
-                                                <form method="POST" action="{{ route('admin.inventory.items.update', $item) }}" class="card card-body bg-light border row g-2">
-                                                    @csrf
-                                                    <div class="row g-2">
-                                                        <div class="col-md-2">
-                                                            <label class="form-label">ItemCode</label>
-                                                            <input type="text" name="item_code" class="form-control form-control-sm" value="{{ $item->sku }}" required>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <label class="form-label">ItemName</label>
-                                                            <input type="text" name="item_name" class="form-control form-control-sm" value="{{ $item->name }}" required>
-                                                        </div>
-                                                        <div class="col-md-2">
-                                                            <label class="form-label">Category</label>
-                                                            <input type="text" name="category" class="form-control form-control-sm" value="{{ $item->category }}">
-                                                        </div>
-                                                        <div class="col-md-1">
-                                                            <label class="form-label">UoM</label>
-                                                            <input type="text" name="uom" class="form-control form-control-sm" value="{{ $item->uom }}" required>
-                                                        </div>
-                                                        <div class="col-md-1">
-                                                            <label class="form-label">Reorder</label>
-                                                            <input type="number" name="reorder_level" class="form-control form-control-sm" value="{{ $item->reorder_level }}" min="0" step="0.001">
-                                                        </div>
-                                                        <div class="col-md-1">
-                                                            <label class="form-label">Status</label>
-                                                            <select name="is_active" class="form-select form-select-sm">
-                                                                <option value="1" @selected($item->is_active)>Active</option>
-                                                                <option value="0" @selected(! $item->is_active)>Inactive</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-1 d-flex align-items-end">
-                                                            <button class="btn btn-sm btn-primary w-100" type="submit">Save</button>
-                                                        </div>
-                                                    </div>
-                                                    <div class="small text-warning mt-2">
-                                                        Note: UoM change display/base label ko affect karega; old stock quantities ka label bhi change nazar aa sakta hai.
-                                                    </div>
-                                                </form>
-                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted">{{ ($search ?? '') !== '' ? 'No items matched your search.' : 'No items found' }}</td>
+                                            <td colspan="7" class="text-center text-muted">{{ ($search ?? '') !== '' ? 'No items matched your search.' : 'No items found' }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

@@ -495,42 +495,6 @@ class InventoryController extends Controller
         return back()->with('success', 'Item created successfully.');
     }
 
-    public function updateItem(Request $request, Item $item): RedirectResponse
-    {
-        $data = $request->validate([
-            'item_code' => 'required|string|max:255',
-            'item_name' => 'required|string|max:255',
-            'category' => 'nullable|string|max:255',
-            'uom' => 'required|string|max:20',
-            'reorder_level' => 'nullable|numeric|min:0',
-            'is_active' => 'required|boolean',
-        ]);
-
-        $item->update([
-            'sku' => trim((string) $data['item_code']),
-            'name' => trim((string) $data['item_name']),
-            'category' => trim((string) ($data['category'] ?? '')) ?: 'Uncategorized',
-            'uom' => trim((string) $data['uom']),
-            'reorder_level' => $data['reorder_level'] ?? 0,
-            'is_active' => (bool) $data['is_active'],
-        ]);
-
-        if ($item->uom) {
-            $item->units()->firstOrCreate(
-                ['unit_code' => $item->uom],
-                [
-                    'factor_to_base' => 1.0,
-                    'is_default_for_grn' => true,
-                    'is_default_for_kitchen' => true,
-                ]
-            );
-        }
-
-        return redirect()
-            ->route('admin.inventory.index', ['tab' => 'items'])
-            ->with('success', 'Item updated successfully.');
-    }
-
     public function bulkUploadItems(Request $request): RedirectResponse
     {
         $request->validate([

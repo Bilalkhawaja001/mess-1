@@ -137,6 +137,58 @@
 
     <div class="tab-content" id="inventory-tab-content">
         <div class="tab-pane fade {{ ($activeTab ?? 'items') === 'items' ? 'show active' : '' }}" id="items-pane" role="tabpanel" aria-labelledby="items-tab" tabindex="0">
+            @php
+                $editItemId = (int) request('edit_item', 0);
+                $editItem = $editItemId > 0 ? $items->firstWhere('id', $editItemId) : null;
+            @endphp
+
+            @if($editItem)
+                <div class="card shadow-sm border-primary mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Edit Item: {{ $editItem->sku }}</strong>
+                        <a href="{{ route('admin.inventory.index', ['tab' => 'items']) }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ route('admin.inventory.items.update', $editItem) }}" class="row g-2">
+                            @csrf
+                            <div class="col-md-2">
+                                <label class="form-label">ItemCode</label>
+                                <input type="text" name="item_code" class="form-control" value="{{ old('item_code', $editItem->sku) }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ItemName</label>
+                                <input type="text" name="item_name" class="form-control" value="{{ old('item_name', $editItem->name) }}" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Category</label>
+                                <input type="text" name="category" class="form-control" value="{{ old('category', $editItem->category) }}">
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label">UoM</label>
+                                <input type="text" name="uom" class="form-control" value="{{ old('uom', $editItem->uom) }}" required>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label">Reorder</label>
+                                <input type="number" name="reorder_level" class="form-control" value="{{ old('reorder_level', $editItem->reorder_level) }}" min="0" step="0.001">
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label">Status</label>
+                                <select name="is_active" class="form-select">
+                                    <option value="1" @selected(old('is_active', $editItem->is_active ? '1' : '0') === '1')>Active</option>
+                                    <option value="0" @selected(old('is_active', $editItem->is_active ? '1' : '0') === '0')>Inactive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" type="submit">Save</button>
+                            </div>
+                        </form>
+                        <div class="small text-warning mt-2">
+                            Note: UoM label change old stock display ko bhi affect kar sakta hai.
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="card shadow-sm mb-3 inventory-import-shell">
                 <div class="card-header">Legacy Bulk Import (name,sku,uom,reorder_level,is_active,category)</div>
                 <div class="card-body">
@@ -228,6 +280,7 @@
                                         <th>UoM</th>
                                         <th>Reorder</th>
                                         <th>Status</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -259,10 +312,13 @@
                                                     <span class="badge bg-secondary">Inactive</span>
                                                 @endif
                                             </td>
+                                            <td>
+                                                <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.inventory.index', ['tab' => 'items', 'edit_item' => $item->id]) }}#items-pane">Edit</a>
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted">{{ ($search ?? '') !== '' ? 'No items matched your search.' : 'No items found' }}</td>
+                                            <td colspan="8" class="text-center text-muted">{{ ($search ?? '') !== '' ? 'No items matched your search.' : 'No items found' }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

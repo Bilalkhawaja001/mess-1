@@ -460,6 +460,22 @@ class KitchenController extends Controller
             $transQty = $transQuantity;
         }
 
+        $availableQty = $this->inventoryService->balanceForItem($item->id);
+
+        if ($availableQty <= 0) {
+            return back()
+                ->withErrors(['quantity' => 'Stock not available.'])
+                ->withInput();
+        }
+
+        if ($baseQuantity > $availableQty) {
+            return back()
+                ->withErrors([
+                    'quantity' => 'Not enough stock available. Available: '.number_format($availableQty, 3).' '.$item->uom.', Requested: '.number_format($baseQuantity, 3).' '.$item->uom,
+                ])
+                ->withInput();
+        }
+
         $recentDuplicate = KitchenIssue::query()
             ->where('item_id', $item->id)
             ->where('issue_date', $d['issue_date'])
@@ -542,8 +558,12 @@ class KitchenController extends Controller
 
                 $item = Item::query()->findOrFail($lockedIssue->item_id);
                 $currentBalance = $this->inventoryService->balanceForItem($item->id);
+                if ($currentBalance <= 0) {
+                    throw new \RuntimeException('Stock not available.');
+                }
+
                 if ((float) $lockedIssue->quantity > $currentBalance) {
-                    throw new \RuntimeException('Not enough stock to approve this kitchen issue. Current balance: '.number_format($currentBalance, 3).' '.$item->uom);
+                    throw new \RuntimeException('Not enough stock available. Available: '.number_format($currentBalance, 3).' '.$item->uom.', Requested: '.number_format((float) $lockedIssue->quantity, 3).' '.$item->uom);
                 }
 
                 $unitCost = $this->inventoryService->currentUnitCostForItem((int) $lockedIssue->item_id);

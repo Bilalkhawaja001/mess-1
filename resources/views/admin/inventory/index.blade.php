@@ -614,7 +614,7 @@
                             <tbody>
                                 @forelse(($stockLedgerRows ?? collect()) as $row)
                                     <tr>
-                                        <td>{{ \\Illuminate\\Support\\Carbon::parse($row->txn_at)->format('Y-m-d H:i') }}</td>
+                                        <td>{{ \Illuminate\Support\Carbon::parse($row->txn_at)->format('Y-m-d H:i') }}</td>
                                         <td>{{ $row->item_sku }}</td>
                                         <td>{{ $row->item_name }}</td>
                                         <td>{{ $row->txn_type }}</td>

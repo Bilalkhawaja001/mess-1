@@ -165,7 +165,18 @@
         </li>
     </ul>
 
-    <div class="tab-content" id="kitchenTabsContent">
+    @if ($errors->any())
+    <div class="alert alert-danger">
+        <strong>Please fix the following:</strong>
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+<div class="tab-content" id="kitchenTabsContent">
         <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'issue' ? 'show active' : '' }} kitchen-tab-pane" id="tab-issue" role="tabpanel" aria-labelledby="tab-issue-tab" tabindex="0">
             <div class="kitchen-tab-kicker">Kitchen Ops</div>
             <div class="kitchen-tab-title">Post Kitchen Issue</div>

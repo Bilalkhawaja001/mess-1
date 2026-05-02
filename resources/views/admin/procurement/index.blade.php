@@ -844,25 +844,31 @@
                         <div class="col-md-2 d-flex align-items-end gap-2">
                             <button class="btn btn-primary w-100">Apply</button>
                         </div>
-                        <div class="col-12 d-flex justify-content-end">
-                            <div class="d-flex gap-2 flex-wrap align-items-end">
-                                    <div>
-                                        <label class="form-label small mb-1">Download Type</label>
-                                        <select id="purchase-report-download-type" class="form-select form-select-sm">
-                                            <option value="summary">Purchase Report Summary</option>
-                                            <option value="detail">GRN Detail</option>
-                                        </select>
-                                    </div>
+                    </form>
 
-                                    <button
-                                        type="button"
-                                        id="purchase-report-download-btn"
-                                        data-summary-url="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}"
-                                        data-detail-url="{{ route('admin.procurement.grn.export.detail', ['from_date' => $reportFromDate, 'to_date' => $reportToDate]) }}"
-                                        class="btn btn-outline-primary btn-sm">
-                                        Download
-                                    </button>
-                                </div>
+                    <form method="GET" action="{{ route('admin.procurement.reports.export-selected') }}" class="row g-3 mb-3">
+                        <input type="hidden" name="tab" value="reports">
+                        <div class="col-md-3">
+                            <label class="form-label">From Date</label>
+                            <input type="date" name="from_date" value="{{ $reportFromDate }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">To Date</label>
+                            <input type="date" name="to_date" value="{{ $reportToDate }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Search</label>
+                            <input type="text" name="q" value="{{ $reportSearch }}" class="form-control" placeholder="e.g. Chicken">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Download Type</label>
+                            <select name="report_type" id="purchase-report-download-type" class="form-select">
+                                <option value="summary">Purchase Report Summary</option>
+                                <option value="detail">GRN Detail</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="submit" id="purchase-report-download-btn" class="btn btn-outline-primary w-100">Download</button>
                         </div>
                     </form>
 

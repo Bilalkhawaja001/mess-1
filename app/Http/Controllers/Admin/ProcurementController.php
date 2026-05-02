@@ -325,9 +325,13 @@ class ProcurementController extends Controller
 
     public function exportSelectedPurchaseReport(Request $request): StreamedResponse
     {
-        return $request->input('report_type') === 'detail'
-            ? $this->exportGrnDetail($request)
-            : $this->exportPurchaseReports($request);
+        $reportType = trim((string) $request->input('report_type', 'summary'));
+
+        if ($reportType === 'detail') {
+            return $this->exportGrnDetail($request);
+        }
+
+        return $this->exportPurchaseReports($request);
     }
 
     public function exportPurchaseReports(Request $request): StreamedResponse

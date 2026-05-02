@@ -73,6 +73,42 @@
         padding-top: 0.7rem;
         padding-bottom: 0.55rem;
     }
+
+    .inventory-vendor-return .card-body {
+        padding: 16px 18px;
+    }
+
+    .inventory-vendor-return .form-label {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #334155;
+    }
+
+    .inventory-vendor-return .form-control,
+    .inventory-vendor-return .form-select {
+        min-height: 42px;
+        font-size: 14px;
+        border-radius: 12px;
+    }
+
+    .inventory-vendor-return .vendor-return-filter-row {
+        align-items: end;
+        row-gap: 10px;
+    }
+
+    .inventory-vendor-return #vendor-return-source-clear-filter {
+        min-width: 86px;
+        white-space: nowrap;
+        border-radius: 12px;
+    }
+
+    .inventory-vendor-return .vendor-return-submit {
+        min-width: 185px;
+        border-radius: 12px;
+        font-weight: 700;
+    }
+
 </style>
 @endpush
 
@@ -537,10 +573,10 @@
                             <span class="text-muted small">Store stock only</span>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ route('admin.inventory.vendor-returns.store') }}" class="row g-2">
+                            <form method="POST" action="{{ route('admin.inventory.vendor-returns.store') }}" class="row g-3 vendor-return-filter-row">
                                 @csrf
 
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label">Filter by GRN Date</label>
                                     <input type="date" id="vendor-return-source-date-filter" class="form-control">
                                 </div>
@@ -596,7 +632,7 @@
                                 </div>
 
                                 <div class="col-12">
-                                    <button class="btn btn-warning" type="submit">Post Vendor Return</button>
+                                    <button class="btn btn-warning vendor-return-submit" type="submit">Post Vendor Return</button>
                                 </div>
                             </form>
                         </div>

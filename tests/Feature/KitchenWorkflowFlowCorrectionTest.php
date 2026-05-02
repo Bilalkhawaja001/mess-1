@@ -294,6 +294,46 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
         $this->assertEquals(1, StockTransaction::query()->where('txn_type', StockTransaction::TXN_TYPE_KITCHEN_ISSUE)->count());
     }
 
+    public function test_two_pending_issues_exceeding_combined_stock_cannot_both_approve(): void
+    {
+        $this->actingAs($this->admin());
+        $item = $this->kitchenItem();
+
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 10,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-10',
+        ]);
+
+        $firstIssue = KitchenIssue::query()->create([
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'issue_type' => 'CONSUMPTION',
+            'quantity' => 6,
+            'status' => KitchenIssue::STATUS_DRAFT,
+        ]);
+
+        $secondIssue = KitchenIssue::query()->create([
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'issue_type' => 'CONSUMPTION',
+            'quantity' => 6,
+            'status' => KitchenIssue::STATUS_DRAFT,
+        ]);
+
+        $this->post(route('admin.kitchen.issues.approve.legacy', $firstIssue))->assertRedirect();
+
+        $this->post(route('admin.kitchen.issues.approve.legacy', $secondIssue))
+            ->assertRedirect()
+            ->assertSessionHasErrors(['kitchen_issue']);
+
+        $this->assertSame(KitchenIssue::STATUS_APPROVED, $firstIssue->fresh()->status);
+        $this->assertSame(KitchenIssue::STATUS_DRAFT, $secondIssue->fresh()->status);
+        $this->assertEquals(1, StockTransaction::query()->where('txn_type', StockTransaction::TXN_TYPE_KITCHEN_ISSUE)->count());
+    }
+
     public function test_legacy_kitchen_page_still_loads_successfully(): void
     {
         $this->actingAs($this->admin());

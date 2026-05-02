@@ -548,9 +548,13 @@
                                     <input type="date" id="vendor-return-source-date-filter" class="form-control">
                                 </div>
 
-                                <div class="col-md-8">
+                                <div class="col-md-7">
                                     <label class="form-label">Search GRN / Vendor / Item</label>
                                     <input type="text" id="vendor-return-source-search" class="form-control" placeholder="Type item, GRN no, vendor, code">
+                                </div>
+
+                                <div class="col-md-1 d-flex align-items-end">
+                                    <button type="button" id="vendor-return-source-clear-filter" class="btn btn-outline-secondary w-100">Clear</button>
                                 </div>
 
                                 <div class="col-12">
@@ -558,8 +562,13 @@
                                     <select name="goods_receipt_line_id" id="vendor-return-source" class="form-select" required>
                                         <option value="">Select GRN source</option>
                                         @foreach($vendorReturnSources as $source)
-                                            <option value="{{ $source['goods_receipt_id'] }}" {{ (string) old('goods_receipt_id') === (string) $source['goods_receipt_id'] ? 'selected' : '' }}>
-                                                {{ $source['grn_number'] }} — {{ $source['vendor_name'] }} — {{ $source['item_sku'] }} / {{ $source['item_name'] }}
+                                            <option
+                                                value="{{ $source['goods_receipt_line_id'] ?? $source['goods_receipt_id'] }}"
+                                                data-grn-id="{{ $source['goods_receipt_id'] }}"
+                                                data-source-date="{{ \Illuminate\Support\Carbon::parse($source['received_date'])->format('Y-m-d') }}"
+                                                data-search-text="{{ strtolower($source['grn_number'].' '.$source['vendor_name'].' '.$source['item_sku'].' '.$source['item_name']) }}"
+                                                {{ (string) old('goods_receipt_line_id') === (string)($source['goods_receipt_line_id'] ?? '') ? 'selected' : '' }}>
+                                                {{ \Illuminate\Support\Carbon::parse($source['received_date'])->format('Y-m-d') }} — {{ $source['grn_number'] }} — {{ $source['vendor_name'] }} — {{ $source['item_sku'] }} / {{ $source['item_name'] }} — Returnable: {{ number_format((float) $source['returnable_qty'], 3) }} {{ $source['uom'] }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -889,11 +898,18 @@
 
         const returnSources = @json($vendorReturnSourcesJson);
         const returnSourcesByGrnId = {};
-        returnSources.forEach((source) => { returnSourcesByGrnId[source.goods_receipt_id] = source; });
+        const returnSourcesByLineId = {};
+        returnSources.forEach((source) => {
+            returnSourcesByGrnId[source.goods_receipt_id] = source;
+            if (source.goods_receipt_line_id) {
+                returnSourcesByLineId[source.goods_receipt_line_id] = source;
+            }
+        });
 
         const returnSourceSelect = document.getElementById('vendor-return-source');
         const returnSourceDateFilter = document.getElementById('vendor-return-source-date-filter');
         const returnSourceSearch = document.getElementById('vendor-return-source-search');
+        const returnSourceClearFilter = document.getElementById('vendor-return-source-clear-filter');
         const returnVendorInput = document.getElementById('vendor-return-vendor-id');
         const returnItemInput = document.getElementById('vendor-return-item-id');
         const returnGrnInput = document.getElementById('vendor-return-grn-id');
@@ -1032,7 +1048,8 @@
 
             [...returnSourceSelect.options].forEach((option, index) => {
                 if (index === 0) {
-                    option.hidden = false;
+                    option.disabled = false;
+                    option.style.display = '';
                     return;
                 }
 
@@ -1042,11 +1059,12 @@
                 const dateOk = !dateValue || optionDate === dateValue;
                 const searchOk = !searchValue || haystack.includes(searchValue);
 
-                option.hidden = !(dateOk && searchOk);
+                option.disabled = !(dateOk && searchOk);
+                option.style.display = (dateOk && searchOk) ? '' : 'none';
             });
 
             const selected = returnSourceSelect.selectedOptions && returnSourceSelect.selectedOptions[0];
-            if (selected && selected.hidden) {
+            if (selected && selected.disabled) {
                 returnSourceSelect.value = '';
                 syncVendorReturnSource();
             }
@@ -1058,6 +1076,11 @@
         if (returnSourceSelect) returnSourceSelect.addEventListener('change', syncVendorReturnSource);
         if (returnSourceDateFilter) returnSourceDateFilter.addEventListener('change', filterVendorReturnSources);
         if (returnSourceSearch) returnSourceSearch.addEventListener('input', filterVendorReturnSources);
+        if (returnSourceClearFilter) returnSourceClearFilter.addEventListener('click', () => {
+            if (returnSourceDateFilter) returnSourceDateFilter.value = '';
+            if (returnSourceSearch) returnSourceSearch.value = '';
+            filterVendorReturnSources();
+        });
         if (returnUnitSelect) returnUnitSelect.addEventListener('change', syncVendorReturnPreview);
         if (returnQtyInput) returnQtyInput.addEventListener('input', syncVendorReturnPreview);
 

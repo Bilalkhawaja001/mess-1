@@ -635,7 +635,7 @@
 
                                 <div class="col-12">
                                     <label class="form-label">Received Stock Source</label>
-                                    <select name="goods_receipt_line_id" id="vendor-return-source" class="form-select" required>
+                                    <select name="goods_receipt_line_id" id="vendor-return-source" class="form-select" size="8" required>
                                         <option value="">Select GRN source</option>
                                         @foreach($vendorReturnSources as $source)
                                             <option

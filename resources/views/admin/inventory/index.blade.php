@@ -178,7 +178,7 @@
                                     <option value="0" @selected(old('is_active', $editItem->is_active ? '1' : '0') === '0')>Inactive</option>
                                 </select>
                             </div>
-                            <div class="col-md-2 d-flex align-items-end">
+                            <div class="col-md-1 d-flex align-items-end">
                                 <button class="btn btn-primary w-100" type="submit">Save</button>
                             </div>
                         </form>

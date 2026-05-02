@@ -11,6 +11,7 @@ use App\Models\StockCountLine;
 use App\Models\StockTransaction;
 use App\Models\VendorReturn;
 use App\Services\InventoryService;
+use App\Support\DocumentNumber;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -811,7 +812,7 @@ class InventoryController extends Controller
                     'goods_receipt_id' => $grn->id,
                     'goods_receipt_line_id' => $line->id,
                     'item_id' => $item->id,
-                    'return_number' => 'VRN-'.now()->format('YmdHis'),
+                    'return_number' => DocumentNumber::generate('VRN'),
                     'return_date' => $data['return_date'],
                     'qty_returned' => $baseQuantity,
                     'trans_unit_code' => $transUnitCode,

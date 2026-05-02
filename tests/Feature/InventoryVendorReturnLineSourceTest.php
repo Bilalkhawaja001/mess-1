@@ -155,6 +155,38 @@ class InventoryVendorReturnLineSourceTest extends TestCase
         $this->assertSame($line->item_id, $return->item_id);
     }
 
+    public function test_same_second_vendor_returns_generate_unique_numbers(): void
+    {
+        $admin = $this->adminUser();
+        [, $lines] = $this->seedGrnWithLines([
+            ['sku' => 'VRN-FIRST', 'name' => 'Rice', 'uom' => 'kg', 'qty' => 5, 'price' => 100],
+            ['sku' => 'VRN-SECOND', 'name' => 'Oil', 'uom' => 'ltr', 'qty' => 5, 'price' => 120],
+        ]);
+
+        $firstLine = $lines[0];
+        $secondLine = $lines[1];
+
+        $responseA = $this->actingAs($admin)->post('/admin/inventory/vendor-returns', [
+            'goods_receipt_line_id' => $firstLine->id,
+            'return_date' => '2026-04-12',
+            'quantity' => 1,
+        ]);
+        $responseB = $this->actingAs($admin)->post('/admin/inventory/vendor-returns', [
+            'goods_receipt_line_id' => $secondLine->id,
+            'return_date' => '2026-04-12',
+            'quantity' => 1,
+        ]);
+
+        $responseA->assertRedirect();
+        $responseB->assertRedirect();
+
+        $numbers = VendorReturn::query()->orderBy('id')->pluck('return_number');
+        $this->assertCount(2, $numbers);
+        $this->assertCount(2, $numbers->unique());
+        $this->assertMatchesRegularExpression('/^VRN-\d{14}-[A-F0-9]{6}$/', $numbers[0]);
+        $this->assertMatchesRegularExpression('/^VRN-\d{14}-[A-F0-9]{6}$/', $numbers[1]);
+    }
+
     public function test_vendor_return_qty_above_source_pending_fails(): void
     {
         $admin = $this->adminUser();

@@ -120,6 +120,72 @@ class ProcurementHardeningTest extends TestCase
         $response->assertSessionHasErrors(['vendor_id', 'po_date', 'lines.0.item_id', 'lines.0.qty_ordered', 'lines.0.unit_price']);
     }
 
+    public function test_same_second_po_creation_generates_unique_numbers(): void
+    {
+        $admin = $this->adminUser();
+        $vendor = Vendor::query()->create(['name' => 'Vendor Unique']);
+        $firstItem = Item::query()->create(['name' => 'Rice A', 'sku' => 'RICE-A', 'uom' => 'kg', 'is_active' => true]);
+        $secondItem = Item::query()->create(['name' => 'Rice B', 'sku' => 'RICE-B', 'uom' => 'kg', 'is_active' => true]);
+
+        $responseA = $this->actingAs($admin)->post('/admin/procurement/po', [
+            'vendor_id' => $vendor->id,
+            'po_date' => '2026-04-10',
+            'lines' => [
+                ['item_id' => $firstItem->id, 'qty_ordered' => '10', 'unit_price' => '100'],
+            ],
+        ]);
+        $responseB = $this->actingAs($admin)->post('/admin/procurement/po', [
+            'vendor_id' => $vendor->id,
+            'po_date' => '2026-04-10',
+            'lines' => [
+                ['item_id' => $secondItem->id, 'qty_ordered' => '5', 'unit_price' => '120'],
+            ],
+        ]);
+
+        $responseA->assertRedirect();
+        $responseB->assertRedirect();
+
+        $poNumbers = PurchaseOrder::query()->orderBy('id')->pluck('po_number');
+        $this->assertCount(2, $poNumbers);
+        $this->assertCount(2, $poNumbers->unique());
+        $this->assertMatchesRegularExpression('/^PO-\d{14}-[A-F0-9]{6}$/', $poNumbers[0]);
+        $this->assertMatchesRegularExpression('/^PO-\d{14}-[A-F0-9]{6}$/', $poNumbers[1]);
+    }
+
+    public function test_same_second_grn_creation_generates_unique_numbers(): void
+    {
+        $admin = $this->adminUser();
+        [$po, $line] = $this->makePurchaseOrderWithLine(20);
+
+        $responseA = $this->actingAs($admin)->post('/admin/procurement/grn', [
+            'purchase_order_id' => $po->id,
+            'purchase_order_line_id' => $line->id,
+            'item_id' => $line->item_id,
+            'received_date' => '2026-04-10',
+            'qty_received' => '4',
+            'unit_cost' => '95',
+            'unit_code' => 'kg',
+        ]);
+        $responseB = $this->actingAs($admin)->post('/admin/procurement/grn', [
+            'purchase_order_id' => $po->id,
+            'purchase_order_line_id' => $line->id,
+            'item_id' => $line->item_id,
+            'received_date' => '2026-04-10',
+            'qty_received' => '3',
+            'unit_cost' => '97',
+            'unit_code' => 'kg',
+        ]);
+
+        $responseA->assertRedirect();
+        $responseB->assertRedirect();
+
+        $grnNumbers = GoodsReceipt::query()->orderBy('id')->pluck('grn_number');
+        $this->assertCount(2, $grnNumbers);
+        $this->assertCount(2, $grnNumbers->unique());
+        $this->assertMatchesRegularExpression('/^GRN-\d{14}-[A-F0-9]{6}$/', $grnNumbers[0]);
+        $this->assertMatchesRegularExpression('/^GRN-\d{14}-[A-F0-9]{6}$/', $grnNumbers[1]);
+    }
+
     public function test_valid_grn_creation(): void
     {
         $admin = $this->adminUser();

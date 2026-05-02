@@ -18,6 +18,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class KitchenController extends Controller
 {
@@ -36,10 +37,11 @@ class KitchenController extends Controller
         }
 
         $items = Item::query()->with('units')->orderBy('name')->get();
+        $itemBalances = $this->inventoryService->balancesForItems($items->pluck('id')->all());
         $issueItems = $items
             ->where('is_active', true)
-            ->map(function (Item $item) {
-                $availableQty = $this->inventoryService->balanceForItem($item->id);
+            ->map(function (Item $item) use ($itemBalances) {
+                $availableQty = (float) ($itemBalances[$item->id] ?? 0);
                 $item->setAttribute('available_qty', $availableQty);
 
                 return $item;
@@ -125,12 +127,16 @@ class KitchenController extends Controller
                 DB::raw('(st.quantity * st.unit_cost) as amount'),
             ]);
 
+        $monthCycleExpression = DB::getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', st.txn_at)"
+            : "DATE_FORMAT(st.txn_at, '%Y-%m')";
+
         $kitchenMonthlySummary = (clone $kitchenLedgerBase)
-            ->groupBy(DB::raw("DATE_FORMAT(st.txn_at, '%Y-%m')"))
-            ->orderByDesc(DB::raw("DATE_FORMAT(st.txn_at, '%Y-%m')"))
+            ->groupBy(DB::raw($monthCycleExpression))
+            ->orderByDesc(DB::raw($monthCycleExpression))
             ->limit(12)
             ->get([
-                DB::raw("DATE_FORMAT(st.txn_at, '%Y-%m') as month_cycle"),
+                DB::raw($monthCycleExpression.' as month_cycle'),
                 DB::raw('COUNT(*) as ledger_rows'),
                 DB::raw('SUM(st.quantity) as total_qty'),
                 DB::raw('SUM(st.quantity * st.unit_cost) as total_amount'),
@@ -330,28 +336,54 @@ class KitchenController extends Controller
 
     public function apiMenus(): JsonResponse
     {
-        $rows = Menu::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'meal_type']);
+        $rows = Menu::query()
+            ->whereIn('status', [Menu::STATUS_DRAFT, Menu::STATUS_APPROVED])
+            ->orderBy('title')
+            ->get(['id', 'title', 'meal_type'])
+            ->map(fn (Menu $menu) => [
+                'id' => $menu->id,
+                'name' => $menu->title,
+                'meal_type' => $menu->meal_type,
+            ]);
 
         return response()->json(['menus' => $rows]);
     }
 
     public function storeMenu(Request $request): RedirectResponse
     {
-        Menu::query()->create($request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'meal_type' => 'required|string|max:30',
-        ]));
+        ]);
+
+        Menu::query()->create([
+            'menu_date' => now()->toDateString(),
+            'meal_type' => $data['meal_type'],
+            'title' => $data['name'],
+            'description' => null,
+            'items_text' => $data['name'],
+            'status' => Menu::STATUS_DRAFT,
+        ]);
 
         return back()->with('success', 'Menu created');
     }
 
     public function updateMenu(Request $request, Menu $menu): RedirectResponse
     {
-        $menu->update($request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'meal_type' => 'required|string|max:30',
-            'is_active' => 'nullable|boolean',
-        ]));
+            'is_active' => ['nullable', Rule::in(['0', '1', 0, 1, true, false])],
+        ]);
+
+        $menu->update([
+            'meal_type' => $data['meal_type'],
+            'title' => $data['name'],
+            'items_text' => $menu->items_text ?: $data['name'],
+            'status' => array_key_exists('is_active', $data) && ! (bool) $data['is_active']
+                ? Menu::STATUS_INACTIVE
+                : ($menu->status === Menu::STATUS_INACTIVE ? Menu::STATUS_DRAFT : $menu->status),
+        ]);
 
         return back()->with('success', 'Menu updated');
     }

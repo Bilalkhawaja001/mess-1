@@ -14,6 +14,7 @@ use App\Models\StockTransaction;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class KitchenWorkflowFlowCorrectionTest extends TestCase
@@ -73,19 +74,43 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
         ]);
     }
 
+    private function createDailyMenu(string $title = 'Lunch', string $mealType = 'LUNCH'): Menu
+    {
+        return Menu::query()->create([
+            'menu_date' => '2026-04-11',
+            'meal_type' => $mealType,
+            'title' => $title,
+            'description' => null,
+            'items_text' => $title,
+            'status' => Menu::STATUS_DRAFT,
+        ]);
+    }
+
+    private function createLegacyMenu(string $title = 'Lunch', string $mealType = 'LUNCH'): int
+    {
+        return (int) DB::table('menus')->insertGetId([
+            'name' => $title,
+            'meal_type' => $mealType,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
     public function test_meal_plan_create_defaults_to_draft(): void
     {
         $this->actingAs($this->admin());
-        $menu = Menu::query()->create(['name' => 'Lunch', 'meal_type' => 'LUNCH']);
+        $this->createDailyMenu('Lunch', 'LUNCH');
+        $legacyMenuId = $this->createLegacyMenu('Lunch', 'LUNCH');
 
         $this->post(route('admin.kitchen.plans.store'), [
             'plan_date' => '2026-04-11',
-            'menu_id' => $menu->id,
+            'menu_id' => $legacyMenuId,
             'planned_servings' => 100,
         ])->assertRedirect();
 
         $this->assertDatabaseHas('meal_plans', [
-            'menu_id' => $menu->id,
+            'menu_id' => $legacyMenuId,
             'planned_servings' => 100,
             'status' => MealPlan::STATUS_DRAFT,
         ]);
@@ -95,9 +120,10 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
     public function test_meal_plan_approve_changes_status_and_sets_approved_at(): void
     {
         $this->actingAs($this->admin());
+        $this->createDailyMenu('Dinner', 'DINNER');
         $plan = MealPlan::query()->create([
             'plan_date' => '2026-04-11',
-            'menu_id' => Menu::query()->create(['name' => 'Dinner', 'meal_type' => 'DINNER'])->id,
+            'menu_id' => $this->createLegacyMenu('Dinner', 'DINNER'),
             'planned_servings' => 50,
             'status' => MealPlan::STATUS_DRAFT,
             'approved_at' => null,
@@ -113,9 +139,10 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
     public function test_meal_plan_approve_does_not_create_stock_transaction(): void
     {
         $this->actingAs($this->admin());
+        $this->createDailyMenu('Breakfast', 'BREAKFAST');
         $plan = MealPlan::query()->create([
             'plan_date' => '2026-04-11',
-            'menu_id' => Menu::query()->create(['name' => 'Breakfast', 'meal_type' => 'BREAKFAST'])->id,
+            'menu_id' => $this->createLegacyMenu('Breakfast', 'BREAKFAST'),
             'planned_servings' => 20,
             'status' => MealPlan::STATUS_DRAFT,
         ]);
@@ -130,6 +157,14 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
         $this->actingAs($this->admin());
         $item = $this->kitchenItem();
         $mess = $this->mess();
+
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 10,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-10',
+        ]);
 
         $this->post(route('admin.kitchen.issues.store'), [
             'issue_date' => '2026-04-11',
@@ -281,21 +316,22 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
         ])->assertRedirect();
 
         $menu = Menu::query()->firstOrFail();
+        $legacyMenuId = $this->createLegacyMenu('Special Lunch', 'LUNCH');
 
         $this->post(route('admin.kitchen.recipes.store'), [
-            'menu_id' => $menu->id,
+            'menu_id' => $legacyMenuId,
             'item_id' => $item->id,
             'qty_per_serving' => 0.5,
         ])->assertRedirect();
 
         $this->post(route('admin.kitchen.plans.store'), [
             'plan_date' => '2026-04-12',
-            'menu_id' => $menu->id,
+            'menu_id' => $legacyMenuId,
             'planned_servings' => 60,
         ])->assertRedirect();
 
-        $this->assertDatabaseHas('menus', ['name' => 'Special Lunch']);
-        $this->assertDatabaseHas('recipes', ['menu_id' => $menu->id, 'item_id' => $item->id]);
-        $this->assertDatabaseHas('meal_plans', ['menu_id' => $menu->id, 'status' => MealPlan::STATUS_DRAFT]);
+        $this->assertDatabaseHas('daily_menus', ['title' => 'Special Lunch']);
+        $this->assertDatabaseHas('recipes', ['menu_id' => $legacyMenuId, 'item_id' => $item->id]);
+        $this->assertDatabaseHas('meal_plans', ['menu_id' => $legacyMenuId, 'status' => MealPlan::STATUS_DRAFT]);
     }
 }

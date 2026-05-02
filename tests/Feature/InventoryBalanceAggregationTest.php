@@ -74,6 +74,64 @@ class InventoryBalanceAggregationTest extends TestCase
         $this->assertSame($service->balanceForItem($second->id), (float) $aggregate[$second->id]);
     }
 
+    public function test_store_stock_totals_include_transactions_older_than_latest_hundred_rows(): void
+    {
+        $admin = $this->admin();
+        $targetItem = Item::query()->create([
+            'name' => 'Historic Rice',
+            'sku' => 'HIST-RICE',
+            'uom' => 'kg',
+            'is_active' => true,
+        ]);
+
+        StockTransaction::query()->create([
+            'item_id' => $targetItem->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 100,
+            'unit_cost' => 0,
+            'txn_at' => '2026-01-01 00:00:00',
+            'remarks' => 'opening old stock',
+        ]);
+        StockTransaction::query()->create([
+            'item_id' => $targetItem->id,
+            'txn_type' => 'OUT',
+            'quantity' => 30,
+            'unit_cost' => 0,
+            'txn_at' => '2026-01-02 00:00:00',
+            'remarks' => 'old issue',
+        ]);
+
+        for ($i = 0; $i < 101; $i++) {
+            $noiseItem = Item::query()->create([
+                'name' => 'Noise '.$i,
+                'sku' => 'NOISE-'.$i,
+                'uom' => 'kg',
+                'is_active' => true,
+            ]);
+
+            StockTransaction::query()->create([
+                'item_id' => $noiseItem->id,
+                'txn_type' => 'OPENING',
+                'quantity' => 1,
+                'unit_cost' => 0,
+                'txn_at' => now()->addSeconds($i),
+                'remarks' => 'newer noise txn '.$i,
+            ]);
+        }
+
+        $response = $this->actingAs($admin)->get('/admin/inventory?tab=store-stock');
+        $response->assertOk();
+
+        $row = collect($response->viewData('storeStockRows'))->first(function (array $row) use ($targetItem) {
+            return (int) $row['item']->id === $targetItem->id;
+        });
+
+        $this->assertNotNull($row);
+        $this->assertSame(100.0, (float) $row['received_qty']);
+        $this->assertSame(30.0, (float) $row['issued_qty']);
+        $this->assertSame(70.0, (float) $row['balance']);
+    }
+
     public function test_vendor_return_source_uses_current_balance_correctly(): void
     {
         $admin = $this->admin();

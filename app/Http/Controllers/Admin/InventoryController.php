@@ -104,6 +104,7 @@ class InventoryController extends Controller
 
             $returnSourceLineIds = $returnSourceGrns
                 ->flatMap(fn (GoodsReceipt $grn) => $grn->lines->pluck('id'))
+                ->filter()
                 ->values();
 
             $returnSourceTxns = StockTransaction::query()
@@ -114,16 +115,10 @@ class InventoryController extends Controller
                 ->keyBy('reference_id');
 
             $returnedQtyBySource = VendorReturn::query()
-                ->get()
-                ->reduce(function (array $carry, VendorReturn $vendorReturn): array {
-                    $sourceKey = $vendorReturn->goods_receipt_line_id
-                        ? 'line:'.$vendorReturn->goods_receipt_line_id
-                        : 'legacy:'.$vendorReturn->goods_receipt_id.':'.$vendorReturn->item_id;
-
-                    $carry[$sourceKey] = ($carry[$sourceKey] ?? 0) + (float) $vendorReturn->qty_returned;
-
-                    return $carry;
-                }, []);
+                ->whereNotNull('goods_receipt_line_id')
+                ->selectRaw('goods_receipt_line_id, SUM(qty_returned) as total_returned')
+                ->groupBy('goods_receipt_line_id')
+                ->pluck('total_returned', 'goods_receipt_line_id');
             $lineBalances = $this->inventoryService->balancesForItems($returnSourceGrns->flatMap(fn (GoodsReceipt $grn) => $grn->lines->pluck('item_id'))->all());
 
             $vendorReturnSources = $returnSourceGrns
@@ -147,7 +142,7 @@ class InventoryController extends Controller
 
                             $currentBalance = (float) ($lineBalances[$item->id] ?? 0);
                             $receivedBaseQty = (float) $txn->quantity;
-                            $alreadyReturnedBaseQty = (float) (($returnedQtyBySource['line:'.$line->id] ?? 0) + ($returnedQtyBySource['legacy:'.$grn->id.':'.$item->id] ?? 0));
+                            $alreadyReturnedBaseQty = (float) ($returnedQtyBySource[$line->id] ?? 0);
                             $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
                             $returnableQty = min($currentBalance, $sourcePendingQty);
 
@@ -712,26 +707,22 @@ class InventoryController extends Controller
     public function storeVendorReturn(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'vendor_id' => 'required|exists:vendors,id',
-            'goods_receipt_id' => 'required|exists:goods_receipts,id',
-            'item_id' => 'required|exists:items,id',
+            'goods_receipt_line_id' => 'required|exists:goods_receipt_lines,id',
             'return_date' => 'required|date',
             'quantity' => 'required|numeric|min:0.001',
             'unit_code' => 'nullable|string|max:20',
             'remarks' => 'nullable|string|max:1000',
         ]);
 
-        $grn = GoodsReceipt::query()->with(['purchaseOrder.vendor', 'lines.item.units'])->findOrFail($data['goods_receipt_id']);
-        $vendor = $grn->purchaseOrder?->vendor;
-        $line = $grn->lines->firstWhere('item_id', (int) $data['item_id']) ?? $grn->lines->first();
-        $item = $line?->item;
+        $line = GoodsReceiptLine::query()
+            ->with(['item.units', 'goodsReceipt.purchaseOrder.vendor'])
+            ->findOrFail((int) $data['goods_receipt_line_id']);
+        $grn = $line->goodsReceipt;
+        $vendor = $grn?->purchaseOrder?->vendor;
+        $item = $line->item;
 
-        if (! $vendor || (int) $vendor->id !== (int) $data['vendor_id']) {
-            return back()->withErrors(['vendor_id' => 'Selected vendor does not match the selected GRN.'])->withInput();
-        }
-
-        if (! $line || ! $item || (int) $item->id !== (int) $data['item_id']) {
-            return back()->withErrors(['item_id' => 'Selected item does not match the selected GRN source.'])->withInput();
+        if (! $grn || ! $vendor || ! $item) {
+            return back()->withErrors(['goods_receipt_line_id' => 'Selected GRN line source is incomplete.'])->withInput();
         }
 
         $unitCode = trim((string) ($data['unit_code'] ?? ''));
@@ -760,13 +751,12 @@ class InventoryController extends Controller
             ->first();
 
         if (! $sourceTxn) {
-            return back()->withErrors(['goods_receipt_id' => 'Selected GRN has no stock receipt trail.'])->withInput();
+            return back()->withErrors(['goods_receipt_line_id' => 'Selected GRN line has no stock receipt trail.'])->withInput();
         }
 
         $currentBalance = $this->inventoryService->balanceForItem($item->id);
         $alreadyReturnedQty = (float) VendorReturn::query()
-            ->where('goods_receipt_id', $grn->id)
-            ->where('item_id', $item->id)
+            ->where('goods_receipt_line_id', $line->id)
             ->sum('qty_returned');
         $sourceReceivedQty = (float) $sourceTxn->quantity;
         $sourcePendingQty = max($sourceReceivedQty - $alreadyReturnedQty, 0);
@@ -785,7 +775,7 @@ class InventoryController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($data, $grn, $item, $vendor, $baseQuantity, $transUnitCode, $transQty, $sourceTxn) {
+            DB::transaction(function () use ($data, $grn, $line, $item, $vendor, $baseQuantity, $transUnitCode, $transQty, $sourceTxn) {
                 $lockedSourceTxn = StockTransaction::query()
                     ->whereKey($sourceTxn->id)
                     ->lockForUpdate()
@@ -803,8 +793,7 @@ class InventoryController extends Controller
                     ->sum('quantity');
                 $lockedCurrentBalance = round($lockedCurrentIn - $lockedCurrentOut, 3);
                 $lockedAlreadyReturnedQty = (float) VendorReturn::query()
-                    ->where('goods_receipt_id', $grn->id)
-                    ->where('item_id', $item->id)
+                    ->where('goods_receipt_line_id', $line->id)
                     ->lockForUpdate()
                     ->sum('qty_returned');
                 $lockedSourcePendingQty = max((float) $lockedSourceTxn->quantity - $lockedAlreadyReturnedQty, 0);
@@ -820,6 +809,7 @@ class InventoryController extends Controller
                 $vendorReturn = VendorReturn::query()->create([
                     'vendor_id' => $vendor->id,
                     'goods_receipt_id' => $grn->id,
+                    'goods_receipt_line_id' => $line->id,
                     'item_id' => $item->id,
                     'return_number' => 'VRN-'.now()->format('YmdHis'),
                     'return_date' => $data['return_date'],

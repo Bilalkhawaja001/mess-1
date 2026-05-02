@@ -539,9 +539,6 @@
                         <div class="card-body">
                             <form method="POST" action="{{ route('admin.inventory.vendor-returns.store') }}" class="row g-2">
                                 @csrf
-                                <input type="hidden" name="vendor_id" id="vendor-return-vendor-id" value="{{ old('vendor_id') }}">
-                                <input type="hidden" name="item_id" id="vendor-return-item-id" value="{{ old('item_id') }}">
-                                <input type="hidden" name="goods_receipt_id" id="vendor-return-grn-id" value="{{ old('goods_receipt_id') }}">
 
                                 <div class="col-md-4">
                                     <label class="form-label">Filter by GRN Date</label>
@@ -563,7 +560,7 @@
                                         <option value="">Select GRN source</option>
                                         @foreach($vendorReturnSources as $source)
                                             <option
-                                                value="{{ $source['goods_receipt_line_id'] ?? $source['goods_receipt_id'] }}"
+                                                value="{{ $source['goods_receipt_line_id'] }}"
                                                 data-grn-id="{{ $source['goods_receipt_id'] }}"
                                                 data-source-date="{{ \Illuminate\Support\Carbon::parse($source['received_date'])->format('Y-m-d') }}"
                                                 data-search-text="{{ strtolower($source['grn_number'].' '.$source['vendor_name'].' '.$source['item_sku'].' '.$source['item_name']) }}"
@@ -837,6 +834,8 @@
 @endsection
 
 @php
+    $oldVendorReturnSourceLineId = old('goods_receipt_line_id');
+
     $inventoryItemsJson = $items->map(function ($item) use ($balances) {
         $balanceRow = collect($balances ?? [])->firstWhere('item.id', $item->id) ?? null;
         $balance = $balanceRow['balance'] ?? 0;
@@ -858,6 +857,7 @@
 
     $vendorReturnSourcesJson = collect($vendorReturnSources ?? [])->map(function ($source) {
         return [
+            'goods_receipt_line_id' => $source['goods_receipt_line_id'],
             'goods_receipt_id' => $source['goods_receipt_id'],
             'vendor_id' => $source['vendor_id'],
             'vendor_name' => $source['vendor_name'],
@@ -910,9 +910,6 @@
         const returnSourceDateFilter = document.getElementById('vendor-return-source-date-filter');
         const returnSourceSearch = document.getElementById('vendor-return-source-search');
         const returnSourceClearFilter = document.getElementById('vendor-return-source-clear-filter');
-        const returnVendorInput = document.getElementById('vendor-return-vendor-id');
-        const returnItemInput = document.getElementById('vendor-return-item-id');
-        const returnGrnInput = document.getElementById('vendor-return-grn-id');
         const returnUnitSelect = document.getElementById('vendor-return-unit');
         const returnQtyInput = document.getElementById('vendor-return-qty');
         const returnMeta = document.getElementById('vendor-return-source-meta');
@@ -983,18 +980,11 @@
             const source = returnSourcesByLineId[grnId];
 
             if (!source) {
-                if (returnVendorInput) returnVendorInput.value = '';
-                if (returnItemInput) returnItemInput.value = '';
-                if (returnGrnInput) returnGrnInput.value = '';
                 if (returnUnitSelect) returnUnitSelect.innerHTML = '<option value="">Base unit</option>';
                 if (returnMeta) returnMeta.textContent = '';
                 if (returnConversion) returnConversion.textContent = '';
                 return;
             }
-
-            if (returnVendorInput) returnVendorInput.value = source.vendor_id;
-            if (returnItemInput) returnItemInput.value = source.item_id;
-            if (returnGrnInput) returnGrnInput.value = source.goods_receipt_id;
 
             if (returnMeta) {
                 returnMeta.textContent = `${source.vendor_name} | ${source.item_sku} - ${source.item_name} | Store balance ${source.current_balance_qty.toFixed(3)} ${source.uom} | Source pending ${source.returnable_qty.toFixed(3)} ${source.uom}`;
@@ -1108,6 +1098,12 @@
         });
 
         syncBalanceAndUnits();
+        renderVendorReturnSources();
+        @if($oldVendorReturnSourceLineId)
+        if (returnSourceSelect) {
+            returnSourceSelect.value = @json((string) $oldVendorReturnSourceLineId);
+        }
+        @endif
         syncVendorReturnSource();
     })();
 </script>

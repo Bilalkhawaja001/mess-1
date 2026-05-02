@@ -845,7 +845,24 @@
                             <button class="btn btn-primary w-100">Apply</button>
                         </div>
                         <div class="col-12 d-flex justify-content-end">
-                            <a href="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}" class="btn btn-outline-primary">Download Purchase Reports CSV</a>
+                            <div class="d-flex gap-2 flex-wrap align-items-end">
+                                    <div>
+                                        <label class="form-label small mb-1">Download Type</label>
+                                        <select id="purchase-report-download-type" class="form-select form-select-sm">
+                                            <option value="summary">Purchase Report Summary</option>
+                                            <option value="detail">GRN Detail</option>
+                                        </select>
+                                    </div>
+
+                                    <a
+                                        id="purchase-report-download-btn"
+                                        href="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}"
+                                        data-summary-url="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}"
+                                        data-detail-url="{{ route('admin.procurement.grn.export.detail') }}"
+                                        class="btn btn-outline-primary btn-sm">
+                                        Download
+                                    </a>
+                                </div>
                         </div>
                     </form>
 
@@ -1295,6 +1312,25 @@
 
                 window.location.href = `${baseUrl}?${params.toString()}`;
             });
+        }
+
+
+        const purchaseReportDownloadType = document.getElementById('purchase-report-download-type');
+        const purchaseReportDownloadBtn = document.getElementById('purchase-report-download-btn');
+
+        if (purchaseReportDownloadType && purchaseReportDownloadBtn) {
+            const syncPurchaseReportDownload = () => {
+                const summaryUrl = purchaseReportDownloadBtn.dataset.summaryUrl || purchaseReportDownloadBtn.href;
+                const detailBase = purchaseReportDownloadBtn.dataset.detailUrl || summaryUrl;
+                const query = summaryUrl.includes('?') ? summaryUrl.substring(summaryUrl.indexOf('?')) : '';
+
+                purchaseReportDownloadBtn.href = purchaseReportDownloadType.value === 'detail'
+                    ? `${detailBase}${query}`
+                    : summaryUrl;
+            };
+
+            purchaseReportDownloadType.addEventListener('change', syncPurchaseReportDownload);
+            syncPurchaseReportDownload();
         }
 
 </script>

@@ -139,6 +139,13 @@ class ProcurementHardeningTest extends TestCase
         $this->assertDatabaseCount('goods_receipts', 1);
         $this->assertDatabaseCount('goods_receipt_lines', 1);
         $this->assertDatabaseCount('stock_transactions', 1);
+
+        $grnLine = GoodsReceiptLine::query()->firstOrFail();
+        $this->assertDatabaseHas('stock_transactions', [
+            'txn_type' => 'GRN',
+            'reference_type' => GoodsReceiptLine::class,
+            'reference_id' => $grnLine->id,
+        ]);
     }
 
     public function test_grn_blocked_when_qty_exceeds_pending(): void
@@ -273,6 +280,146 @@ class ProcurementHardeningTest extends TestCase
         $this->assertSame(8.0, (float) $secondViewLine->pending_qty);
     }
 
+    public function test_grn_import_creates_stock_transaction_referencing_goods_receipt_line(): void
+    {
+        $admin = $this->adminUser();
+        [$po, $line] = $this->makePurchaseOrderWithLine(10);
+
+        $preview = [
+            'purchase_order_id' => $po->id,
+            'po_number' => $po->po_number,
+            'received_date' => '2026-04-10',
+            'valid_rows' => [[
+                'purchase_order_id' => $po->id,
+                'po_number' => $po->po_number,
+                'purchase_order_line_id' => $line->id,
+                'item_id' => $line->item_id,
+                'item_sku' => 'RICE-1',
+                'item_name' => 'Rice',
+                'pending_qty' => 10,
+                'qty_received' => 4,
+                'unit_cost' => 100,
+                'unit_code' => 'kg',
+                'unit_factor' => 1,
+                'received_date' => '2026-04-10',
+                'remarks' => 'import row',
+            ]],
+            'error_rows' => [],
+            'valid_count' => 1,
+            'error_count' => 0,
+        ];
+
+        $response = $this->actingAs($admin)
+            ->withSession(['procurement_grn_import_preview' => $preview])
+            ->post('/admin/procurement/grn/import/store');
+
+        $response->assertRedirect('/admin/procurement?tab=grn');
+        $grnLine = GoodsReceiptLine::query()->latest('id')->firstOrFail();
+        $this->assertDatabaseHas('stock_transactions', [
+            'txn_type' => 'GRN',
+            'reference_type' => GoodsReceiptLine::class,
+            'reference_id' => $grnLine->id,
+        ]);
+    }
+
+    public function test_multi_line_grn_creates_separate_stock_transactions_per_grn_line(): void
+    {
+        $admin = $this->adminUser();
+        $vendor = Vendor::query()->create(['name' => 'Vendor Multi Line']);
+        $firstItem = Item::query()->create(['name' => 'Rice', 'sku' => 'RICE-ML', 'uom' => 'kg', 'is_active' => true]);
+        $secondItem = Item::query()->create(['name' => 'Oil', 'sku' => 'OIL-ML', 'uom' => 'ltr', 'is_active' => true]);
+        $po = PurchaseOrder::query()->create([
+            'vendor_id' => $vendor->id,
+            'po_number' => 'PO-MULTI-LINE',
+            'po_date' => '2026-04-10',
+            'status' => 'ISSUED',
+        ]);
+        $firstLine = PurchaseOrderLine::query()->create([
+            'purchase_order_id' => $po->id,
+            'item_id' => $firstItem->id,
+            'qty_ordered' => 5,
+            'unit_price' => 100,
+        ]);
+        $secondLine = PurchaseOrderLine::query()->create([
+            'purchase_order_id' => $po->id,
+            'item_id' => $secondItem->id,
+            'qty_ordered' => 3,
+            'unit_price' => 200,
+        ]);
+
+        $response = $this->actingAs($admin)->post('/admin/procurement/grn', [
+            'purchase_order_id' => $po->id,
+            'received_date' => '2026-04-10',
+            'receive_rows' => [
+                [
+                    'selected' => true,
+                    'purchase_order_line_id' => $firstLine->id,
+                    'item_id' => $firstItem->id,
+                    'qty_received' => '2',
+                    'unit_cost' => '100',
+                    'unit_code' => 'kg',
+                ],
+                [
+                    'selected' => true,
+                    'purchase_order_line_id' => $secondLine->id,
+                    'item_id' => $secondItem->id,
+                    'qty_received' => '1',
+                    'unit_cost' => '200',
+                    'unit_code' => 'ltr',
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect('/admin/procurement?tab=grn');
+        $grnLines = GoodsReceiptLine::query()->orderBy('id')->get();
+        $this->assertCount(2, $grnLines);
+        foreach ($grnLines as $grnLine) {
+            $this->assertDatabaseHas('stock_transactions', [
+                'txn_type' => 'GRN',
+                'reference_type' => GoodsReceiptLine::class,
+                'reference_id' => $grnLine->id,
+            ]);
+        }
+        $this->assertSame(2, StockTransaction::query()->where('txn_type', 'GRN')->count());
+    }
+
+    public function test_grn_stock_transaction_backfill_migrates_goods_receipt_reference_to_goods_receipt_line(): void
+    {
+        $po = null;
+        $line = null;
+        [$po, $line] = $this->makePurchaseOrderWithLine(5);
+        $grn = GoodsReceipt::query()->create([
+            'purchase_order_id' => $po->id,
+            'grn_number' => 'GRN-BACKFILL',
+            'received_date' => '2026-04-10',
+        ]);
+        $grnLine = GoodsReceiptLine::query()->create([
+            'goods_receipt_id' => $grn->id,
+            'purchase_order_line_id' => Schema::hasColumn('goods_receipt_lines', 'purchase_order_line_id') ? $line->id : null,
+            'item_id' => $line->item_id,
+            'qty_received' => 2,
+            'unit_cost' => 100,
+        ]);
+        $txn = StockTransaction::query()->create([
+            'item_id' => $line->item_id,
+            'txn_type' => 'GRN',
+            'quantity' => 2,
+            'unit_cost' => 100,
+            'trans_quantity' => 2,
+            'reference_type' => GoodsReceipt::class,
+            'reference_id' => $grn->id,
+            'txn_at' => '2026-04-10',
+            'remarks' => 'legacy grn reference',
+        ]);
+
+        $migration = require base_path('database/migrations/2026_05_02_151000_backfill_grn_stock_transaction_line_references.php');
+        $migration->up();
+
+        $txn->refresh();
+        $this->assertSame(GoodsReceiptLine::class, $txn->reference_type);
+        $this->assertSame($grnLine->id, $txn->reference_id);
+    }
+
     public function test_stock_not_double_posted_by_approval_acknowledgement(): void
     {
         $admin = $this->adminUser();
@@ -346,15 +493,16 @@ class ProcurementHardeningTest extends TestCase
             $payload['purchase_order_line_id'] = $line->id;
         }
 
-        GoodsReceiptLine::query()->create($payload);
+        $grnLine = GoodsReceiptLine::query()->create($payload);
 
         StockTransaction::query()->create([
             'item_id' => $line->item_id,
             'txn_type' => 'GRN',
             'quantity' => $qty,
             'unit_cost' => $unitCost,
-            'reference_type' => GoodsReceipt::class,
-            'reference_id' => $grn->id,
+            'trans_quantity' => $qty,
+            'reference_type' => GoodsReceiptLine::class,
+            'reference_id' => $grnLine->id,
             'txn_at' => '2026-04-10',
             'remarks' => 'GRN posting (stock posted on create)',
         ]);

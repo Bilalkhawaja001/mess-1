@@ -1073,7 +1073,8 @@
 
             grnLinesBody.innerHTML = lines.map((line, index) => {
                 const oldRow = oldRowsByLineId[String(line.id)] || {};
-                const checked = !!oldRow.selected;
+                const hasOldRows = Object.keys(oldRowsByLineId).length > 0;
+                const checked = hasOldRows ? !!oldRow.selected : true;
                 const qtyValue = oldRow.qty_received ?? line.pending;
                 const costValue = oldRow.unit_cost ?? line.unit_price;
                 const remarksValue = oldRow.remarks ?? '';

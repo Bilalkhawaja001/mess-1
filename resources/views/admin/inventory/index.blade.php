@@ -543,6 +543,16 @@
                                 <input type="hidden" name="item_id" id="vendor-return-item-id" value="{{ old('item_id') }}">
                                 <input type="hidden" name="goods_receipt_id" id="vendor-return-grn-id" value="{{ old('goods_receipt_id') }}">
 
+                                <div class="col-md-4">
+                                    <label class="form-label">Filter by GRN Date</label>
+                                    <input type="date" id="vendor-return-source-date-filter" class="form-control">
+                                </div>
+
+                                <div class="col-md-8">
+                                    <label class="form-label">Search GRN / Vendor / Item</label>
+                                    <input type="text" id="vendor-return-source-search" class="form-control" placeholder="Type item, GRN no, vendor, code">
+                                </div>
+
                                 <div class="col-12">
                                     <label class="form-label">Received Stock Source</label>
                                     <select name="goods_receipt_line_id" id="vendor-return-source" class="form-select" required>
@@ -882,6 +892,8 @@
         returnSources.forEach((source) => { returnSourcesByGrnId[source.goods_receipt_id] = source; });
 
         const returnSourceSelect = document.getElementById('vendor-return-source');
+        const returnSourceDateFilter = document.getElementById('vendor-return-source-date-filter');
+        const returnSourceSearch = document.getElementById('vendor-return-source-search');
         const returnVendorInput = document.getElementById('vendor-return-vendor-id');
         const returnItemInput = document.getElementById('vendor-return-item-id');
         const returnGrnInput = document.getElementById('vendor-return-grn-id');
@@ -1012,10 +1024,40 @@
             returnConversion.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${source.uom}`;
         };
 
+        const filterVendorReturnSources = () => {
+            if (!returnSourceSelect) return;
+
+            const dateValue = (returnSourceDateFilter && returnSourceDateFilter.value) || '';
+            const searchValue = ((returnSourceSearch && returnSourceSearch.value) || '').toLowerCase().trim();
+
+            [...returnSourceSelect.options].forEach((option, index) => {
+                if (index === 0) {
+                    option.hidden = false;
+                    return;
+                }
+
+                const optionDate = option.dataset.sourceDate || '';
+                const haystack = option.dataset.searchText || option.textContent.toLowerCase();
+
+                const dateOk = !dateValue || optionDate === dateValue;
+                const searchOk = !searchValue || haystack.includes(searchValue);
+
+                option.hidden = !(dateOk && searchOk);
+            });
+
+            const selected = returnSourceSelect.selectedOptions && returnSourceSelect.selectedOptions[0];
+            if (selected && selected.hidden) {
+                returnSourceSelect.value = '';
+                syncVendorReturnSource();
+            }
+        };
+
         if (itemSelect) itemSelect.addEventListener('change', syncBalanceAndUnits);
         if (unitSelect) unitSelect.addEventListener('change', syncPreview);
         if (qtyInput) qtyInput.addEventListener('input', syncPreview);
         if (returnSourceSelect) returnSourceSelect.addEventListener('change', syncVendorReturnSource);
+        if (returnSourceDateFilter) returnSourceDateFilter.addEventListener('change', filterVendorReturnSources);
+        if (returnSourceSearch) returnSourceSearch.addEventListener('input', filterVendorReturnSources);
         if (returnUnitSelect) returnUnitSelect.addEventListener('change', syncVendorReturnPreview);
         if (returnQtyInput) returnQtyInput.addEventListener('input', syncVendorReturnPreview);
 

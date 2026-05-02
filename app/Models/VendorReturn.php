@@ -23,4 +23,9 @@ class VendorReturn extends Model
     {
         return $this->belongsTo(Item::class);
     }
+
+    public function goodsReceiptLine(): BelongsTo
+    {
+        return $this->belongsTo(GoodsReceiptLine::class);
+    }
 }

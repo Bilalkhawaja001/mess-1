@@ -16,6 +16,6 @@ class GoodsReceipt extends Model
 
     public function lines(): HasMany
     {
-        return $this->hasMany(GoodsReceiptLine::class);
+        return $this->hasMany(GoodsReceiptLine::class)->with('purchaseOrderLine');
     }
 }

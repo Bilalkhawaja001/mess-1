@@ -854,14 +854,14 @@
                                         </select>
                                     </div>
 
-                                    <a
+                                    <button
+                                        type="button"
                                         id="purchase-report-download-btn"
-                                        href="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}"
                                         data-summary-url="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}"
-                                        data-detail-url="{{ route('admin.procurement.grn.export.detail') }}"
+                                        data-detail-url="{{ route('admin.procurement.grn.export.detail', ['from_date' => $reportFromDate, 'to_date' => $reportToDate]) }}"
                                         class="btn btn-outline-primary btn-sm">
                                         Download
-                                    </a>
+                                    </button>
                                 </div>
                         </div>
                     </form>

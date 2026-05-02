@@ -113,56 +113,63 @@ class InventoryController extends Controller
             ->get()
             ->keyBy('reference_id');
 
-        $returnedQtyByGrn = VendorReturn::query()
-            ->selectRaw('goods_receipt_id, SUM(qty_returned) as total_returned')
-            ->groupBy('goods_receipt_id')
-            ->pluck('total_returned', 'goods_receipt_id');
+        $returnedQtyBySource = VendorReturn::query()
+            ->selectRaw("CONCAT(goods_receipt_id, ':', item_id) as source_key, SUM(qty_returned) as total_returned")
+            ->groupBy('goods_receipt_id', 'item_id')
+            ->pluck('total_returned', 'source_key');
 
         $vendorReturnSources = $returnSourceGrns
-            ->map(function (GoodsReceipt $grn) use ($returnSourceTxns, $returnedQtyByGrn) {
-                $line = $grn->lines->first();
-                $item = $line?->item;
+            ->flatMap(function (GoodsReceipt $grn) use ($returnSourceTxns, $returnedQtyBySource) {
                 $vendor = $grn->purchaseOrder?->vendor;
-                if (! $line || ! $item || ! $vendor) {
-                    return null;
+
+                if (! $vendor) {
+                    return collect();
                 }
 
-                $txn = $returnSourceTxns->get($line->id);
+                return $grn->lines->map(function (GoodsReceiptLine $line) use ($grn, $vendor, $returnSourceTxns, $returnedQtyBySource) {
+                    $item = $line->item;
+                    if (! $item) {
+                        return null;
+                    }
 
-                if (! $txn) {
-                    return null;
-                }
+                    $txn = $returnSourceTxns->get($line->id);
+                    if (! $txn) {
+                        return null;
+                    }
 
-                $currentBalance = $this->inventoryService->balanceForItem($item->id);
-                $receivedBaseQty = (float) $txn->quantity;
-                $alreadyReturnedBaseQty = (float) ($returnedQtyByGrn[$grn->id] ?? 0);
-                $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
-                $returnableQty = min($currentBalance, $sourcePendingQty);
+                    $currentBalance = $this->inventoryService->balanceForItem($item->id);
+                    $receivedBaseQty = (float) $txn->quantity;
+                    $sourceKey = $grn->id.':'.$item->id;
+                    $alreadyReturnedBaseQty = (float) ($returnedQtyBySource[$sourceKey] ?? 0);
+                    $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
+                    $returnableQty = min($currentBalance, $sourcePendingQty);
 
-                if ($returnableQty <= 0) {
-                    return null;
-                }
+                    if ($returnableQty <= 0) {
+                        return null;
+                    }
 
-                return [
-                    'goods_receipt_id' => $grn->id,
-                    'grn_number' => $grn->grn_number,
-                    'received_date' => $grn->received_date,
-                    'vendor_id' => $vendor->id,
-                    'vendor_name' => $vendor->name,
-                    'item_id' => $item->id,
-                    'item_name' => $item->name,
-                    'item_sku' => $item->sku,
-                    'uom' => $item->uom,
-                    'unit_cost' => (float) $txn->unit_cost,
-                    'source_received_qty' => $receivedBaseQty,
-                    'already_returned_qty' => $alreadyReturnedBaseQty,
-                    'current_balance_qty' => $currentBalance,
-                    'returnable_qty' => $returnableQty,
-                    'units' => $item->units->map(fn ($u) => [
-                        'code' => $u->unit_code,
-                        'factor' => (float) $u->factor_to_base,
-                    ])->values()->all(),
-                ];
+                    return [
+                        'goods_receipt_id' => $grn->id,
+                        'goods_receipt_line_id' => $line->id,
+                        'grn_number' => $grn->grn_number,
+                        'received_date' => $grn->received_date,
+                        'vendor_id' => $vendor->id,
+                        'vendor_name' => $vendor->name,
+                        'item_id' => $item->id,
+                        'item_name' => $item->name,
+                        'item_sku' => $item->sku,
+                        'uom' => $item->uom,
+                        'unit_cost' => (float) $txn->unit_cost,
+                        'source_received_qty' => $receivedBaseQty,
+                        'already_returned_qty' => $alreadyReturnedBaseQty,
+                        'current_balance_qty' => $currentBalance,
+                        'returnable_qty' => $returnableQty,
+                        'units' => $item->units->map(fn ($u) => [
+                            'code' => $u->unit_code,
+                            'factor' => (float) $u->factor_to_base,
+                        ])->values()->all(),
+                    ];
+                })->filter();
             })
             ->filter()
             ->filter(function (array $source) use ($search) {

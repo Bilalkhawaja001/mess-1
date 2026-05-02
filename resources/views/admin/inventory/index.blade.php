@@ -1040,25 +1040,60 @@
             returnConversion.textContent = `${qty.toFixed(3)} ${unit.code} = ${baseQty.toFixed(3)} ${source.uom}`;
         };
 
-        const filterVendorReturnSources = () => {
+        const renderVendorReturnSources = () => {
             if (!returnSourceSelect) return;
 
-            [...returnSourceSelect.options].forEach((option) => {
-                option.disabled = false;
-                option.style.display = '';
+            const dateValue = (returnSourceDateFilter && returnSourceDateFilter.value) || '';
+            const searchValue = ((returnSourceSearch && returnSourceSearch.value) || '').toLowerCase().trim();
+            const currentValue = returnSourceSelect.value;
+
+            returnSourceSelect.innerHTML = '<option value="">Select GRN source</option>';
+
+            returnSources.forEach((source) => {
+                const sourceDate = String(source.received_date || '').substring(0, 10);
+                const haystack = [
+                    source.grn_number,
+                    source.vendor_name,
+                    source.item_sku,
+                    source.item_name,
+                    source.uom
+                ].join(' ').toLowerCase();
+
+                const dateOk = !dateValue || sourceDate === dateValue;
+                const searchOk = !searchValue || haystack.includes(searchValue);
+
+                if (!dateOk || !searchOk) return;
+
+                const option = document.createElement('option');
+                option.value = source.goods_receipt_line_id || source.goods_receipt_id;
+                option.dataset.grnId = source.goods_receipt_id;
+                option.dataset.sourceDate = sourceDate;
+                option.dataset.searchText = haystack;
+                option.textContent = `${sourceDate} — ${source.grn_number} — ${source.vendor_name} — ${source.item_sku} / ${source.item_name} — Returnable: ${Number(source.returnable_qty || 0).toFixed(3)} ${source.uom || ''}`;
+
+                returnSourceSelect.appendChild(option);
             });
+
+            if (currentValue && [...returnSourceSelect.options].some((option) => option.value === currentValue)) {
+                returnSourceSelect.value = currentValue;
+            } else {
+                returnSourceSelect.value = '';
+                syncVendorReturnSource();
+            }
         };
+
+        const filterVendorReturnSources = renderVendorReturnSources;
 
         if (itemSelect) itemSelect.addEventListener('change', syncBalanceAndUnits);
         if (unitSelect) unitSelect.addEventListener('change', syncPreview);
         if (qtyInput) qtyInput.addEventListener('input', syncPreview);
         if (returnSourceSelect) returnSourceSelect.addEventListener('change', syncVendorReturnSource);
-        if (returnSourceDateFilter) returnSourceDateFilter.addEventListener('change', filterVendorReturnSources);
-        if (returnSourceSearch) returnSourceSearch.addEventListener('input', filterVendorReturnSources);
+        if (returnSourceDateFilter) returnSourceDateFilter.addEventListener('change', renderVendorReturnSources);
+        if (returnSourceSearch) returnSourceSearch.addEventListener('input', renderVendorReturnSources);
         if (returnSourceClearFilter) returnSourceClearFilter.addEventListener('click', () => {
             if (returnSourceDateFilter) returnSourceDateFilter.value = '';
             if (returnSourceSearch) returnSourceSearch.value = '';
-            filterVendorReturnSources();
+            renderVendorReturnSources();
         });
         if (returnUnitSelect) returnUnitSelect.addEventListener('change', syncVendorReturnPreview);
         if (returnQtyInput) returnQtyInput.addEventListener('input', syncVendorReturnPreview);

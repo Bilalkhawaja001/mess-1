@@ -682,10 +682,7 @@
                             </div>
                             <div class="col-12 d-grid gap-2">
                                 <button class="btn btn-outline-secondary">Apply</button>
-                                <form method="GET" id="grn-export-selector-form" action="{{ route('admin.procurement.grn.export.detail') }}" class="d-flex gap-2 flex-wrap align-items-end">
-                                    <input type="hidden" name="from_date" value="{{ $grnFromDate }}">
-                                    <input type="hidden" name="to_date" value="{{ $grnToDate }}">
-
+                                <div class="d-flex gap-2 flex-wrap align-items-end">
                                     <div>
                                         <label class="form-label small mb-1">Download Type</label>
                                         <select id="grn-export-type" class="form-select form-select-sm">
@@ -694,8 +691,8 @@
                                         </select>
                                     </div>
 
-                                    <button type="submit" class="btn btn-outline-primary btn-sm">Download</button>
-                                </form>
+                                    <button type="button" id="grn-export-download-btn" class="btn btn-outline-primary btn-sm">Download</button>
+                                </div>
                             </div>
                         </form>
                         <form method="GET" action="{{ route('admin.procurement.grn.template') }}" class="row g-3 mb-3">
@@ -1281,5 +1278,24 @@
             renderGrnRows();
         }
     })();
+
+        const grnExportBtn = document.getElementById('grn-export-download-btn');
+        const grnExportType = document.getElementById('grn-export-type');
+
+        if (grnExportBtn && grnExportType) {
+            grnExportBtn.addEventListener('click', () => {
+                const baseUrl = grnExportType.value === 'summary'
+                    ? "{{ route('admin.procurement.grn.export.summary') }}"
+                    : "{{ route('admin.procurement.grn.export.detail') }}";
+
+                const params = new URLSearchParams({
+                    from_date: "{{ $grnFromDate }}",
+                    to_date: "{{ $grnToDate }}"
+                });
+
+                window.location.href = `${baseUrl}?${params.toString()}`;
+            });
+        }
+
 </script>
 @endpush

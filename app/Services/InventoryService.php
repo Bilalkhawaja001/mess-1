@@ -2,42 +2,88 @@
 
 namespace App\Services;
 
+use App\Models\GoodsReceiptLine;
 use App\Models\Item;
 use App\Models\StockTransaction;
+use Illuminate\Support\Collection;
 
 class InventoryService
 {
     public function balanceForItem(int $itemId): float
     {
-        $in = (float) StockTransaction::query()
-            ->where('item_id', $itemId)
-            ->whereIn('txn_type', ['OPENING', 'IN', 'ADJUSTMENT', 'GRN'])
-            ->sum('quantity');
+        return (float) ($this->balancesForItems([$itemId])[$itemId] ?? 0);
+    }
 
-        $out = (float) StockTransaction::query()
-            ->where('item_id', $itemId)
-            ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE', 'VENDOR_RETURN'])
-            ->sum('quantity');
+    public function balancesForItems(array $itemIds): array
+    {
+        $itemIds = collect($itemIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
 
-        return round($in - $out, 3);
+        if ($itemIds->isEmpty()) {
+            return [];
+        }
+
+        return StockTransaction::query()
+            ->selectRaw("item_id, ROUND(SUM(CASE WHEN txn_type IN ('OPENING', 'IN', 'ADJUSTMENT', 'GRN') THEN quantity ELSE -quantity END), 3) as balance")
+            ->whereIn('item_id', $itemIds)
+            ->groupBy('item_id')
+            ->pluck('balance', 'item_id')
+            ->map(fn ($balance) => (float) $balance)
+            ->all();
+    }
+
+    public function movementTotalsForItems(array $itemIds): array
+    {
+        $itemIds = collect($itemIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($itemIds->isEmpty()) {
+            return [];
+        }
+
+        return StockTransaction::query()
+            ->selectRaw("item_id,
+                ROUND(SUM(CASE WHEN txn_type IN ('OPENING', 'IN', 'ADJUSTMENT', 'GRN') THEN quantity ELSE 0 END), 3) as received_qty,
+                ROUND(SUM(CASE WHEN txn_type IN ('OUT', 'KITCHEN_ISSUE', 'VENDOR_RETURN') THEN quantity ELSE 0 END), 3) as issued_qty")
+            ->whereIn('item_id', $itemIds)
+            ->groupBy('item_id')
+            ->get()
+            ->mapWithKeys(fn ($row) => [
+                (int) $row->item_id => [
+                    'received_qty' => (float) $row->received_qty,
+                    'issued_qty' => (float) $row->issued_qty,
+                ],
+            ])
+            ->all();
     }
 
     public function stockBalances(): array
     {
-        return Item::query()
-            ->get()
-            ->map(fn (Item $i) => ['item' => $i, 'balance' => $this->balanceForItem($i->id)])
+        $items = Item::query()->get();
+        $balances = $this->balancesForItems($items->pluck('id')->all());
+
+        return $items
+            ->map(fn (Item $i) => ['item' => $i, 'balance' => (float) ($balances[$i->id] ?? 0)])
             ->all();
     }
 
     public function lowStockItems(): array
     {
-        return Item::query()
+        $items = Item::query()
             ->where('is_active', true)
             ->where('reorder_level', '>', 0)
-            ->get()
-            ->map(function (Item $item) {
-                $balance = $this->balanceForItem($item->id);
+            ->get();
+        $balances = $this->balancesForItems($items->pluck('id')->all());
+
+        return $items
+            ->map(function (Item $item) use ($balances) {
+                $balance = (float) ($balances[$item->id] ?? 0);
 
                 return [
                     'item' => $item,
@@ -63,14 +109,25 @@ class InventoryService
                 $poNumber = null;
                 $vendorName = null;
 
-                if ($txn->reference_type === \App\Models\GoodsReceipt::class && $txn->reference_id) {
-                    $grn = \App\Models\GoodsReceipt::query()
-                        ->with('purchaseOrder.vendor')
-                        ->find($txn->reference_id);
-                    if ($grn) {
-                        $grnNumber = $grn->grn_number;
-                        $poNumber = $grn->purchaseOrder?->po_number;
-                        $vendorName = $grn->purchaseOrder?->vendor?->name;
+                if ($txn->reference_id) {
+                    if ($txn->reference_type === GoodsReceiptLine::class) {
+                        $grnLine = GoodsReceiptLine::query()
+                            ->with(['goodsReceipt.purchaseOrder.vendor'])
+                            ->find($txn->reference_id);
+                        if ($grnLine?->goodsReceipt) {
+                            $grnNumber = $grnLine->goodsReceipt->grn_number;
+                            $poNumber = $grnLine->goodsReceipt->purchaseOrder?->po_number;
+                            $vendorName = $grnLine->goodsReceipt->purchaseOrder?->vendor?->name;
+                        }
+                    } elseif ($txn->reference_type === \App\Models\GoodsReceipt::class) {
+                        $grn = \App\Models\GoodsReceipt::query()
+                            ->with(['purchaseOrder.vendor'])
+                            ->find($txn->reference_id);
+                        if ($grn) {
+                            $grnNumber = $grn->grn_number;
+                            $poNumber = $grn->purchaseOrder?->po_number;
+                            $vendorName = $grn->purchaseOrder?->vendor?->name;
+                        }
                     }
                 }
 

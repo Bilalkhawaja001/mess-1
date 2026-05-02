@@ -55,19 +55,17 @@ class InventoryController extends Controller
         $ledger = StockTransaction::query()->latest('txn_at')->limit(100)->get();
         $balances = $this->inventoryService->stockBalances();
         $lowStockItems = $this->inventoryService->lowStockItems();
+        $movementTotals = $this->inventoryService->movementTotalsForItems($items->pluck('id')->all());
 
         $ledgerByItem = $ledger->groupBy('item_id');
         $storeStockRows = collect($balances)
-            ->map(function (array $row) use ($ledgerByItem) {
+            ->map(function (array $row) use ($ledgerByItem, $movementTotals) {
                 /** @var \App\Models\Item $item */
                 $item = $row['item'];
                 $itemLedger = collect($ledgerByItem->get($item->id, collect()));
-                $receivedQty = (float) $itemLedger
-                    ->whereIn('txn_type', ['OPENING', 'IN', 'ADJUSTMENT', 'GRN'])
-                    ->sum('quantity');
-                $issuedQty = (float) $itemLedger
-                    ->whereIn('txn_type', ['OUT', 'KITCHEN_ISSUE', 'VENDOR_RETURN'])
-                    ->sum('quantity');
+                $totals = $movementTotals[$item->id] ?? ['received_qty' => 0, 'issued_qty' => 0];
+                $receivedQty = (float) ($totals['received_qty'] ?? 0);
+                $issuedQty = (float) ($totals['issued_qty'] ?? 0);
                 $latestMovement = $itemLedger->sortByDesc('txn_at')->first();
 
                 return [
@@ -116,19 +114,27 @@ class InventoryController extends Controller
                 ->keyBy('reference_id');
 
             $returnedQtyBySource = VendorReturn::query()
-                ->selectRaw("CONCAT(goods_receipt_id, ':', item_id) as source_key, SUM(qty_returned) as total_returned")
-                ->groupBy('goods_receipt_id', 'item_id')
-                ->pluck('total_returned', 'source_key');
+                ->get()
+                ->reduce(function (array $carry, VendorReturn $vendorReturn): array {
+                    $sourceKey = $vendorReturn->goods_receipt_line_id
+                        ? 'line:'.$vendorReturn->goods_receipt_line_id
+                        : 'legacy:'.$vendorReturn->goods_receipt_id.':'.$vendorReturn->item_id;
+
+                    $carry[$sourceKey] = ($carry[$sourceKey] ?? 0) + (float) $vendorReturn->qty_returned;
+
+                    return $carry;
+                }, []);
+            $lineBalances = $this->inventoryService->balancesForItems($returnSourceGrns->flatMap(fn (GoodsReceipt $grn) => $grn->lines->pluck('item_id'))->all());
 
             $vendorReturnSources = $returnSourceGrns
-                ->flatMap(function (GoodsReceipt $grn) use ($returnSourceTxns, $returnedQtyBySource) {
+                ->flatMap(function (GoodsReceipt $grn) use ($returnSourceTxns, $returnedQtyBySource, $lineBalances) {
                         $vendor = $grn->purchaseOrder?->vendor;
 
                         if (! $vendor) {
                             return collect();
                         }
 
-                        return $grn->lines->map(function ($line) use ($grn, $vendor, $returnSourceTxns, $returnedQtyBySource) {
+                        return $grn->lines->map(function ($line) use ($grn, $vendor, $returnSourceTxns, $returnedQtyBySource, $lineBalances) {
                             $item = $line->item;
                             if (! $item) {
                                     return null;
@@ -139,10 +145,9 @@ class InventoryController extends Controller
                                     return null;
                             }
 
-                            $currentBalance = $this->inventoryService->balanceForItem($item->id);
+                            $currentBalance = (float) ($lineBalances[$item->id] ?? 0);
                             $receivedBaseQty = (float) $txn->quantity;
-                            $sourceKey = $grn->id.':'.$item->id;
-                            $alreadyReturnedBaseQty = (float) ($returnedQtyBySource[$sourceKey] ?? 0);
+                            $alreadyReturnedBaseQty = (float) (($returnedQtyBySource['line:'.$line->id] ?? 0) + ($returnedQtyBySource['legacy:'.$grn->id.':'.$item->id] ?? 0));
                             $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
                             $returnableQty = min($currentBalance, $sourcePendingQty);
 
@@ -196,7 +201,7 @@ class InventoryController extends Controller
         }
 
         $vendorReturns = VendorReturn::query()
-            ->with(['vendor', 'goodsReceipt', 'item'])
+            ->with(['vendor', 'goodsReceipt', 'goodsReceiptLine', 'item'])
             ->latest('return_date')
             ->limit(50)
             ->get();

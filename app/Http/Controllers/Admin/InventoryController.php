@@ -97,98 +97,103 @@ class InventoryController extends Controller
             ->sortBy(fn (array $row) => strtolower((string) $row['item']->name))
             ->values();
 
-        $returnSourceGrns = GoodsReceipt::query()
-            ->with(['purchaseOrder.vendor', 'lines.item.units'])
-            ->latest('received_date')
-            ->limit(200)
-            ->get();
+        if (($activeTab ?? 'items') === 'vendor-return') {
+            $returnSourceGrns = GoodsReceipt::query()
+                ->with(['purchaseOrder.vendor', 'lines.item.units'])
+                ->latest('received_date')
+                ->limit(200)
+                ->get();
 
-        $returnSourceLineIds = $returnSourceGrns
-            ->flatMap(fn (GoodsReceipt $grn) => $grn->lines->pluck('id'))
-            ->values();
+            $returnSourceLineIds = $returnSourceGrns
+                ->flatMap(fn (GoodsReceipt $grn) => $grn->lines->pluck('id'))
+                ->values();
 
-        $returnSourceTxns = StockTransaction::query()
-            ->where('reference_type', GoodsReceiptLine::class)
-            ->where('txn_type', 'GRN')
-            ->whereIn('reference_id', $returnSourceLineIds)
-            ->get()
-            ->keyBy('reference_id');
+            $returnSourceTxns = StockTransaction::query()
+                ->where('reference_type', GoodsReceiptLine::class)
+                ->where('txn_type', 'GRN')
+                ->whereIn('reference_id', $returnSourceLineIds)
+                ->get()
+                ->keyBy('reference_id');
 
-        $returnedQtyBySource = VendorReturn::query()
-            ->selectRaw("CONCAT(goods_receipt_id, ':', item_id) as source_key, SUM(qty_returned) as total_returned")
-            ->groupBy('goods_receipt_id', 'item_id')
-            ->pluck('total_returned', 'source_key');
+            $returnedQtyBySource = VendorReturn::query()
+                ->selectRaw("CONCAT(goods_receipt_id, ':', item_id) as source_key, SUM(qty_returned) as total_returned")
+                ->groupBy('goods_receipt_id', 'item_id')
+                ->pluck('total_returned', 'source_key');
 
-        $vendorReturnSources = $returnSourceGrns
-            ->flatMap(function (GoodsReceipt $grn) use ($returnSourceTxns, $returnedQtyBySource) {
-                $vendor = $grn->purchaseOrder?->vendor;
+            $vendorReturnSources = $returnSourceGrns
+                ->flatMap(function (GoodsReceipt $grn) use ($returnSourceTxns, $returnedQtyBySource) {
+                        $vendor = $grn->purchaseOrder?->vendor;
 
-                if (! $vendor) {
-                    return collect();
-                }
+                        if (! $vendor) {
+                            return collect();
+                        }
 
-                return $grn->lines->map(function ($line) use ($grn, $vendor, $returnSourceTxns, $returnedQtyBySource) {
-                    $item = $line->item;
-                    if (! $item) {
-                        return null;
-                    }
+                        return $grn->lines->map(function ($line) use ($grn, $vendor, $returnSourceTxns, $returnedQtyBySource) {
+                            $item = $line->item;
+                            if (! $item) {
+                                    return null;
+                            }
 
-                    $txn = $returnSourceTxns->get($line->id);
-                    if (! $txn) {
-                        return null;
-                    }
+                            $txn = $returnSourceTxns->get($line->id);
+                            if (! $txn) {
+                                    return null;
+                            }
 
-                    $currentBalance = $this->inventoryService->balanceForItem($item->id);
-                    $receivedBaseQty = (float) $txn->quantity;
-                    $sourceKey = $grn->id.':'.$item->id;
-                    $alreadyReturnedBaseQty = (float) ($returnedQtyBySource[$sourceKey] ?? 0);
-                    $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
-                    $returnableQty = min($currentBalance, $sourcePendingQty);
+                            $currentBalance = $this->inventoryService->balanceForItem($item->id);
+                            $receivedBaseQty = (float) $txn->quantity;
+                            $sourceKey = $grn->id.':'.$item->id;
+                            $alreadyReturnedBaseQty = (float) ($returnedQtyBySource[$sourceKey] ?? 0);
+                            $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
+                            $returnableQty = min($currentBalance, $sourcePendingQty);
 
-                    if ($returnableQty <= 0) {
-                        return null;
-                    }
+                            if ($returnableQty <= 0) {
+                                    return null;
+                            }
 
-                    return [
-                        'goods_receipt_id' => $grn->id,
-                        'goods_receipt_line_id' => $line->id,
-                        'grn_number' => $grn->grn_number,
-                        'received_date' => $grn->received_date,
-                        'vendor_id' => $vendor->id,
-                        'vendor_name' => $vendor->name,
-                        'item_id' => $item->id,
-                        'item_name' => $item->name,
-                        'item_sku' => $item->sku,
-                        'uom' => $item->uom,
-                        'unit_cost' => (float) $txn->unit_cost,
-                        'source_received_qty' => $receivedBaseQty,
-                        'already_returned_qty' => $alreadyReturnedBaseQty,
-                        'current_balance_qty' => $currentBalance,
-                        'returnable_qty' => $returnableQty,
-                        'units' => $item->units->map(fn ($u) => [
-                            'code' => $u->unit_code,
-                            'factor' => (float) $u->factor_to_base,
-                        ])->values()->all(),
-                    ];
-                })->filter();
-            })
-            ->filter()
-            ->filter(function (array $source) use ($search) {
-                if ($search === '') {
-                    return true;
-                }
+                            return [
+                                    'goods_receipt_id' => $grn->id,
+                                    'goods_receipt_line_id' => $line->id,
+                                    'grn_number' => $grn->grn_number,
+                                    'received_date' => $grn->received_date,
+                                    'vendor_id' => $vendor->id,
+                                    'vendor_name' => $vendor->name,
+                                    'item_id' => $item->id,
+                                    'item_name' => $item->name,
+                                    'item_sku' => $item->sku,
+                                    'uom' => $item->uom,
+                                    'unit_cost' => (float) $txn->unit_cost,
+                                    'source_received_qty' => $receivedBaseQty,
+                                    'already_returned_qty' => $alreadyReturnedBaseQty,
+                                    'current_balance_qty' => $currentBalance,
+                                    'returnable_qty' => $returnableQty,
+                                    'units' => $item->units->map(fn ($u) => [
+                                        'code' => $u->unit_code,
+                                        'factor' => (float) $u->factor_to_base,
+                                    ])->values()->all(),
+                            ];
+                        })->filter();
+                })
+                ->filter()
+                ->filter(function (array $source) use ($search) {
+                        if ($search === '') {
+                            return true;
+                        }
 
-                $haystack = strtolower(implode(' ', [
-                    (string) ($source['grn_number'] ?? ''),
-                    (string) ($source['vendor_name'] ?? ''),
-                    (string) ($source['item_sku'] ?? ''),
-                    (string) ($source['item_name'] ?? ''),
-                ]));
+                        $haystack = strtolower(implode(' ', [
+                            (string) ($source['grn_number'] ?? ''),
+                            (string) ($source['vendor_name'] ?? ''),
+                            (string) ($source['item_sku'] ?? ''),
+                            (string) ($source['item_name'] ?? ''),
+                        ]));
 
-                return str_contains($haystack, strtolower($search));
-            })
-            ->sortByDesc('received_date')
-            ->values();
+                        return str_contains($haystack, strtolower($search));
+                })
+                ->sortByDesc('received_date')
+                ->values();
+
+        } else {
+            $vendorReturnSources = collect();
+        }
 
         $vendorReturns = VendorReturn::query()
             ->with(['vendor', 'goodsReceipt', 'item'])

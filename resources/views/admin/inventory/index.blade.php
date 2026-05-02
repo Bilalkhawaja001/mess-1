@@ -109,6 +109,49 @@
         font-weight: 700;
     }
 
+
+    .inventory-vendor-return .vendor-return-source-results {
+        max-height: 320px;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+        margin-top: 8px;
+    }
+    .inventory-vendor-return .vendor-return-source-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 100px;
+        gap: 10px;
+        align-items: center;
+        padding: 9px 11px;
+        border-bottom: 1px solid #edf2f7;
+        font-size: 13px;
+    }
+    .inventory-vendor-return .vendor-return-source-row:last-child { border-bottom: 0; }
+    .inventory-vendor-return .vendor-return-source-row.is-selected {
+        background: #fff7ed;
+        border-left: 4px solid #f59e0b;
+    }
+    .inventory-vendor-return .vendor-return-source-title {
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .inventory-vendor-return .vendor-return-source-sub {
+        color: #64748b;
+        font-size: 12px;
+    }
+    .inventory-vendor-return .vendor-return-source-qty {
+        font-weight: 700;
+        color: #166534;
+        white-space: nowrap;
+    }
+    .inventory-vendor-return .vendor-return-source-empty {
+        padding: 12px;
+        color: #64748b;
+        text-align: center;
+        font-size: 13px;
+    }
+
 </style>
 @endpush
 
@@ -934,8 +977,6 @@
         const preview = document.getElementById('inv-conversion-preview');
 
         const returnSources = @json($vendorReturnSourcesJson);
-        console.log('returnSources count', returnSources.length);
-        console.log(returnSources.slice(0, 5));
         const returnSourcesByGrnId = {};
         const returnSourcesByLineId = {};
         returnSources.forEach((source) => {
@@ -946,6 +987,7 @@
         });
 
         const returnSourceSelect = document.getElementById('vendor-return-source');
+        const returnSourceResults = document.getElementById('vendor-return-source-results');
         const returnSourceDateFilter = document.getElementById('vendor-return-source-date-filter');
         const returnSourceSearch = document.getElementById('vendor-return-source-search');
         const returnSourceClearFilter = document.getElementById('vendor-return-source-clear-filter');
@@ -1072,17 +1114,12 @@
         const renderVendorReturnSources = () => {
             if (!returnSourceSelect) return;
 
-            console.log('renderVendorReturnSources start', {
-                count: returnSources.length,
-                dateFilter: (returnSourceDateFilter && returnSourceDateFilter.value) || '',
-                searchFilter: (returnSourceSearch && returnSourceSearch.value) || ''
-            });
-
             const dateValue = (returnSourceDateFilter && returnSourceDateFilter.value) || '';
             const searchValue = ((returnSourceSearch && returnSourceSearch.value) || '').toLowerCase().trim();
             const currentValue = returnSourceSelect.value;
 
             returnSourceSelect.innerHTML = '<option value="">Select GRN source</option>';
+            if (returnSourceResults) returnSourceResults.innerHTML = '';
 
             returnSources.forEach((source) => {
                 const sourceDate = String(source.received_date || '').substring(0, 10);
@@ -1107,7 +1144,31 @@
                 option.textContent = `${sourceDate} — ${source.grn_number} — ${source.vendor_name} — ${source.item_sku} / ${source.item_name} — Returnable: ${Number(source.returnable_qty || 0).toFixed(3)} ${source.uom || ''}`;
 
                 returnSourceSelect.appendChild(option);
+
+                if (returnSourceResults) {
+                    const sourceValue = String(source.goods_receipt_line_id || source.goods_receipt_id);
+                    const row = document.createElement('div');
+                    row.className = 'vendor-return-source-row' + (String(currentValue) === sourceValue ? ' is-selected' : '');
+                    row.innerHTML = `
+                        <div>
+                            <div class="vendor-return-source-qty">${Number(source.returnable_qty || 0).toFixed(3)} ${source.uom || ''}</div>
+                            <div class="vendor-return-source-sub">${sourceDate}</div>
+                        </div>
+                        <div>
+                            <div class="vendor-return-source-title">${source.item_sku || ''} / ${source.item_name || ''}</div>
+                            <div class="vendor-return-source-sub">${source.grn_number || ''} — ${source.vendor_name || ''}</div>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-select-source="${sourceValue}">Select</button>
+                        </div>
+                    `;
+                    returnSourceResults.appendChild(row);
+                }
             });
+
+            if (returnSourceResults && returnSourceResults.children.length === 0) {
+                returnSourceResults.innerHTML = '<div class="vendor-return-source-empty">No returnable GRN source matched.</div>';
+            }
 
             if (currentValue && [...returnSourceSelect.options].some((option) => option.value === currentValue)) {
                 returnSourceSelect.value = currentValue;
@@ -1116,7 +1177,6 @@
                 syncVendorReturnSource();
             }
 
-            console.log('options after render', returnSourceSelect.options.length);
         };
 
         const filterVendorReturnSources = renderVendorReturnSources;
@@ -1124,6 +1184,15 @@
         if (itemSelect) itemSelect.addEventListener('change', syncBalanceAndUnits);
         if (unitSelect) unitSelect.addEventListener('change', syncPreview);
         if (qtyInput) qtyInput.addEventListener('input', syncPreview);
+        if (returnSourceResults) {
+            returnSourceResults.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-select-source]');
+                if (!button) return;
+                returnSourceSelect.value = button.dataset.selectSource || '';
+                syncVendorReturnSource();
+                renderVendorReturnSources();
+            });
+        }
         if (returnSourceSelect) returnSourceSelect.addEventListener('change', syncVendorReturnSource);
         if (returnSourceDateFilter) returnSourceDateFilter.addEventListener('change', renderVendorReturnSources);
         if (returnSourceSearch) returnSourceSearch.addEventListener('input', renderVendorReturnSources);

@@ -30,6 +30,7 @@ use App\Services\Payments\PaymentAttemptService;
 use App\Services\Payments\PaymentTransactionService;
 use App\Services\MonthClosureService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -450,8 +451,14 @@ class RepairFinancialFlowsTest extends TestCase
     {
         $admin = $this->adminUser();
         $item = Item::query()->create(['name' => 'Rice', 'sku' => 'RICE-1', 'unit' => 'kg', 'is_active' => true]);
-        $menu = Menu::query()->create(['name' => 'Lunch Menu', 'meal_type' => 'Lunch', 'is_active' => true]);
-        $plan = MealPlan::query()->create(['plan_date' => '2026-03-11', 'menu_id' => $menu->id, 'planned_servings' => 10]);
+        $menuId = DB::table('menus')->insertGetId([
+            'name' => 'Lunch Menu',
+            'meal_type' => 'Lunch',
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $plan = MealPlan::query()->create(['plan_date' => '2026-03-11', 'menu_id' => $menuId, 'planned_servings' => 10]);
         $issue = KitchenIssue::query()->create(['issue_date' => '2026-03-11', 'item_id' => $item->id, 'quantity' => 5, 'remarks' => 'initial']);
         $vendor = Vendor::query()->create(['name' => 'Vendor A']);
         $po = PurchaseOrder::query()->create(['vendor_id' => $vendor->id, 'po_number' => 'PO-1', 'po_date' => '2026-03-11', 'status' => 'ISSUED']);

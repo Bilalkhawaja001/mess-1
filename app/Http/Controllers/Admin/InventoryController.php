@@ -127,7 +127,7 @@ class InventoryController extends Controller
                     return collect();
                 }
 
-                return $grn->lines->map(function (GoodsReceiptLine $line) use ($grn, $vendor, $returnSourceTxns, $returnedQtyBySource) {
+                return $grn->lines->map(function ($line) use ($grn, $vendor, $returnSourceTxns, $returnedQtyBySource) {
                     $item = $line->item;
                     if (! $item) {
                         return null;

@@ -508,18 +508,17 @@ class KitchenController extends Controller
                 ->withInput();
         }
 
-        $recentDuplicate = KitchenIssue::query()
+        $pendingDuplicate = KitchenIssue::query()
             ->where('item_id', $item->id)
             ->where('issue_date', $d['issue_date'])
             ->where('quantity', $baseQuantity)
             ->where('issue_type', $d['issue_type'])
             ->where('mess_id', $d['mess_id'])
-                        ->where('remarks', $request->input('remarks'))
-            ->where('created_at', '>=', now()->subMinutes(2))
+            ->whereIn('status', [KitchenIssue::STATUS_DRAFT, 'pending'])
             ->exists();
 
-        if ($recentDuplicate) {
-            return back()->with('info', 'Similar kitchen issue was just created. Duplicate request has been skipped.');
+        if ($pendingDuplicate) {
+            return back()->withErrors(['kitchen_issue' => 'A similar pending kitchen issue already exists.'])->withInput();
         }
 
         KitchenIssue::query()->create([

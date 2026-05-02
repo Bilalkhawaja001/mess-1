@@ -14,6 +14,7 @@ use App\Models\StockTransaction;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -292,6 +293,206 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
 
         $this->assertDatabaseCount('stock_transactions', 2);
         $this->assertEquals(1, StockTransaction::query()->where('txn_type', StockTransaction::TXN_TYPE_KITCHEN_ISSUE)->count());
+    }
+
+    public function test_duplicate_pending_issue_blocked_after_time_window(): void
+    {
+        $this->actingAs($this->admin());
+        $item = $this->kitchenItem();
+        $mess = $this->mess();
+
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 20,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-10',
+        ]);
+
+        KitchenIssue::query()->create([
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'quantity' => 5,
+            'mess_id' => $mess->id,
+            'issue_type' => 'CONSUMPTION',
+            'remarks' => 'Original request',
+            'status' => KitchenIssue::STATUS_DRAFT,
+            'created_at' => Carbon::parse('2026-04-11 10:00:00'),
+            'updated_at' => Carbon::parse('2026-04-11 10:00:00'),
+        ]);
+
+        Carbon::setTestNow('2026-04-11 10:05:00');
+
+        try {
+            $this->post(route('admin.kitchen.issues.store'), [
+                'issue_date' => '2026-04-11',
+                'item_id' => $item->id,
+                'quantity' => 5,
+                'unit_code' => 'kg',
+                'issue_type' => 'CONSUMPTION',
+                'mess_id' => $mess->id,
+                'remarks' => 'Later duplicate',
+            ])
+                ->assertRedirect()
+                ->assertSessionHasErrors(['kitchen_issue']);
+        } finally {
+            Carbon::setTestNow();
+        }
+
+        $this->assertSame(1, KitchenIssue::query()->count());
+        $this->assertDatabaseHas('kitchen_issues', [
+            'item_id' => $item->id,
+            'quantity' => 5,
+            'mess_id' => $mess->id,
+            'issue_type' => 'CONSUMPTION',
+            'status' => KitchenIssue::STATUS_DRAFT,
+        ]);
+    }
+
+    public function test_duplicate_pending_issue_with_different_remarks_is_still_blocked(): void
+    {
+        $this->actingAs($this->admin());
+        $item = $this->kitchenItem();
+        $mess = $this->mess();
+
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 20,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-10',
+        ]);
+
+        $this->post(route('admin.kitchen.issues.store'), [
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'quantity' => 5,
+            'unit_code' => 'kg',
+            'issue_type' => 'CONSUMPTION',
+            'mess_id' => $mess->id,
+            'remarks' => 'First remarks',
+        ])->assertRedirect();
+
+        $this->post(route('admin.kitchen.issues.store'), [
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'quantity' => 5,
+            'unit_code' => 'kg',
+            'issue_type' => 'CONSUMPTION',
+            'mess_id' => $mess->id,
+            'remarks' => 'Second remarks',
+        ])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['kitchen_issue']);
+
+        $this->assertSame(1, KitchenIssue::query()->count());
+    }
+
+    public function test_same_issue_after_approval_is_allowed(): void
+    {
+        $this->actingAs($this->admin());
+        $item = $this->kitchenItem();
+        $mess = $this->mess();
+
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 20,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-10',
+        ]);
+
+        $approvedIssue = KitchenIssue::query()->create([
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'quantity' => 5,
+            'mess_id' => $mess->id,
+            'issue_type' => 'CONSUMPTION',
+            'remarks' => 'Already approved',
+            'status' => KitchenIssue::STATUS_APPROVED,
+            'approved_at' => now(),
+        ]);
+
+        $this->post(route('admin.kitchen.issues.store'), [
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'quantity' => 5,
+            'unit_code' => 'kg',
+            'issue_type' => 'CONSUMPTION',
+            'mess_id' => $mess->id,
+            'remarks' => 'Repeat after approval',
+        ])->assertRedirect();
+
+        $this->assertSame(2, KitchenIssue::query()->count());
+        $this->assertSame(KitchenIssue::STATUS_APPROVED, $approvedIssue->fresh()->status);
+        $this->assertSame(1, KitchenIssue::query()->where('status', KitchenIssue::STATUS_DRAFT)->count());
+    }
+
+    public function test_different_issue_business_keys_are_allowed(): void
+    {
+        $this->actingAs($this->admin());
+        $item = $this->kitchenItem();
+        $otherItem = Item::query()->create([
+            'name' => 'Oil',
+            'sku' => 'OIL-FLOW',
+            'category' => 'Grocery',
+            'uom' => 'ltr',
+            'reorder_level' => 0,
+            'is_active' => true,
+        ]);
+        $mess = $this->mess();
+        $otherDepartment = Department::query()->create([
+            'name' => 'Plant',
+            'code' => 'PLANT',
+            'is_active' => true,
+        ]);
+        $otherMess = Mess::query()->create([
+            'name' => 'Plant Mess',
+            'code' => 'PLANT-MESS',
+            'department_id' => $otherDepartment->id,
+            'is_active' => true,
+        ]);
+
+        StockTransaction::query()->create([
+            'item_id' => $item->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 20,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-10',
+        ]);
+        StockTransaction::query()->create([
+            'item_id' => $otherItem->id,
+            'txn_type' => 'OPENING',
+            'quantity' => 20,
+            'unit_cost' => 0,
+            'txn_at' => '2026-04-10',
+        ]);
+
+        KitchenIssue::query()->create([
+            'issue_date' => '2026-04-11',
+            'item_id' => $item->id,
+            'quantity' => 5,
+            'mess_id' => $mess->id,
+            'issue_type' => 'CONSUMPTION',
+            'remarks' => 'Base request',
+            'status' => KitchenIssue::STATUS_DRAFT,
+        ]);
+
+        $variants = [
+            ['issue_date' => '2026-04-12', 'item_id' => $item->id, 'quantity' => 5, 'unit_code' => 'kg', 'issue_type' => 'CONSUMPTION', 'mess_id' => $mess->id, 'remarks' => 'Different date'],
+            ['issue_date' => '2026-04-11', 'item_id' => $otherItem->id, 'quantity' => 5, 'unit_code' => 'ltr', 'issue_type' => 'CONSUMPTION', 'mess_id' => $mess->id, 'remarks' => 'Different item'],
+            ['issue_date' => '2026-04-11', 'item_id' => $item->id, 'quantity' => 6, 'unit_code' => 'kg', 'issue_type' => 'CONSUMPTION', 'mess_id' => $mess->id, 'remarks' => 'Different qty'],
+            ['issue_date' => '2026-04-11', 'item_id' => $item->id, 'quantity' => 5, 'unit_code' => 'kg', 'issue_type' => 'WASTAGE', 'mess_id' => $mess->id, 'remarks' => 'Different type'],
+            ['issue_date' => '2026-04-11', 'item_id' => $item->id, 'quantity' => 5, 'unit_code' => 'kg', 'issue_type' => 'CONSUMPTION', 'mess_id' => $otherMess->id, 'remarks' => 'Different mess'],
+        ];
+
+        foreach ($variants as $payload) {
+            $this->post(route('admin.kitchen.issues.store'), $payload)
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertSame(6, KitchenIssue::query()->count());
     }
 
     public function test_two_pending_issues_exceeding_combined_stock_cannot_both_approve(): void

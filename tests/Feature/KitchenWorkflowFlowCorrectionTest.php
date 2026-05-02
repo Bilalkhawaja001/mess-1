@@ -546,6 +546,93 @@ class KitchenWorkflowFlowCorrectionTest extends TestCase
             ->assertSee('Post Kitchen Issue');
     }
 
+    public function test_daily_menu_create_and_update_use_daily_menus_schema_fields(): void
+    {
+        $this->actingAs($this->admin());
+
+        $this->post(route('admin.kitchen.menus.store'), [
+            'name' => 'Special Lunch',
+            'meal_type' => 'LUNCH',
+        ])->assertRedirect();
+
+        $menu = Menu::query()->firstOrFail();
+        $this->assertSame('Special Lunch', $menu->title);
+        $this->assertSame('LUNCH', $menu->meal_type);
+        $this->assertSame('Special Lunch', $menu->items_text);
+        $this->assertDatabaseMissing('daily_menus', ['name' => 'Special Lunch']);
+
+        $this->post(route('admin.kitchen.menus.edit.legacy', $menu), [
+            'name' => 'Updated Lunch',
+            'meal_type' => 'DINNER',
+            'is_active' => '1',
+        ])->assertRedirect();
+
+        $menu->refresh();
+        $this->assertSame('Updated Lunch', $menu->title);
+        $this->assertSame('DINNER', $menu->meal_type);
+        $this->assertDatabaseHas('daily_menus', [
+            'id' => $menu->id,
+            'title' => 'Updated Lunch',
+            'meal_type' => 'DINNER',
+        ]);
+        $this->assertDatabaseMissing('daily_menus', ['name' => 'Updated Lunch']);
+    }
+
+    public function test_recipe_creation_requires_legacy_menu_id_when_fk_targets_legacy_menus(): void
+    {
+        $this->actingAs($this->admin());
+        $item = $this->kitchenItem();
+        $this->createDailyMenu('Daily Only', 'LUNCH');
+        $legacyMenuId = $this->createLegacyMenu('Legacy Lunch', 'LUNCH');
+
+        $this->post(route('admin.kitchen.recipes.store'), [
+            'menu_id' => $legacyMenuId,
+            'item_id' => $item->id,
+            'qty_per_serving' => 0.5,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('recipes', ['menu_id' => $legacyMenuId, 'item_id' => $item->id]);
+    }
+
+    public function test_meal_plan_creation_requires_legacy_menu_id_when_fk_targets_legacy_menus(): void
+    {
+        $this->actingAs($this->admin());
+        $this->createDailyMenu('Daily Only', 'DINNER');
+        $legacyMenuId = $this->createLegacyMenu('Legacy Dinner', 'DINNER');
+
+        $this->post(route('admin.kitchen.plans.store'), [
+            'plan_date' => '2026-04-12',
+            'menu_id' => $legacyMenuId,
+            'planned_servings' => 60,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('meal_plans', [
+            'menu_id' => $legacyMenuId,
+            'plan_date' => '2026-04-12',
+            'planned_servings' => 60,
+            'status' => MealPlan::STATUS_DRAFT,
+        ]);
+    }
+
+    public function test_kitchen_page_uses_daily_menus_for_menu_crud_and_legacy_menus_for_recipe_and_plan_selects(): void
+    {
+        $this->actingAs($this->admin());
+        $this->createDailyMenu('Daily Visible', 'LUNCH');
+        $legacyMenuId = $this->createLegacyMenu('Legacy Visible', 'DINNER');
+
+        $response = $this->get(route('admin.kitchen.index'));
+        $response->assertOk();
+        $response->assertSee('Legacy Visible');
+
+        $legacyOptions = collect($response->viewData('legacyMenuOptions'));
+        $menus = $response->viewData('menus');
+
+        $this->assertNotNull($menus->firstWhere('title', 'Daily Visible'));
+        $this->assertNull($menus->firstWhere('title', 'Legacy Visible'));
+        $this->assertNotNull($legacyOptions->firstWhere('id', $legacyMenuId));
+        $this->assertSame('Legacy Visible', $legacyOptions->firstWhere('id', $legacyMenuId)->name);
+    }
+
     public function test_existing_recipe_menu_and_plan_creation_still_works(): void
     {
         $this->actingAs($this->admin());

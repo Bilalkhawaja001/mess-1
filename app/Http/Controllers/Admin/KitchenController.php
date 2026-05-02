@@ -49,6 +49,7 @@ class KitchenController extends Controller
             ->filter(fn (Item $item) => (float) ($item->available_qty ?? 0) > 0)
             ->values();
         $menus = Menu::query()->latest()->get();
+        $legacyMenuOptions = DB::table('menus')->orderByDesc('id')->get();
         $recipes = Recipe::query()->latest()->limit(200)->get();
         $plans = MealPlan::query()->latest('plan_date')->limit(200)->get();
         $issues = KitchenIssue::query()->with(['mess', 'approvedStockTransaction', 'item'])->latest('issue_date')->limit(200)->get();
@@ -174,6 +175,7 @@ class KitchenController extends Controller
             'items',
             'issueItems',
             'menus',
+            'legacyMenuOptions',
             'recipes',
             'plans',
             'issues',
@@ -397,6 +399,7 @@ class KitchenController extends Controller
 
     public function storeRecipe(Request $request): RedirectResponse
     {
+        // Intentional split: Menu model points to daily_menus, but recipes.menu_id still FK's to legacy menus.id.
         Recipe::query()->create($request->validate([
             'menu_id' => 'required|exists:menus,id',
             'item_id' => 'required|exists:items,id',
@@ -426,6 +429,7 @@ class KitchenController extends Controller
 
     public function storePlan(Request $request): RedirectResponse
     {
+        // Intentional split: meal_plans.menu_id still targets legacy menus.id, not daily_menus.id.
         $data = $request->validate([
             'plan_date' => 'required|date',
             'menu_id' => 'required|exists:menus,id',

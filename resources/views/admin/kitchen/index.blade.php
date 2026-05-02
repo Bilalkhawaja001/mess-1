@@ -499,7 +499,7 @@
                         <div class="card-body">
                             <form method="POST" action="{{ route('admin.kitchen.recipes.store') }}" class="row g-2">
                                 @csrf
-                                <div class="col-md-4"><select name="menu_id" class="form-select" required>@foreach($menus as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach</select></div>
+                                <div class="col-md-4"><select name="menu_id" class="form-select" required>@foreach($legacyMenuOptions as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach</select></div>
                                 <div class="col-md-4"><select name="item_id" class="form-select" required>@foreach($items as $i)<option value="{{ $i->id }}">{{ $i->name }}</option>@endforeach</select></div>
                                 <div class="col-md-2"><input class="form-control" name="qty_per_serving" step="0.0001" type="number" required></div>
                                 <div class="col-md-2"><button class="btn btn-primary w-100">Add</button></div>
@@ -515,7 +515,7 @@
                                 <tbody>
                                 @foreach($recipes as $r)
                                     <tr>
-                                        <td>{{ $menus->firstWhere('id',$r->menu_id)?->name ?? $r->menu_id }}</td>
+                                        <td>{{ $legacyMenuOptions->firstWhere('id',$r->menu_id)?->name ?? $r->menu_id }}</td>
                                         <td>{{ $items->firstWhere('id',$r->item_id)?->name ?? $r->item_id }}</td>
                                         <td>{{ $r->qty_per_serving }}</td>
                                         <td class="text-end"><form method="POST" action="{{ route('admin.kitchen.recipes.delete.legacy',$r) }}">@csrf<button class="btn btn-sm btn-outline-danger">Delete</button></form></td>
@@ -542,7 +542,7 @@
                             <form method="POST" action="{{ route('admin.kitchen.plans.store') }}" class="row g-2">
                                 @csrf
                                 <div class="col-md-4"><input name="plan_date" type="date" class="form-control" required></div>
-                                <div class="col-md-4"><select name="menu_id" class="form-select" required>@foreach($menus as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach</select></div>
+                                <div class="col-md-4"><select name="menu_id" class="form-select" required>@foreach($legacyMenuOptions as $m)<option value="{{ $m->id }}">{{ $m->name }}</option>@endforeach</select></div>
                                 <div class="col-md-2"><input name="planned_servings" type="number" min="1" class="form-control" required></div>
                                 <div class="col-md-2"><button class="btn btn-primary w-100">Add</button></div>
                             </form>
@@ -559,7 +559,7 @@
                                 @foreach($plans as $p)
                                     <tr>
                                         <td>{{ $p->plan_date }}</td>
-                                        <td>{{ $menus->firstWhere('id',$p->menu_id)?->name ?? $p->menu_id }}</td>
+                                        <td>{{ $legacyMenuOptions->firstWhere('id',$p->menu_id)?->name ?? $p->menu_id }}</td>
                                         <td>{{ $p->planned_servings }}</td>
                                         <td>
                                             @if($p->status === \App\Models\MealPlan::STATUS_APPROVED)

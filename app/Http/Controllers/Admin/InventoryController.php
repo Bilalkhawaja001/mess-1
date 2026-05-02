@@ -102,10 +102,14 @@ class InventoryController extends Controller
             ->limit(200)
             ->get();
 
+        $returnSourceLineIds = $returnSourceGrns
+            ->flatMap(fn (GoodsReceipt $grn) => $grn->lines->pluck('id'))
+            ->values();
+
         $returnSourceTxns = StockTransaction::query()
-            ->where('reference_type', GoodsReceipt::class)
+            ->where('reference_type', GoodsReceiptLine::class)
             ->where('txn_type', 'GRN')
-            ->whereIn('reference_id', $returnSourceGrns->pluck('id'))
+            ->whereIn('reference_id', $returnSourceLineIds)
             ->get()
             ->keyBy('reference_id');
 
@@ -119,9 +123,13 @@ class InventoryController extends Controller
                 $line = $grn->lines->first();
                 $item = $line?->item;
                 $vendor = $grn->purchaseOrder?->vendor;
-                $txn = $returnSourceTxns->get($grn->id);
+                if (! $line || ! $item || ! $vendor) {
+                    return null;
+                }
 
-                if (! $line || ! $item || ! $vendor || ! $txn) {
+                $txn = $returnSourceTxns->get($line->id);
+
+                if (! $txn) {
                     return null;
                 }
 
@@ -726,8 +734,8 @@ class InventoryController extends Controller
         }
 
         $sourceTxn = StockTransaction::query()
-            ->where('reference_type', GoodsReceipt::class)
-            ->where('reference_id', $grn->id)
+            ->where('reference_type', GoodsReceiptLine::class)
+            ->where('reference_id', $line->id)
             ->where('txn_type', 'GRN')
             ->where('item_id', $item->id)
             ->latest('id')

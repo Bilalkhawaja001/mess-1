@@ -541,10 +541,11 @@
                                 @csrf
                                 <input type="hidden" name="vendor_id" id="vendor-return-vendor-id" value="{{ old('vendor_id') }}">
                                 <input type="hidden" name="item_id" id="vendor-return-item-id" value="{{ old('item_id') }}">
+                                <input type="hidden" name="goods_receipt_id" id="vendor-return-grn-id" value="{{ old('goods_receipt_id') }}">
 
                                 <div class="col-12">
                                     <label class="form-label">Received Stock Source</label>
-                                    <select name="goods_receipt_id" id="vendor-return-source" class="form-select" required>
+                                    <select name="goods_receipt_line_id" id="vendor-return-source" class="form-select" required>
                                         <option value="">Select GRN source</option>
                                         @foreach($vendorReturnSources as $source)
                                             <option value="{{ $source['goods_receipt_id'] }}" {{ (string) old('goods_receipt_id') === (string) $source['goods_receipt_id'] ? 'selected' : '' }}>
@@ -883,6 +884,7 @@
         const returnSourceSelect = document.getElementById('vendor-return-source');
         const returnVendorInput = document.getElementById('vendor-return-vendor-id');
         const returnItemInput = document.getElementById('vendor-return-item-id');
+        const returnGrnInput = document.getElementById('vendor-return-grn-id');
         const returnUnitSelect = document.getElementById('vendor-return-unit');
         const returnQtyInput = document.getElementById('vendor-return-qty');
         const returnMeta = document.getElementById('vendor-return-source-meta');
@@ -950,11 +952,12 @@
 
         const syncVendorReturnSource = () => {
             const grnId = Number((returnSourceSelect && returnSourceSelect.value) || 0);
-            const source = returnSourcesByGrnId[grnId];
+            const source = returnSourcesByLineId[grnId];
 
             if (!source) {
                 if (returnVendorInput) returnVendorInput.value = '';
                 if (returnItemInput) returnItemInput.value = '';
+                if (returnGrnInput) returnGrnInput.value = '';
                 if (returnUnitSelect) returnUnitSelect.innerHTML = '<option value="">Base unit</option>';
                 if (returnMeta) returnMeta.textContent = '';
                 if (returnConversion) returnConversion.textContent = '';
@@ -963,6 +966,7 @@
 
             if (returnVendorInput) returnVendorInput.value = source.vendor_id;
             if (returnItemInput) returnItemInput.value = source.item_id;
+            if (returnGrnInput) returnGrnInput.value = source.goods_receipt_id;
 
             if (returnMeta) {
                 returnMeta.textContent = `${source.vendor_name} | ${source.item_sku} - ${source.item_name} | Store balance ${source.current_balance_qty.toFixed(3)} ${source.uom} | Source pending ${source.returnable_qty.toFixed(3)} ${source.uom}`;
@@ -989,7 +993,7 @@
         const syncVendorReturnPreview = () => {
             if (!returnConversion) return;
             const grnId = Number((returnSourceSelect && returnSourceSelect.value) || 0);
-            const source = returnSourcesByGrnId[grnId];
+            const source = returnSourcesByLineId[grnId];
             const qty = Number((returnQtyInput && returnQtyInput.value) || 0);
             const unitCode = (returnUnitSelect && returnUnitSelect.value) || '';
 

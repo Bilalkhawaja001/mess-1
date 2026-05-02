@@ -682,8 +682,20 @@
                             </div>
                             <div class="col-12 d-grid gap-2">
                                 <button class="btn btn-outline-secondary">Apply</button>
-                                <a href="{{ route('admin.procurement.grn.export.detail', ['from_date' => $grnFromDate, 'to_date' => $grnToDate]) }}" class="btn btn-outline-primary">Download GRN Detail CSV</a>
-                                <a href="{{ route('admin.procurement.grn.export.summary', ['from_date' => $grnFromDate, 'to_date' => $grnToDate]) }}" class="btn btn-outline-primary">Download Item Summary CSV</a>
+                                <form method="GET" id="grn-export-selector-form" action="{{ route('admin.procurement.grn.export.detail') }}" class="d-flex gap-2 flex-wrap align-items-end">
+                                    <input type="hidden" name="from_date" value="{{ $grnFromDate }}">
+                                    <input type="hidden" name="to_date" value="{{ $grnToDate }}">
+
+                                    <div>
+                                        <label class="form-label small mb-1">Download Type</label>
+                                        <select id="grn-export-type" class="form-select form-select-sm">
+                                            <option value="detail">GRN Detail</option>
+                                            <option value="summary">Item Summary</option>
+                                        </select>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">Download</button>
+                                </form>
                             </div>
                         </form>
                         <form method="GET" action="{{ route('admin.procurement.grn.template') }}" class="row g-3 mb-3">

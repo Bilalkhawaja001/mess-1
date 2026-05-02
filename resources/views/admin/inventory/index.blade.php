@@ -178,7 +178,7 @@
                                     <option value="0" @selected(old('is_active', $editItem->is_active ? '1' : '0') === '0')>Inactive</option>
                                 </select>
                             </div>
-                            <div class="col-md-1 d-flex align-items-end">
+                            <div class="col-md-2 d-flex align-items-end">
                                 <button class="btn btn-primary w-100" type="submit">Save</button>
                             </div>
                         </form>
@@ -548,13 +548,13 @@
                                     <input type="date" id="vendor-return-source-date-filter" class="form-control">
                                 </div>
 
-                                <div class="col-md-7">
+                                <div class="col-md-6">
                                     <label class="form-label">Search GRN / Vendor / Item</label>
                                     <input type="text" id="vendor-return-source-search" class="form-control" placeholder="Type item, GRN no, vendor, code">
                                 </div>
 
                                 <div class="col-md-1 d-flex align-items-end">
-                                    <button type="button" id="vendor-return-source-clear-filter" class="btn btn-outline-secondary w-100">Clear</button>
+                                    <button type="button" id="vendor-return-source-clear-filter" class="btn btn-outline-secondary w-100 text-nowrap">Clear</button>
                                 </div>
 
                                 <div class="col-12">
@@ -1043,31 +1043,10 @@
         const filterVendorReturnSources = () => {
             if (!returnSourceSelect) return;
 
-            const dateValue = (returnSourceDateFilter && returnSourceDateFilter.value) || '';
-            const searchValue = ((returnSourceSearch && returnSourceSearch.value) || '').toLowerCase().trim();
-
-            [...returnSourceSelect.options].forEach((option, index) => {
-                if (index === 0) {
-                    option.disabled = false;
-                    option.style.display = '';
-                    return;
-                }
-
-                const optionDate = option.dataset.sourceDate || '';
-                const haystack = option.dataset.searchText || option.textContent.toLowerCase();
-
-                const dateOk = !dateValue || optionDate === dateValue;
-                const searchOk = !searchValue || haystack.includes(searchValue);
-
-                option.disabled = !(dateOk && searchOk);
-                option.style.display = (dateOk && searchOk) ? '' : 'none';
+            [...returnSourceSelect.options].forEach((option) => {
+                option.disabled = false;
+                option.style.display = '';
             });
-
-            const selected = returnSourceSelect.selectedOptions && returnSourceSelect.selectedOptions[0];
-            if (selected && selected.disabled) {
-                returnSourceSelect.value = '';
-                syncVendorReturnSource();
-            }
         };
 
         if (itemSelect) itemSelect.addEventListener('change', syncBalanceAndUnits);

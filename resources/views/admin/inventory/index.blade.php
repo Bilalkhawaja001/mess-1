@@ -898,6 +898,8 @@
         const preview = document.getElementById('inv-conversion-preview');
 
         const returnSources = @json($vendorReturnSourcesJson);
+        console.log('returnSources count', returnSources.length);
+        console.log(returnSources.slice(0, 5));
         const returnSourcesByGrnId = {};
         const returnSourcesByLineId = {};
         returnSources.forEach((source) => {
@@ -1034,6 +1036,12 @@
         const renderVendorReturnSources = () => {
             if (!returnSourceSelect) return;
 
+            console.log('renderVendorReturnSources start', {
+                count: returnSources.length,
+                dateFilter: (returnSourceDateFilter && returnSourceDateFilter.value) || '',
+                searchFilter: (returnSourceSearch && returnSourceSearch.value) || ''
+            });
+
             const dateValue = (returnSourceDateFilter && returnSourceDateFilter.value) || '';
             const searchValue = ((returnSourceSearch && returnSourceSearch.value) || '').toLowerCase().trim();
             const currentValue = returnSourceSelect.value;
@@ -1071,6 +1079,8 @@
                 returnSourceSelect.value = '';
                 syncVendorReturnSource();
             }
+
+            console.log('options after render', returnSourceSelect.options.length);
         };
 
         const filterVendorReturnSources = renderVendorReturnSources;

@@ -1319,18 +1319,13 @@
         const purchaseReportDownloadBtn = document.getElementById('purchase-report-download-btn');
 
         if (purchaseReportDownloadType && purchaseReportDownloadBtn) {
-            const syncPurchaseReportDownload = () => {
-                const summaryUrl = purchaseReportDownloadBtn.dataset.summaryUrl || purchaseReportDownloadBtn.href;
-                const detailBase = purchaseReportDownloadBtn.dataset.detailUrl || summaryUrl;
-                const query = summaryUrl.includes('?') ? summaryUrl.substring(summaryUrl.indexOf('?')) : '';
+            purchaseReportDownloadBtn.addEventListener('click', () => {
+                const url = purchaseReportDownloadType.value === 'detail'
+                    ? purchaseReportDownloadBtn.dataset.detailUrl
+                    : purchaseReportDownloadBtn.dataset.summaryUrl;
 
-                purchaseReportDownloadBtn.href = purchaseReportDownloadType.value === 'detail'
-                    ? `${detailBase}${query}`
-                    : summaryUrl;
-            };
-
-            purchaseReportDownloadType.addEventListener('change', syncPurchaseReportDownload);
-            syncPurchaseReportDownload();
+                window.location.href = url;
+            });
         }
 
 </script>

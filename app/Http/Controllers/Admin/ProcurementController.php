@@ -323,6 +323,13 @@ class ProcurementController extends Controller
         }, $filename, ['Content-Type' => 'text/csv']);
     }
 
+    public function exportSelectedPurchaseReport(Request $request): StreamedResponse
+    {
+        return $request->input('report_type') === 'detail'
+            ? $this->exportGrnDetail($request)
+            : $this->exportPurchaseReports($request);
+    }
+
     public function exportPurchaseReports(Request $request): StreamedResponse
     {
         [$fromDate, $toDate] = $this->resolvePurchaseReportDateRange($request, true);

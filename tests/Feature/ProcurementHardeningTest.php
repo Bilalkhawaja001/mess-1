@@ -13,6 +13,7 @@ use App\Models\Vendor;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class ProcurementHardeningTest extends TestCase
@@ -208,6 +209,70 @@ class ProcurementHardeningTest extends TestCase
         $response->assertSee('3.000');
     }
 
+    public function test_grn_pending_qty_is_tracked_per_purchase_order_line_for_same_item(): void
+    {
+        $admin = $this->adminUser();
+        $vendor = Vendor::query()->create(['name' => 'Vendor Same Item']);
+        $item = Item::query()->create(['name' => 'Rice', 'sku' => 'RICE-SAME', 'uom' => 'kg', 'is_active' => true]);
+        $po = PurchaseOrder::query()->create([
+            'vendor_id' => $vendor->id,
+            'po_number' => 'PO-SAME-ITEM',
+            'po_date' => '2026-04-10',
+            'status' => 'ISSUED',
+        ]);
+        $firstLine = PurchaseOrderLine::query()->create([
+            'purchase_order_id' => $po->id,
+            'item_id' => $item->id,
+            'qty_ordered' => 10,
+            'unit_price' => 100,
+        ]);
+        $secondLine = PurchaseOrderLine::query()->create([
+            'purchase_order_id' => $po->id,
+            'item_id' => $item->id,
+            'qty_ordered' => 8,
+            'unit_price' => 110,
+        ]);
+
+        $response = $this->actingAs($admin)->post('/admin/procurement/grn', [
+            'purchase_order_id' => $po->id,
+            'received_date' => '2026-04-10',
+            'receive_rows' => [
+                [
+                    'selected' => true,
+                    'purchase_order_line_id' => $firstLine->id,
+                    'item_id' => $item->id,
+                    'qty_received' => '4',
+                    'unit_cost' => '100',
+                    'unit_code' => 'kg',
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect('/admin/procurement?tab=grn');
+        if (Schema::hasColumn('goods_receipt_lines', 'purchase_order_line_id')) {
+            $this->assertDatabaseHas('goods_receipt_lines', [
+                'purchase_order_line_id' => $firstLine->id,
+                'item_id' => $item->id,
+                'qty_received' => 4,
+            ]);
+        }
+
+        $page = $this->actingAs($admin)->get('/admin/procurement');
+        $page->assertOk();
+
+        $this->assertSame(4.0, $this->receivedQtyForLine($po->fresh('goodsReceipts.lines'), $firstLine));
+        $this->assertSame(0.0, $this->receivedQtyForLine($po->fresh('goodsReceipts.lines'), $secondLine));
+
+        $eligiblePo = collect($page->viewData('grnEligiblePos'))->firstWhere('id', $po->id);
+        $this->assertNotNull($eligiblePo);
+        $firstViewLine = $eligiblePo->lines->firstWhere('id', $firstLine->id);
+        $secondViewLine = $eligiblePo->lines->firstWhere('id', $secondLine->id);
+        $this->assertSame(4.0, (float) $firstViewLine->received_qty);
+        $this->assertSame(6.0, (float) $firstViewLine->pending_qty);
+        $this->assertSame(0.0, (float) $secondViewLine->received_qty);
+        $this->assertSame(8.0, (float) $secondViewLine->pending_qty);
+    }
+
     public function test_stock_not_double_posted_by_approval_acknowledgement(): void
     {
         $admin = $this->adminUser();
@@ -270,12 +335,18 @@ class ProcurementHardeningTest extends TestCase
             'received_date' => '2026-04-10',
         ]);
 
-        GoodsReceiptLine::query()->create([
+        $payload = [
             'goods_receipt_id' => $grn->id,
             'item_id' => $line->item_id,
             'qty_received' => $qty,
             'unit_cost' => $unitCost,
-        ]);
+        ];
+
+        if (Schema::hasColumn('goods_receipt_lines', 'purchase_order_line_id')) {
+            $payload['purchase_order_line_id'] = $line->id;
+        }
+
+        GoodsReceiptLine::query()->create($payload);
 
         StockTransaction::query()->create([
             'item_id' => $line->item_id,
@@ -289,5 +360,13 @@ class ProcurementHardeningTest extends TestCase
         ]);
 
         return $grn;
+    }
+
+    private function receivedQtyForLine(PurchaseOrder $po, PurchaseOrderLine $line): float
+    {
+        return (float) $po->goodsReceipts
+            ->flatMap->lines
+            ->where('purchase_order_line_id', $line->id)
+            ->sum('qty_received');
     }
 }

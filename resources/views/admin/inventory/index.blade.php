@@ -859,6 +859,7 @@
         return [
             'goods_receipt_line_id' => $source['goods_receipt_line_id'],
             'goods_receipt_id' => $source['goods_receipt_id'],
+            'received_date' => $source['received_date'],
             'vendor_id' => $source['vendor_id'],
             'vendor_name' => $source['vendor_name'],
             'grn_number' => $source['grn_number'],

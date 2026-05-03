@@ -818,25 +818,20 @@
             <div class="card procurement-form-card">
                 <div class="card-header"><span>Purchase Reports</span><span class="text-muted small">GRN-based purchasing analysis</span></div>
                 <div class="card-body">
-                    <form method="GET" action="{{ route('admin.procurement.index') }}" class="row g-3 mb-3">
+                    <form method="GET" action="{{ route('admin.procurement.reports.export-selected') }}" class="row g-3 mb-3">
                         <input type="hidden" name="tab" value="reports">
-                        <div class="col-md-3">
-                            <label class="form-label">From Date</label>
-                            <input type="date" name="from_date" value="{{ $reportFromDate }}" class="form-control">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">To Date</label>
-                            <input type="date" name="to_date" value="{{ $reportToDate }}" class="form-control">
-                        </div>
+                        <input type="hidden" name="from_date" value="{{ $reportFromDate }}">
+                        <input type="hidden" name="to_date" value="{{ $reportToDate }}">
+                        <input type="hidden" name="q" value="{{ $reportSearch }}">
                         <div class="col-md-4">
-                            <label class="form-label">Search Item / Category / Vendor</label>
-                            <input type="text" name="q" value="{{ $reportSearch }}" class="form-control" placeholder="e.g. Chicken">
+                            <label class="form-label">Download Type</label>
+                            <select name="report_type" class="form-select">
+                                <option value="summary">Purchase Report Summary</option>
+                                <option value="detail">GRN Detail</option>
+                            </select>
                         </div>
                         <div class="col-md-2 d-flex align-items-end gap-2">
-                            <button class="btn btn-primary w-100">Apply</button>
-                        </div>
-                        <div class="col-12 d-flex justify-content-end">
-                            <a href="{{ route('admin.procurement.reports.export', ['from_date' => $reportFromDate, 'to_date' => $reportToDate, 'q' => $reportSearch]) }}" class="btn btn-outline-primary">Download Purchase Reports CSV</a>
+                            <button class="btn btn-outline-primary w-100" type="submit">Download</button>
                         </div>
                     </form>
 

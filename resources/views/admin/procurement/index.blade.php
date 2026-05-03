@@ -940,6 +940,54 @@
                 </div>
             </div>
         </div>
+
+            <div class="card procurement-table-card">
+                <div class="card-header">
+                    <span>GRN Details</span>
+                    <span class="text-muted small">Line-wise GRN purchase details</span>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>GRN</th>
+                                <th>PO</th>
+                                <th>Vendor</th>
+                                <th>Item Code</th>
+                                <th>Item Name</th>
+                                <th>Category</th>
+                                <th>Qty</th>
+                                <th>UOM</th>
+                                <th>Unit Cost</th>
+                                <th>Total Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($purchaseReportData['grnDetails'] ?? $purchaseReportData['grn_details'] ?? [] as $row)
+                                <tr>
+                                    <td>{{ $row->received_date ?? '' }}</td>
+                                    <td>{{ $row->grn_number ?? $row->grn_id ?? '' }}</td>
+                                    <td>{{ $row->po_number ?? $row->po_id ?? '' }}</td>
+                                    <td>{{ $row->vendor_name ?? '' }}</td>
+                                    <td>{{ $row->sku ?? $row->item_code ?? '' }}</td>
+                                    <td>{{ $row->item_name ?? '' }}</td>
+                                    <td>{{ $row->category ?? '' }}</td>
+                                    <td>{{ number_format((float) ($row->qty_received ?? 0), 3) }}</td>
+                                    <td>{{ $row->uom ?? '' }}</td>
+                                    <td>{{ number_format((float) ($row->unit_cost ?? 0), 2) }}</td>
+                                    <td>{{ number_format((float) ($row->total_cost ?? 0), 2) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted py-4">No GRN details found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
     @endif
 </div>
 

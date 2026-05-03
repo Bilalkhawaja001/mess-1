@@ -1071,11 +1071,33 @@ class ProcurementController extends Controller
             ->orderBy('items.sku')
             ->get();
 
+
+        $grnDetails = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
+            ->selectRaw("
+                goods_receipts.received_date,
+                goods_receipts.id as grn_id,
+                purchase_orders.id as po_id,
+                vendors.name as vendor_name,
+                items.sku as item_code,
+                items.name as item_name,
+                COALESCE(items.category, 'Uncategorized') as category,
+                items.uom,
+                goods_receipt_lines.qty_received,
+                goods_receipt_lines.unit_cost,
+                (goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost
+            ")
+            ->orderByDesc('goods_receipts.received_date')
+            ->orderByDesc('goods_receipts.id')
+            ->orderBy('items.name')
+            ->limit(300)
+            ->get();
+
         return [
             'totals' => $baseTotals,
             'categoryRows' => $categoryRows,
             'vendorRows' => $vendorRows,
             'itemRows' => $itemRows,
+            'grnDetails' => $grnDetails,
         ];
     }
 

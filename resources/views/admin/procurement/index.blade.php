@@ -827,6 +827,25 @@
             <div class="card procurement-form-card">
                 <div class="card-header"><span>Purchase Reports</span><span class="text-muted small">GRN-based purchasing analysis</span></div>
                 <div class="card-body">
+                    <form method="GET" action="{{ route('admin.procurement.index') }}" class="row g-3 mb-3">
+                        <input type="hidden" name="tab" value="reports">
+                        <div class="col-md-3">
+                            <label class="form-label">From Date</label>
+                            <input type="date" name="from_date" value="{{ $reportFromDate }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">To Date</label>
+                            <input type="date" name="to_date" value="{{ $reportToDate }}" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Search Item / Category / Vendor</label>
+                            <input type="text" name="q" value="{{ $reportSearch }}" class="form-control" placeholder="e.g. Chicken">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            <button class="btn btn-primary w-100" type="submit">Apply</button>
+                        </div>
+                    </form>
+
                     <form method="GET" action="{{ route('admin.procurement.reports.export-selected') }}" class="row g-3 mb-3">
                         <input type="hidden" name="tab" value="reports">
                         <input type="hidden" name="from_date" value="{{ $reportFromDate }}">

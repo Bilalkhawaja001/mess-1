@@ -30,6 +30,35 @@
     </div>
 </div>
 
+<div class="card shadow-sm mb-3">
+    <div class="card-header">Manual Monthly Attendance Entry</div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('admin.attendance-monthly.manual') }}" class="row g-3 align-items-end">
+            @csrf
+            <div class="col-md-3">
+                <label class="form-label">Month</label>
+                <input type="month" name="month_cycle" value="{{ $monthCycle }}" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Search Member</label>
+                <select name="member_id" class="form-select" required>
+                    <option value="">Select member</option>
+                    @foreach($rows as $r)
+                        <option value="{{ $r['member']->id }}">{{ $r['member']->member_code }} — {{ $r['member']->name }} — {{ $r['member']->department_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Present Days</label>
+                <input type="number" name="present_days" min="0" max="31" class="form-control" required>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card shadow-sm"><div class="card-header">Monthly Present Days</div><div class="card-body table-responsive">
 <form method="POST" action="{{ route('admin.attendance-monthly.store') }}">@csrf
 <input type="hidden" name="month_cycle" value="{{ $monthCycle }}">

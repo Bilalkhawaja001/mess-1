@@ -69,6 +69,46 @@ class MonthlyAttendanceController extends Controller
         }, 'monthly_attendance_template.csv', ['Content-Type' => 'text/csv']);
     }
 
+    public function manualStore(Request $request): RedirectResponse
+    {
+        $payload = $request->validate([
+            'month_cycle' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+            'member_id' => ['required', 'integer', 'exists:members,id'],
+            'present_days' => ['required', 'integer', 'min:0', 'max:31'],
+        ]);
+
+        $monthCycle = (string) $payload['month_cycle'];
+        $memberId = (int) $payload['member_id'];
+        $presentDays = (int) $payload['present_days'];
+
+        $monthDays = (int) date('t', strtotime($monthCycle . '-01'));
+        if ($presentDays > $monthDays) {
+            return back()->with('error', "present_days cannot exceed {$monthDays} for {$monthCycle}.")->withInput();
+        }
+
+        $existing = MonthlyAttendance::query()
+            ->where('month_cycle', $monthCycle)
+            ->where('member_id', $memberId)
+            ->first();
+
+        if ($existing && $existing->is_locked) {
+            return back()->with('error', 'Monthly attendance is locked. Unlock before editing.')->withInput();
+        }
+
+        MonthlyAttendance::query()->updateOrCreate(
+            ['month_cycle' => $monthCycle, 'member_id' => $memberId],
+            [
+                'present_days' => $presentDays,
+                'approved_by_user_id' => $existing?->approved_by_user_id,
+                'approved_at' => $existing?->approved_at,
+                'is_locked' => $existing?->is_locked ?? false,
+            ]
+        );
+
+        return redirect()->route('admin.attendance-monthly.index', ['month_cycle' => $monthCycle])
+            ->with('success', 'Manual monthly attendance saved.');
+    }
+
     public function import(Request $request): RedirectResponse
     {
         $request->validate([

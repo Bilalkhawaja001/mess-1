@@ -15,9 +15,22 @@ use Illuminate\View\View;
 
 class MemberController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $rows = Member::query()->with(['user', 'mess'])->orderBy('member_code')->get();
+        $q = trim((string) $request->input('q', ''));
+
+        $rows = Member::query()
+            ->with(['user', 'mess'])
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($inner) use ($q) {
+                    $inner->where('member_code', 'like', "%{$q}%")
+                        ->orWhere('name', 'like', "%{$q}%")
+                        ->orWhere('department_name', 'like', "%{$q}%")
+                        ->orWhere('mobile_number', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('member_code')
+            ->get();
         $users = User::query()->where('is_active', true)->with('role')->orderBy('username')->get();
         $messes = Mess::query()->where('is_active', true)->orderBy('name')->get();
 
@@ -30,7 +43,7 @@ class MemberController extends Controller
             ],
         ]);
 
-        return view('admin.members.index', compact('rows', 'users', 'messes', 'removalMeta'));
+        return view('admin.members.index', compact('rows', 'users', 'messes', 'removalMeta', 'q'));
     }
 
     public function store(StoreMemberRequest $request): RedirectResponse

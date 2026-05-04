@@ -119,6 +119,16 @@
 <div class="card shadow-sm members-page-card">
     <div class="card-header">Members List</div>
     <div class="card-body">
+        <form method="GET" action="{{ route('admin.members.index') }}" class="row g-2 align-items-end mb-3">
+            <div class="col-md-5">
+                <label class="form-label">Search Member</label>
+                <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control" placeholder="Search by member code, name, department, or mobile">
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-outline-primary">Search</button>
+                <a href="{{ route('admin.members.index') }}" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
         <div class="table-wrap members-table-wrap">
         <table class="table table-sm align-middle members-table">
             <thead>

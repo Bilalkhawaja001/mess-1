@@ -206,6 +206,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/procurement/po', [ProcurementController::class, 'storePo'])->name('procurement.po.store');
         Route::post('/procurement/po/bulk-approve', [ProcurementController::class, 'bulkApprovePo'])->name('procurement.po.bulk-approve');
         Route::post('/procurement/po/{po}/approve', [ProcurementController::class, 'approvePo'])->name('procurement.po.approve');
+        Route::post('/procurement/purchase-orders/{po}/cancel', [ProcurementController::class, 'cancelPurchaseOrder'])->name('procurement.po.cancel');
+        Route::post('/procurement/purchase-orders/{po}/lines/update', [ProcurementController::class, 'updatePurchaseOrderLines'])->name('procurement.po.lines.update');
         Route::get('/procurement/grn/template', [ProcurementController::class, 'downloadGrnTemplate'])->name('procurement.grn.template');
         Route::post('/procurement/grn/import/preview', [ProcurementController::class, 'previewGrnImport'])->name('procurement.grn.import.preview');
         Route::post('/procurement/grn/import/store', [ProcurementController::class, 'storeGrnImport'])->name('procurement.grn.import.store');

@@ -585,11 +585,27 @@
                                             <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
                                             <td>{{ $po->status }}</td>
                                             <td class="text-end">
-                                                @if($poSelectable)
-                                                    <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}?tab=po" formmethod="POST" class="btn btn-sm btn-outline-success">Approve</button>
-                                                @else
-                                                    <span class="text-muted small">Approved</span>
-                                                @endif
+                                                <div class="d-flex gap-1 justify-content-end flex-wrap">
+                                                    @if($poSelectable)
+                                                        <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}?tab=po" formmethod="POST" class="btn btn-sm btn-outline-success">Approve</button>
+                                                    @endif
+
+                                                    @if($po->goodsReceipts->isEmpty() && $po->status !== 'CANCELLED')
+                                                        <a href="{{ route('admin.procurement.index', ['tab' => 'po', 'edit_po' => $po->id]) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+
+                                                        <button type="submit"
+                                                                formaction="{{ route('admin.procurement.po.cancel',$po) }}?tab=po"
+                                                                formmethod="POST"
+                                                                class="btn btn-sm btn-outline-danger"
+                                                                onclick="return confirm('Cancel this PO? This is allowed only before GRN creation.');">
+                                                            Cancel
+                                                        </button>
+                                                    @endif
+
+                                                    @if($po->goodsReceipts->isNotEmpty())
+                                                        <span class="text-muted small">GRN Created</span>
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
                                     @empty
@@ -598,6 +614,49 @@
                                 </tbody></table>
                             </div>
                     </form>
+
+                    @if(isset($editPo) && $editPo)
+                        <div class="card procurement-form-card mt-3">
+                            <div class="card-header">
+                                <span>Edit PO Lines</span>
+                                <span class="text-muted small">{{ $editPo->po_number }} — {{ $editPo->po_date }} — {{ $editPo->vendor->name ?? 'Vendor' }}</span>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ route('admin.procurement.po.lines.update', $editPo) }}?tab=po">
+                                    @csrf
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>Item Code</th>
+                                                    <th>Item Name</th>
+                                                    <th>Qty</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Remove</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($editPo->lines as $line)
+                                                    <tr>
+                                                        <td>{{ $line->item?->sku }}</td>
+                                                        <td>{{ $line->item?->name }}</td>
+                                                        <td><input type="number" step="0.001" min="0.001" name="lines[{{ $line->id }}][qty_ordered]" value="{{ $line->qty_ordered }}" class="form-control form-control-sm"></td>
+                                                        <td><input type="number" step="0.01" min="0" name="lines[{{ $line->id }}][unit_price]" value="{{ $line->unit_price }}" class="form-control form-control-sm"></td>
+                                                        <td class="text-center"><input type="checkbox" name="lines[{{ $line->id }}][remove]" value="1"></td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="btn btn-outline-secondary">Close</a>
+                                        <button class="btn btn-primary">Save PO Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

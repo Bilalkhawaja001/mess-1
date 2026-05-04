@@ -76,6 +76,18 @@ class ProcurementController extends Controller
         $reportSearch = trim((string) $request->input('q', ''));
         $purchaseReportData = $this->buildPurchaseReportData($reportFromDate, $reportToDate, $reportSearch);
 
+        $editPo = null;
+        $editPoId = $request->integer('edit_po');
+        if ($editPoId > 0) {
+            $editPo = PurchaseOrder::query()
+                ->with(['vendor', 'lines.item.units', 'goodsReceipts'])
+                ->find($editPoId);
+
+            if ($editPo && $editPo->goodsReceipts->isNotEmpty()) {
+                $editPo = null;
+            }
+        }
+
         return view('admin.procurement.index', compact(
             'vendors',
             'items',
@@ -90,7 +102,8 @@ class ProcurementController extends Controller
             'reportFromDate',
             'reportToDate',
             'reportSearch',
-            'purchaseReportData'
+            'purchaseReportData',
+            'editPo'
         ));
     }
 
@@ -545,6 +558,94 @@ class ProcurementController extends Controller
 
         return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('success', 'PO created');
     }
+    public function cancelPurchaseOrder(PurchaseOrder $po): RedirectResponse
+    {
+        $grnExists = GoodsReceipt::query()
+            ->where('purchase_order_id', $po->id)
+            ->exists();
+
+        if ($grnExists) {
+            return back()->withErrors(['po' => 'PO cannot be cancelled after GRN is created.']);
+        }
+
+        if ($po->status === 'CANCELLED') {
+            return back()->with('success', 'PO is already cancelled.');
+        }
+
+        $po->status = 'CANCELLED';
+        $po->save();
+
+        return redirect()->route('admin.procurement.index', ['tab' => 'po'])
+            ->with('success', 'PO cancelled successfully.');
+    }
+
+    public function updatePurchaseOrderLines(Request $request, PurchaseOrder $po): RedirectResponse
+    {
+        $grnExists = GoodsReceipt::query()
+            ->where('purchase_order_id', $po->id)
+            ->exists();
+
+        if ($grnExists) {
+            return back()->withErrors(['po' => 'PO cannot be edited after GRN is created.']);
+        }
+
+        if ($po->status === 'CANCELLED') {
+            return back()->withErrors(['po' => 'Cancelled PO cannot be edited.']);
+        }
+
+        $data = $request->validate([
+            'lines' => ['required', 'array'],
+            'lines.*.qty_ordered' => ['nullable', 'numeric', 'min:0.001'],
+            'lines.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.remove' => ['nullable'],
+        ]);
+
+        $po->load('lines');
+
+        $remaining = 0;
+        foreach ($po->lines as $line) {
+            $row = $data['lines'][$line->id] ?? null;
+            if (!$row) {
+                $remaining++;
+                continue;
+            }
+
+            if (!empty($row['remove'])) {
+                continue;
+            }
+
+            $remaining++;
+        }
+
+        if ($remaining <= 0) {
+            return back()->withErrors(['po' => 'At least one PO line must remain.']);
+        }
+
+        DB::transaction(function () use ($po, $data) {
+            $po->load('lines');
+
+            foreach ($po->lines as $line) {
+                $row = $data['lines'][$line->id] ?? null;
+                if (!$row) {
+                    continue;
+                }
+
+                if (!empty($row['remove'])) {
+                    $line->delete();
+                    continue;
+                }
+
+                $line->qty_ordered = (float) $row['qty_ordered'];
+                $line->unit_price = (float) $row['unit_price'];
+                $line->save();
+            }
+        });
+
+        return redirect()->route('admin.procurement.index', ['tab' => 'po'])
+            ->with('success', 'PO lines updated successfully.');
+    }
+
+
 
     public function approvePo(PurchaseOrder $po): RedirectResponse
     {

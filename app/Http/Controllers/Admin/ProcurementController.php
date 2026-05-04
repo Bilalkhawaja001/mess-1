@@ -1049,30 +1049,44 @@ class ProcurementController extends Controller
 
     private function buildPurchaseReportData(string $fromDate, string $toDate, string $search = ''): array
     {
-        $baseTotals = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
-            ->selectRaw('COALESCE(SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost), 0) as total_cost, COALESCE(SUM(goods_receipt_lines.qty_received), 0) as total_qty, COUNT(DISTINCT items.id) as unique_items, COUNT(DISTINCT vendors.id) as vendors_used')
+        $returnAgg = \Illuminate\Support\Facades\DB::table('vendor_returns')
+            ->selectRaw('goods_receipt_line_id, SUM(qty_returned) as returned_qty, SUM(qty_returned * unit_cost) as returned_cost')
+            ->whereNotNull('goods_receipt_line_id')
+            ->groupBy('goods_receipt_line_id');
+
+        $netBase = function () use ($fromDate, $toDate, $search, $returnAgg) {
+            return $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
+                ->leftJoinSub($returnAgg, 'vr', function ($join) {
+                    $join->on('vr.goods_receipt_line_id', '=', 'goods_receipt_lines.id');
+                });
+        };
+
+        $netQtySql = '(goods_receipt_lines.qty_received - COALESCE(vr.returned_qty, 0))';
+        $netCostSql = '((goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) - COALESCE(vr.returned_cost, 0))';
+
+        $baseTotals = $netBase()
+            ->selectRaw("COALESCE(SUM($netCostSql), 0) as total_cost, COALESCE(SUM($netQtySql), 0) as total_qty, COUNT(DISTINCT items.id) as unique_items, COUNT(DISTINCT vendors.id) as vendors_used")
             ->first();
 
-        $categoryRows = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
-            ->selectRaw("COALESCE(items.category, 'Uncategorized') as category, SUM(goods_receipt_lines.qty_received) as total_qty, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost, CASE WHEN SUM(goods_receipt_lines.qty_received) > 0 THEN SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) / SUM(goods_receipt_lines.qty_received) ELSE 0 END as avg_cost")
+        $categoryRows = $netBase()
+            ->selectRaw("COALESCE(items.category, 'Uncategorized') as category, SUM($netQtySql) as total_qty, SUM($netCostSql) as total_cost, CASE WHEN SUM($netQtySql) > 0 THEN SUM($netCostSql) / SUM($netQtySql) ELSE 0 END as avg_cost")
             ->groupBy('items.category')
             ->orderBy('category')
             ->get();
 
-        $vendorRows = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
-            ->selectRaw('vendors.name as vendor_name, SUM(goods_receipt_lines.qty_received) as total_qty, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost, COUNT(DISTINCT goods_receipts.id) as grn_count')
+        $vendorRows = $netBase()
+            ->selectRaw("vendors.name as vendor_name, SUM($netQtySql) as total_qty, SUM($netCostSql) as total_cost, COUNT(DISTINCT goods_receipts.id) as grn_count")
             ->groupBy('vendors.id', 'vendors.name')
             ->orderBy('vendors.name')
             ->get();
 
-        $itemRows = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
-            ->selectRaw("items.id as item_id, items.sku, items.name as item_name, COALESCE(items.category, 'Uncategorized') as category, items.uom, SUM(goods_receipt_lines.qty_received) as total_qty, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost, CASE WHEN SUM(goods_receipt_lines.qty_received) > 0 THEN SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) / SUM(goods_receipt_lines.qty_received) ELSE 0 END as avg_cost, MIN(goods_receipts.received_date) as first_grn_date, MAX(goods_receipts.received_date) as last_grn_date")
+        $itemRows = $netBase()
+            ->selectRaw("items.id as item_id, items.sku, items.name as item_name, COALESCE(items.category, 'Uncategorized') as category, items.uom, SUM($netQtySql) as total_qty, SUM($netCostSql) as total_cost, CASE WHEN SUM($netQtySql) > 0 THEN SUM($netCostSql) / SUM($netQtySql) ELSE 0 END as avg_cost, MIN(goods_receipts.received_date) as first_grn_date, MAX(goods_receipts.received_date) as last_grn_date")
             ->groupBy('items.id', 'items.sku', 'items.name', 'items.category', 'items.uom')
             ->orderBy('items.sku')
             ->get();
 
-
-        $grnDetails = $this->buildPurchaseReportBaseQuery($fromDate, $toDate, $search)
+        $grnDetails = $netBase()
             ->selectRaw("
                 goods_receipts.received_date,
                 goods_receipts.id as grn_id,
@@ -1083,8 +1097,12 @@ class ProcurementController extends Controller
                 COALESCE(items.category, 'Uncategorized') as category,
                 items.uom,
                 goods_receipt_lines.qty_received,
+                COALESCE(vr.returned_qty, 0) as returned_qty,
+                $netQtySql as net_qty,
                 goods_receipt_lines.unit_cost,
-                (goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_cost
+                (goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as gross_cost,
+                COALESCE(vr.returned_cost, 0) as returned_cost,
+                $netCostSql as total_cost
             ")
             ->orderByDesc('goods_receipts.received_date')
             ->orderByDesc('goods_receipts.id')

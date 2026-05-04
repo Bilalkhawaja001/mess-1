@@ -1,115 +1,183 @@
 @extends('layouts.app')
-@section('title','Statement')
-@section('page_title','Statement')
-@push('styles')
-<style>
-    @media print {
-        .no-print { display:none !important; }
-        body { background:#fff; }
-        .card { border:0; box-shadow:none !important; }
-    }
-</style>
-@endpush
+
 @section('content')
-<div class="card shadow-sm mb-3 no-print">
-    <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end">
+<div class="container-fluid py-3">
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <form method="GET" action="{{ route('admin.statement.index') }}" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Member</label>
+                    <select name="member_id" class="form-select">
+                        @foreach($members as $m)
+                            <option value="{{ $m->id }}" @selected((int) $memberId === (int) $m->id)>
+                                {{ $m->member_code }} - {{ $m->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Single Month</label>
+                    <input type="month" name="single_month" value="{{ $singleMonth }}" class="form-control">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">From Month</label>
+                    <input type="month" name="from_month" value="{{ $fromMonth }}" class="form-control">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">To Month</label>
+                    <input type="month" name="to_month" value="{{ $toMonth }}" class="form-control">
+                </div>
+
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn btn-secondary flex-fill" type="submit">View</button>
+                    <button class="btn btn-success flex-fill" type="submit" name="export" value="csv">Excel</button>
+                </div>
+
+                <div class="col-md-2">
+                    <button type="button" onclick="window.print()" class="btn btn-primary w-100">Print Statement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="statement-print mx-auto bg-white border rounded shadow-sm p-3" style="max-width: 920px;">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h3 class="mb-1 fw-bold">Executive Mess</h3>
+                <div class="text-muted">Member Account Statement</div>
+            </div>
+            <div class="text-muted small">Generated: {{ now()->format('Y-m-d') }}</div>
+        </div>
+
+        <hr>
+
+        <div class="row small fw-semibold mb-2">
+            <div class="col-md-2">Member ID:</div>
+            <div class="col-md-4 fw-normal">{{ $member->member_code ?? '-' }}</div>
+            <div class="col-md-2">Name:</div>
+            <div class="col-md-4 fw-normal">{{ $member->name ?? '-' }}</div>
+        </div>
+
+        <div class="row small fw-semibold mb-2">
+            <div class="col-md-2">Department:</div>
+            <div class="col-md-4 fw-normal">{{ $member->department_name ?? '-' }}</div>
+            <div class="col-md-2">Mess:</div>
+            <div class="col-md-4 fw-normal">{{ $messName }}</div>
+        </div>
+
+        <div class="row small fw-semibold mb-2">
+            <div class="col-md-2">Join Date:</div>
+            <div class="col-md-4 fw-normal">{{ $member->join_date ?? '-' }}</div>
+            <div class="col-md-2">Leave Date:</div>
+            <div class="col-md-4 fw-normal">{{ $member->leave_date ?? '-' }}</div>
+        </div>
+
+        <div class="row small fw-semibold mb-3">
+            <div class="col-md-2">Statement Month:</div>
+            <div class="col-md-10 fw-normal">{{ $fromMonth }} to {{ $toMonth }}</div>
+        </div>
+
+        <div class="row g-2 mb-3">
             <div class="col-md-3">
-                <label class="form-label">Member Search</label>
-                <input name="member_q" class="form-control" value="{{ $memberQuery }}" placeholder="code, name, department">
+                <div class="border rounded p-2">
+                    <div class="text-muted">Opening Balance</div>
+                    <div class="h5 mb-0 fw-bold">{{ number_format($openingBalance, 2) }}</div>
+                </div>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Member</label>
-                <select name="member_id" class="form-select">
-                    <option value="">All</option>
-                    @foreach($members as $member)
-                        <option value="{{ $member->id }}" @selected((string) $memberId === (string) $member->id)>{{ $member->member_code }} - {{ $member->name }}</option>
-                    @endforeach
-                </select>
+                <div class="border rounded p-2">
+                    <div class="text-muted">Total Debit</div>
+                    <div class="h5 mb-0 fw-bold">{{ number_format($totalDebit, 2) }}</div>
+                </div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Month</label>
-                <input name="month_cycle" class="form-control" value="{{ $monthCycle }}" placeholder="2026-03">
+            <div class="col-md-3">
+                <div class="border rounded p-2">
+                    <div class="text-muted">Total Credit</div>
+                    <div class="h5 mb-0 fw-bold">{{ number_format($totalCredit, 2) }}</div>
+                </div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">From Month</label>
-                <input name="from_month" class="form-control" value="{{ $fromMonth }}" placeholder="2026-01">
+            <div class="col-md-3">
+                <div class="border rounded p-2">
+                    <div class="text-muted">Closing Balance</div>
+                    <div class="h5 mb-0 fw-bold">{{ number_format($closingBalance, 2) }}</div>
+                </div>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">To Month</label>
-                <input name="to_month" class="form-control" value="{{ $toMonth }}" placeholder="2026-03">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">From Date</label>
-                <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">To Date</label>
-                <input type="date" name="to_date" class="form-control" value="{{ $toDate }}">
-            </div>
-            <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-outline-primary" type="submit">Load</button>
-                <a class="btn btn-outline-secondary" href="{{ route('admin.statement.index', array_filter(['member_id' => $memberId, 'member_q' => $memberQuery, 'month_cycle' => $monthCycle, 'from_month' => $fromMonth, 'to_month' => $toMonth, 'from_date' => $fromDate, 'to_date' => $toDate, 'export' => 'csv'])) }}">Download CSV</a>
-                <button type="button" onclick="window.print()" class="btn btn-primary">Print</button>
-            </div>
-        </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Month</th>
+                        <th>Days</th>
+                        <th>Rate Per Day</th>
+                        <th>Total Amount</th>
+                        <th>Ref Type</th>
+                        <th>Ref ID</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th>Running Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($rows as $row)
+                        <tr>
+                            <td>{{ $row->month }}</td>
+                            <td>{{ $row->days }}</td>
+                            <td>{{ $row->rate_per_day !== '' ? number_format((float) $row->rate_per_day, 2) : '' }}</td>
+                            <td>{{ number_format((float) $row->total_amount, 2) }}</td>
+                            <td>{{ $row->ref_type }}</td>
+                            <td>{{ $row->ref_id }}</td>
+                            <td>{{ number_format((float) $row->debit, 2) }}</td>
+                            <td>{{ number_format((float) $row->credit, 2) }}</td>
+                            <td>{{ number_format((float) $row->running_balance, 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">No statement rows found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="text-center text-muted small mt-3">
+            This is a system-generated statement and does not require any signature or stamp.
+        </div>
     </div>
 </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-3">
-        <div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Opening Balance</div><div class="fs-5 fw-semibold">{{ number_format((float) ($totals['opening_balance'] ?? 0), 2) }}</div></div></div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Bill Debit</div><div class="fs-5 fw-semibold">{{ number_format((float) ($totals['debit'] ?? 0), 2) }}</div></div></div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Payment Credit</div><div class="fs-5 fw-semibold">{{ number_format((float) ($totals['credit'] ?? 0), 2) }}</div></div></div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm"><div class="card-body"><div class="text-muted small">Closing Balance</div><div class="fs-5 fw-semibold">{{ number_format((float) ($totals['closing_balance'] ?? 0), 2) }}</div></div></div>
-    </div>
-</div>
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
 
-<div class="card shadow-sm">
-    <div class="card-header">Member Statement</div>
-    <div class="card-body table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Month</th>
-                    <th>Member</th>
-                    <th>Ref</th>
-                    <th>Reason</th>
-                    <th>Debit</th>
-                    <th>Credit</th>
-                    <th>Running Balance</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="table-light">
-                    <td colspan="7" class="fw-semibold">Opening Balance</td>
-                    <td class="fw-semibold">{{ number_format((float) ($totals['opening_balance'] ?? 0), 2) }}</td>
-                </tr>
-                @forelse($rows as $row)
-                    <tr>
-                        <td>{{ optional($row['date'])->format('Y-m-d') }}</td>
-                        <td>{{ $row['month_cycle'] }}</td>
-                        <td>{{ $row['member_code'] }} @if(!empty($row['member_name']))<div class="small text-muted">{{ $row['member_name'] }}</div>@endif</td>
-                        <td>{{ $row['ref_type'] }}#{{ $row['ref_id'] }}</td>
-                        <td>{{ $row['reason_code'] ?: '-' }}</td>
-                        <td>{{ number_format((float) $row['debit'], 2) }}</td>
-                        <td>{{ number_format((float) $row['credit'], 2) }}</td>
-                        <td>{{ number_format((float) $row['balance_after'], 2) }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" class="text-center text-muted">No statement rows found</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
+    .statement-print,
+    .statement-print * {
+        visibility: visible;
+    }
+
+    .statement-print {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .sidebar,
+    nav,
+    header,
+    .btn,
+    form {
+        display: none !important;
+    }
+}
+</style>
 @endsection

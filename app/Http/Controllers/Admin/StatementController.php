@@ -1,190 +1,178 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Billing;
-use App\Models\Member;
-use App\Models\MemberLedger;
+use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Response;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StatementController extends Controller
 {
     public function index(Request $request): View|StreamedResponse
     {
-        $memberId = trim((string) $request->input('member_id', ''));
-        $memberQuery = trim((string) $request->input('member_q', ''));
-        $monthCycle = trim((string) $request->input('month_cycle', ''));
-        $fromMonth = trim((string) $request->input('from_month', ''));
-        $toMonth = trim((string) $request->input('to_month', ''));
-        $fromDate = trim((string) $request->input('from_date', ''));
-        $toDate = trim((string) $request->input('to_date', ''));
-        $export = trim((string) $request->input('export', ''));
-
-        $members = Member::query()
-            ->where('is_active', true)
-            ->when($memberQuery !== '', function ($query) use ($memberQuery) {
-                $query->where(function ($inner) use ($memberQuery) {
-                    $inner->where('member_code', 'like', "%{$memberQuery}%")
-                        ->orWhere('name', 'like', "%{$memberQuery}%")
-                        ->orWhere('department_name', 'like', "%{$memberQuery}%");
-                });
-            })
+        $members = DB::table('members')
+            ->select('id', 'member_code', 'name', 'department_name', 'mess_id', 'join_date', 'leave_date')
             ->orderBy('member_code')
+            ->orderBy('name')
             ->get();
 
-        $query = MemberLedger::query()
-            ->with('member')
-            ->whereIn('ref_type', ['BILL', 'PAYMENT', 'ADJUSTMENT']);
-
-        if ($memberId !== '') {
-            $query->where('member_id', (int) $memberId);
+        $memberId = (int) $request->input('member_id', 0);
+        if ($memberId <= 0 && $members->isNotEmpty()) {
+            $memberId = (int) $members->first()->id;
         }
 
-        [$rangeStart, $rangeEnd] = $this->resolveRange($monthCycle, $fromMonth, $toMonth, $fromDate, $toDate);
+        $singleMonth = trim((string) $request->input('single_month', $request->input('month_cycle', '')));
+        $fromMonth = trim((string) $request->input('from_month', ''));
+        $toMonth = trim((string) $request->input('to_month', ''));
 
-        if ($rangeStart) {
-            $query->whereDate('entry_date', '>=', $rangeStart->toDateString());
-        }
-        if ($rangeEnd) {
-            $query->whereDate('entry_date', '<=', $rangeEnd->toDateString());
+        if ($singleMonth !== '') {
+            $fromMonth = $singleMonth;
+            $toMonth = $singleMonth;
         }
 
-        $openingBalance = 0.0;
-        if ($memberId !== '' && $rangeStart) {
-            $openingBalance = (float) MemberLedger::query()
-                ->where('member_id', (int) $memberId)
-                ->whereDate('entry_date', '<', $rangeStart->toDateString())
+        if ($fromMonth === '' || $toMonth === '') {
+            $latestMonth = DB::table('member_ledgers')
+                ->where('member_id', $memberId)
+                ->selectRaw("DATE_FORMAT(entry_date, '%Y-%m') as ym")
                 ->orderByDesc('entry_date')
-                ->orderByDesc('id')
-                ->value('balance_after');
+                ->value('ym');
+
+            $fromMonth = $fromMonth ?: ($latestMonth ?: now()->format('Y-m'));
+            $toMonth = $toMonth ?: $fromMonth;
         }
 
-        $ledgerRows = $query->orderBy('entry_date')->orderBy('id')->get();
-        $billings = Billing::query()
-            ->whereIn('id', $ledgerRows->where('ref_type', 'BILL')->pluck('ref_id')->filter()->all())
-            ->get()
-            ->keyBy('id');
+        $fromDate = Carbon::createFromFormat('Y-m', $fromMonth)->startOfMonth()->toDateString();
+        $toDate = Carbon::createFromFormat('Y-m', $toMonth)->endOfMonth()->toDateString();
 
-        $running = $openingBalance;
-        $rows = [];
-        foreach ($ledgerRows as $ledgerRow) {
-            $bill = $ledgerRow->ref_type === 'BILL' ? $billings->get($ledgerRow->ref_id) : null;
-            $signedAmount = round((float) $ledgerRow->debit - (float) $ledgerRow->credit, 2);
-            $running = round($running + $signedAmount, 2);
+        $member = $memberId > 0
+            ? DB::table('members')->where('id', $memberId)->first()
+            : null;
 
-            $rows[] = [
-                'date' => $ledgerRow->entry_date,
-                'month_cycle' => $bill->month_cycle ?? optional($ledgerRow->entry_date)->format('Y-m'),
-                'member_code' => $ledgerRow->member->member_code ?? '',
-                'member_name' => $ledgerRow->member->name ?? '',
-                'ref_type' => $ledgerRow->ref_type,
-                'ref_id' => $ledgerRow->ref_id,
-                'debit' => (float) $ledgerRow->debit,
-                'credit' => (float) $ledgerRow->credit,
-                'signed_amount' => $signedAmount,
-                'balance_after' => $running,
-                'reason_code' => $ledgerRow->reason_code,
-                'active_days' => $bill->active_days ?? null,
-                'rate_per_day' => $bill->rate_per_day ?? null,
-                'base_amount' => $bill->base_amount ?? null,
-                'extras_amount' => $bill->extras_amount ?? null,
-                'net_payable' => $bill->net_payable ?? $signedAmount,
+        $messName = '-';
+        if ($member && !empty($member->mess_id) && Schema::hasTable('messes')) {
+            $messName = DB::table('messes')->where('id', $member->mess_id)->value('name') ?: '-';
+        }
+
+        $openingBalance = (float) (DB::table('member_ledgers')
+            ->where('member_id', $memberId)
+            ->where('entry_date', '<', $fromDate)
+            ->orderByDesc('entry_date')
+            ->orderByDesc('id')
+            ->value('balance_after') ?? 0);
+
+        $ledgerRows = DB::table('member_ledgers')
+            ->where('member_id', $memberId)
+            ->whereBetween('entry_date', [$fromDate, $toDate])
+            ->orderBy('entry_date')
+            ->orderBy('id')
+            ->get();
+
+        $billIds = $ledgerRows
+            ->where('ref_type', 'BILL')
+            ->pluck('ref_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $paymentIds = $ledgerRows
+            ->where('ref_type', 'PAYMENT')
+            ->pluck('ref_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $billings = $billIds->isNotEmpty()
+            ? DB::table('billings')->whereIn('id', $billIds)->get()->keyBy('id')
+            : collect();
+
+        $payments = $paymentIds->isNotEmpty()
+            ? DB::table('payments')->whereIn('id', $paymentIds)->get()->keyBy('id')
+            : collect();
+
+        $rows = $ledgerRows->map(function ($row) use ($billings, $payments) {
+            $refType = strtoupper((string) $row->ref_type);
+            $bill = $refType === 'BILL' ? ($billings[$row->ref_id] ?? null) : null;
+            $payment = $refType === 'PAYMENT' ? ($payments[$row->ref_id] ?? null) : null;
+
+            $month = $bill->month_cycle
+                ?? ($payment && !empty($payment->payment_date) ? Carbon::parse($payment->payment_date)->format('Y-m') : Carbon::parse($row->entry_date)->format('Y-m'));
+
+            return (object) [
+                'month' => $month,
+                'days' => $bill->active_days ?? '',
+                'rate_per_day' => $bill->rate_per_day ?? '',
+                'total_amount' => $bill->net_payable ?? (((float) $row->debit) > 0 ? $row->debit : (((float) $row->credit) * -1)),
+                'ref_type' => $refType,
+                'ref_id' => $row->ref_id,
+                'debit' => (float) $row->debit,
+                'credit' => (float) $row->credit,
+                'running_balance' => (float) $row->balance_after,
             ];
-        }
+        });
 
-        $totals = [
-            'opening_balance' => $openingBalance,
-            'debit' => (float) collect($rows)->sum('debit'),
-            'credit' => (float) collect($rows)->sum('credit'),
-            'closing_balance' => (float) (count($rows) ? collect($rows)->last()['balance_after'] : $openingBalance),
-        ];
+        $totalDebit = (float) $ledgerRows->sum('debit');
+        $totalCredit = (float) $ledgerRows->sum('credit');
+        $closingBalance = $rows->isNotEmpty()
+            ? (float) $rows->last()->running_balance
+            : $openingBalance;
 
-        if ($export === 'csv') {
-            return Response::streamDownload(function () use ($rows, $totals) {
-                $out = fopen('php://output', 'w');
-                fputcsv($out, ['Date', 'Month', 'Member Code', 'Member Name', 'Reference Type', 'Reference ID', 'Debit', 'Credit', 'Running Balance', 'Reason', 'Active Days', 'Rate/Day', 'Base Amount', 'Extras Amount', 'Net Payable']);
-                fputcsv($out, ['', '', '', '', 'OPENING', '', '', '', number_format($totals['opening_balance'], 2, '.', ''), '', '', '', '', '', '']);
-                foreach ($rows as $row) {
-                    fputcsv($out, [
-                        optional($row['date'])->format('Y-m-d'),
-                        $row['month_cycle'],
-                        $row['member_code'],
-                        $row['member_name'],
-                        $row['ref_type'],
-                        $row['ref_id'],
-                        number_format($row['debit'], 2, '.', ''),
-                        number_format($row['credit'], 2, '.', ''),
-                        number_format($row['balance_after'], 2, '.', ''),
-                        $row['reason_code'],
-                        $row['active_days'],
-                        $row['rate_per_day'],
-                        $row['base_amount'],
-                        $row['extras_amount'],
-                        $row['net_payable'],
-                    ]);
-                }
-                fputcsv($out, []);
-                fputcsv($out, ['Closing Balance', '', '', '', '', '', number_format($totals['debit'], 2, '.', ''), number_format($totals['credit'], 2, '.', ''), number_format($totals['closing_balance'], 2, '.', ''), '', '', '', '', '', '']);
-                fclose($out);
-            }, 'statement.csv', ['Content-Type' => 'text/csv']);
+        if ($request->input('export') === 'csv') {
+            return $this->csvResponse($member, $messName, $fromMonth, $toMonth, $openingBalance, $totalDebit, $totalCredit, $closingBalance, $rows);
         }
 
         return view('admin.statement.index', compact(
             'members',
             'memberId',
-            'memberQuery',
-            'monthCycle',
+            'member',
+            'messName',
+            'singleMonth',
             'fromMonth',
             'toMonth',
-            'fromDate',
-            'toDate',
-            'rows',
-            'totals'
+            'openingBalance',
+            'totalDebit',
+            'totalCredit',
+            'closingBalance',
+            'rows'
         ));
     }
 
-    private function resolveRange(string $monthCycle, string $fromMonth, string $toMonth, string $fromDate, string $toDate): array
+    private function csvResponse($member, string $messName, string $fromMonth, string $toMonth, float $openingBalance, float $totalDebit, float $totalCredit, float $closingBalance, $rows): StreamedResponse
     {
-        $rangeStart = null;
-        $rangeEnd = null;
+        return response()->streamDownload(function () use ($member, $messName, $fromMonth, $toMonth, $openingBalance, $totalDebit, $totalCredit, $closingBalance, $rows) {
+            $out = fopen('php://output', 'w');
 
-        if ($monthCycle !== '') {
-            try {
-                $month = Carbon::createFromFormat('Y-m', $monthCycle);
-                return [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()];
-            } catch (\Throwable $e) {
-            }
-        }
+            fputcsv($out, ['Executive Mess']);
+            fputcsv($out, ['Member Account Statement']);
+            fputcsv($out, ['Member ID', $member->member_code ?? '']);
+            fputcsv($out, ['Name', $member->name ?? '']);
+            fputcsv($out, ['Department', $member->department_name ?? '']);
+            fputcsv($out, ['Mess', $messName]);
+            fputcsv($out, ['Statement Month', $fromMonth.' to '.$toMonth]);
+            fputcsv($out, []);
+            fputcsv($out, ['Opening Balance', 'Total Debit', 'Total Credit', 'Closing Balance']);
+            fputcsv($out, [$openingBalance, $totalDebit, $totalCredit, $closingBalance]);
+            fputcsv($out, []);
+            fputcsv($out, ['Month', 'Days', 'Rate Per Day', 'Total Amount', 'Ref Type', 'Ref ID', 'Debit', 'Credit', 'Running Balance']);
 
-        if ($fromMonth !== '') {
-            try {
-                $rangeStart = Carbon::createFromFormat('Y-m', $fromMonth)->startOfMonth();
-            } catch (\Throwable $e) {
+            foreach ($rows as $row) {
+                fputcsv($out, [
+                    $row->month,
+                    $row->days,
+                    $row->rate_per_day,
+                    $row->total_amount,
+                    $row->ref_type,
+                    $row->ref_id,
+                    $row->debit,
+                    $row->credit,
+                    $row->running_balance,
+                ]);
             }
-        }
-        if ($toMonth !== '') {
-            try {
-                $rangeEnd = Carbon::createFromFormat('Y-m', $toMonth)->endOfMonth();
-            } catch (\Throwable $e) {
-            }
-        }
-        if ($fromDate !== '') {
-            try {
-                $rangeStart = Carbon::parse($fromDate)->startOfDay();
-            } catch (\Throwable $e) {
-            }
-        }
-        if ($toDate !== '') {
-            try {
-                $rangeEnd = Carbon::parse($toDate)->endOfDay();
-            } catch (\Throwable $e) {
-            }
-        }
 
-        return [$rangeStart, $rangeEnd];
+            fclose($out);
+        }, 'statement.csv', ['Content-Type' => 'text/csv']);
     }
 }

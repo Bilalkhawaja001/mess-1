@@ -593,7 +593,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="11" class="text-center text-muted py-4">No purchase orders found.</td></tr>
+                                        <tr><td colspan="14" class="text-center text-muted py-4">No purchase orders found.</td></tr>
                                     @endforelse
                                 </tbody></table>
                             </div>
@@ -614,7 +614,7 @@
                                     <option value="">Select PO</option>
                                     @foreach($grnEligiblePos as $po)
                                         <option value="{{ $po->id }}" data-lines='@json($procurementPoLinesJson[$po->id] ?? [])' @selected((string) old('purchase_order_id') === (string) $po->id)>
-                                            {{ $po->po_number }} — {{ $po->vendor->name ?? 'Vendor' }}
+                                            {{ $po->po_number }} — {{ $po->po_date }} — {{ $po->vendor->name ?? 'Vendor' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -701,7 +701,7 @@
                                 <select name="purchase_order_id" class="form-select">
                                     <option value="">Blank GRN template</option>
                                     @foreach($grnEligiblePos as $po)
-                                        <option value="{{ $po->id }}" @selected((string) $selectedGrnTemplatePo === (string) $po->id)>{{ $po->po_number }} — {{ $po->vendor->name ?? 'Vendor' }}</option>
+                                        <option value="{{ $po->id }}" @selected((string) $selectedGrnTemplatePo === (string) $po->id)>{{ $po->po_number }} — {{ $po->po_date }} — {{ $po->vendor->name ?? 'Vendor' }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -957,10 +957,14 @@
                                 <th>Item Code</th>
                                 <th>Item Name</th>
                                 <th>Category</th>
-                                <th>Qty</th>
+                                <th>Gross Qty</th>
+                                <th>Returned Qty</th>
+                                <th>Net Qty</th>
                                 <th>UOM</th>
                                 <th>Unit Cost</th>
-                                <th>Total Cost</th>
+                                <th>Gross Cost</th>
+                                <th>Returned Cost</th>
+                                <th>Net Cost</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -974,13 +978,17 @@
                                     <td>{{ $row->item_name ?? '' }}</td>
                                     <td>{{ $row->category ?? '' }}</td>
                                     <td>{{ number_format((float) ($row->qty_received ?? 0), 3) }}</td>
+                                    <td>{{ number_format((float) ($row->returned_qty ?? 0), 3) }}</td>
+                                    <td>{{ number_format((float) ($row->net_qty ?? ($row->qty_received ?? 0)), 3) }}</td>
                                     <td>{{ $row->uom ?? '' }}</td>
                                     <td>{{ number_format((float) ($row->unit_cost ?? 0), 2) }}</td>
+                                    <td>{{ number_format((float) ($row->gross_cost ?? 0), 2) }}</td>
+                                    <td>{{ number_format((float) ($row->returned_cost ?? 0), 2) }}</td>
                                     <td>{{ number_format((float) ($row->total_cost ?? 0), 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center text-muted py-4">No GRN details found.</td>
+                                    <td colspan="14" class="text-center text-muted py-4">No GRN details found.</td>
                                 </tr>
                             @endforelse
                         </tbody>

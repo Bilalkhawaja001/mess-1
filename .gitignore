@@ -43,3 +43,10 @@ storage/app/*.json
 *_evidence.json
 runtime_verify.php
 _tmp_*.php
+
+# Local server backups / temporary files
+_db_backups/
+_local_backups_ignored/
+error_log
+import_flask_data.php
+public/branding/*.save

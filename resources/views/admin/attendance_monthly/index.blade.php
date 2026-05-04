@@ -8,6 +8,28 @@
 <div class="col-md-2"><button class="btn btn-outline-primary">Load</button></div>
 </form></div></div>
 
+<div class="card shadow-sm mb-3">
+    <div class="card-header">CSV Template / Bulk Upload</div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-3 align-items-end">
+            <div>
+                <a href="{{ route('admin.attendance-monthly.template') }}" class="btn btn-outline-secondary">Download CSV Template</a>
+            </div>
+            <form method="POST" action="{{ route('admin.attendance-monthly.import') }}" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-end">
+                @csrf
+                <div>
+                    <label class="form-label mb-1">CSV File</label>
+                    <input type="file" name="csv_file" accept=".csv,text/csv" class="form-control">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Upload CSV</button>
+                </div>
+            </form>
+        </div>
+        <div class="form-text mt-2">Required columns: month_cycle, member_code, present_days</div>
+    </div>
+</div>
+
 <div class="card shadow-sm"><div class="card-header">Monthly Present Days</div><div class="card-body table-responsive">
 <form method="POST" action="{{ route('admin.attendance-monthly.store') }}">@csrf
 <input type="hidden" name="month_cycle" value="{{ $monthCycle }}">

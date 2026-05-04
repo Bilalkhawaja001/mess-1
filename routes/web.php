@@ -115,6 +115,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
         Route::get('/attendance-monthly', [MonthlyAttendanceController::class, 'index'])->name('attendance-monthly.index');
         Route::post('/attendance-monthly', [MonthlyAttendanceController::class, 'store'])->name('attendance-monthly.store');
+        Route::get('/attendance-monthly/template', [MonthlyAttendanceController::class, 'template'])->name('attendance-monthly.template');
+        Route::post('/attendance-monthly/import', [MonthlyAttendanceController::class, 'import'])->name('attendance-monthly.import');
         Route::post('/attendance-monthly/approve', [MonthlyAttendanceController::class, 'approve'])->name('attendance-monthly.approve');
         Route::post('/attendance-monthly/unlock', [MonthlyAttendanceController::class, 'unlock'])->name('attendance-monthly.unlock');
         Route::get('/attendance-monthly/export', [MonthlyAttendanceController::class, 'export'])->name('attendance-monthly.export');

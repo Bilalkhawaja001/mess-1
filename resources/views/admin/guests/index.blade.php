@@ -61,7 +61,7 @@
                             <select name="department_id" class="form-select" required>
                                 <option value="">Select department</option>
                                 @foreach($departments as $department)
-                                    <option value="{{ $department->id }}">{{ $department->code }} - {{ $department->name }}</option>
+                                    <option value="{{ $department->id }}">{{ is_object($department) ? ($department->code ?? '') : $department }} - {{ $department->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -205,7 +205,7 @@
                                 @endif
                             </td>
                             <td>{{ $guest->came_from ?: '-' }}</td>
-                            <td>{{ $guest->department?->code ?: '-' }}</td>
+                            <td>{{ is_object($guest->department) ? (($guest->department->code ?? $guest->department->name ?? '-') ?: '-') : (($guest->department ?? '-') ?: '-') }}</td>
                             <td>{{ $guest->hostMember ? ($guest->hostMember->member_code . ' - ' . $guest->hostMember->name) : '-' }}</td>
                             <td>{{ $guest->is_active ? 'Active' : 'Inactive' }}</td>
                             <td>
@@ -220,7 +220,7 @@
                                         <div class="col-md-6">
                                             <select name="department_id" class="form-select" required>
                                                 @foreach($departments as $department)
-                                                    <option value="{{ $department->id }}" @selected($guest->department_id === $department->id)>{{ $department->code }} - {{ $department->name }}</option>
+                                                    <option value="{{ $department->id }}" @selected($guest->department_id === $department->id)>{{ is_object($department) ? ($department->code ?? '') : $department }} - {{ $department->name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>

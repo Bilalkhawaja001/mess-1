@@ -208,6 +208,13 @@
                 <a class="btn btn-outline-primary" href="{{ route('admin.billing.index') }}"><i class="bi bi-receipt me-1"></i> Create Billing Cycle</a>
                 <a class="btn btn-outline-primary" href="{{ route('admin.payments.index') }}"><i class="bi bi-cash-coin me-1"></i> Record Payment</a>
                 <a class="btn btn-outline-secondary" href="{{ route('admin.reports.index') }}"><i class="bi bi-bar-chart me-1"></i> View Reports</a>
+
+                <a class="nav-link {{ request()->routeIs('admin.reports.bills-download*') ? 'active' : '' }}"
+                   href="{{ route('admin.reports.bills-download') }}">
+                    <i class="bi bi-file-earmark-arrow-down"></i>
+                    <span>Bills Download</span>
+                </a>
+
             </div>
         </div>
 

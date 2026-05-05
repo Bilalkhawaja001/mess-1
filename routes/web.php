@@ -167,6 +167,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::get('/month-governance', [MonthGovernanceController::class, 'index'])->name('month.index');
         Route::get('/summary', [SummaryController::class, 'index'])->name('summary.index');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/bills-download', [ReportController::class, 'billsDownload'])->name('reports.bills-download');
+        Route::get('/reports/bills-download/export.csv', [ReportController::class, 'billsDownloadExportCsv'])->name('reports.bills-download.export.csv');
+        Route::get('/reports/bills-download/export.xlsx', [ReportController::class, 'billsDownloadExportXlsx'])->name('reports.bills-download.export.xlsx');
         Route::get('/overall-recovery', [ReportController::class, 'overallRecovery'])->name('reports.overall-recovery');
         Route::get('/statement', [StatementController::class, 'index'])->name('statement.index');
     });

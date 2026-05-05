@@ -120,6 +120,9 @@
                         @if(auth()->user()->hasPermission('report.view'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.summary.*') ? 'active' : '' }}" href="{{ route('admin.summary.index') }}" title="Summary"><span class="sidebar-icon-wrap"><i class="bi bi-clipboard-data sidebar-icon"></i></span><span>Summary</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.reports.index') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}" title="Reports"><span class="sidebar-icon-wrap"><i class="bi bi-bar-chart-line sidebar-icon"></i></span><span>Reports</span></a>
+
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.reports.bills-download*') ? 'active' : '' }}" href="{{ route('admin.reports.bills-download') }}" title="Bills Download"><span class="sidebar-icon-wrap"><i class="bi bi-file-earmark-arrow-down sidebar-icon"></i></span><span>Bills Download</span></a>
+
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.reports.overall-recovery') ? 'active' : '' }}" href="{{ route('admin.reports.overall-recovery') }}" title="Overall Recovery"><span class="sidebar-icon-wrap"><i class="bi bi-graph-up-arrow sidebar-icon"></i></span><span>Overall Recovery</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.statement.*') ? 'active' : '' }}" href="{{ route('admin.statement.index') }}" title="Statement"><span class="sidebar-icon-wrap"><i class="bi bi-file-earmark-text sidebar-icon"></i></span><span>Statement</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.month.*') ? 'active' : '' }}" href="{{ route('admin.month.index') }}" title="Month Governance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar2-check sidebar-icon"></i></span><span>Month Governance</span></a>

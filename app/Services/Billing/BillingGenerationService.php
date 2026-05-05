@@ -12,6 +12,7 @@ use App\Models\MemberLedger;
 use App\Models\MonthClosure;
 use App\Models\MonthlyAttendance;
 use App\Models\RatePolicy;
+use App\Support\BusinessMonthCycle;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -58,11 +59,12 @@ class BillingGenerationService
 
     public function generate(string $monthCycle, int $actorId): array
     {
-        [$year, $month] = array_map('intval', explode('-', $monthCycle));
-        $start = sprintf('%04d-%02d-01', $year, $month);
-        $end = date('Y-m-t', strtotime($start));
+        $cycle = BusinessMonthCycle::resolve($monthCycle);
+        $cycleStart = $cycle['cycle_start_date'];
+        $cycleEnd = $cycle['cycle_end_date'];
+        $calendarStart = $monthCycle . '-01';
 
-        return DB::transaction(function () use ($monthCycle, $actorId, $start, $end) {
+        return DB::transaction(function () use ($monthCycle, $actorId, $cycleStart, $cycleEnd, $calendarStart) {
             $closure = MonthClosure::query()->where('month_cycle', $monthCycle)->latest('id')->first();
             if ($closure && $closure->status === MonthClosure::STATUS_CLOSED) {
                 throw new RuntimeException("Month {$monthCycle} is closed. Reopen before billing generation.");
@@ -79,9 +81,9 @@ class BillingGenerationService
 
             $members = Member::query()
                 ->with('mess')
-                ->whereDate('join_date', '<=', $end)
-                ->where(function ($q) use ($start) {
-                    $q->whereNull('leave_date')->orWhereDate('leave_date', '>=', $start);
+                ->whereDate('join_date', '<=', $cycleEnd)
+                ->where(function ($q) use ($cycleStart) {
+                    $q->whereNull('leave_date')->orWhereDate('leave_date', '>=', $cycleStart);
                 })
                 ->orderBy('id')
                 ->get();
@@ -122,10 +124,10 @@ class BillingGenerationService
                     continue;
                 }
 
-                $effectiveStart = max(strtotime($start), strtotime((string) $member->join_date));
+                $effectiveStart = max(strtotime($cycleStart), strtotime((string) $member->join_date));
                 $effectiveEnd = $member->leave_date
-                    ? min(strtotime($end), strtotime((string) $member->leave_date))
-                    : strtotime($end);
+                    ? min(strtotime($cycleEnd), strtotime((string) $member->leave_date))
+                    : strtotime($cycleEnd);
                 $employmentWindowDays = $effectiveEnd >= $effectiveStart
                     ? ((int) floor(($effectiveEnd - $effectiveStart) / 86400) + 1)
                     : 0;
@@ -149,11 +151,11 @@ class BillingGenerationService
                         : 0;
                 }
 
-                $ratePerDay = $this->resolveRatePerDay($member, $start);
+                $ratePerDay = $this->resolveRatePerDay($member, $calendarStart);
                 $base = round($presentDays * $ratePerDay, 2);
                 $extras = (float) Extra::query()
                     ->where('member_id', $member->id)
-                    ->whereBetween('extra_date', [$start, $end])
+                    ->whereBetween('extra_date', [$cycleStart, $cycleEnd])
                     ->sum('amount');
                 $net = round($base + $extras, 2);
 
@@ -178,7 +180,7 @@ class BillingGenerationService
 
                 MemberLedger::query()->create([
                     'member_id' => $member->id,
-                    'entry_date' => $end,
+                    'entry_date' => $cycleEnd,
                     'debit' => $net,
                     'credit' => 0,
                     'ref_type' => 'BILL',

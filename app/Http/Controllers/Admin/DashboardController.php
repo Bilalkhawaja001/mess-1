@@ -10,7 +10,7 @@ use App\Models\Member;
 use App\Models\MemberLedger;
 use App\Models\Payment;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Support\BusinessMonthCycle;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -22,7 +22,7 @@ class DashboardController extends Controller
         $totalCollected = (float) MemberLedger::query()->sum('credit');
         $outstanding = round($totalBillable - $totalCollected, 2);
 
-        $dashboardMonthCycle = trim((string) $request->query('dashboard_month_cycle', now()->subMonthNoOverflow()->format('Y-m')));
+        $dashboardMonthCycle = trim((string) $request->query('dashboard_month_cycle', BusinessMonthCycle::defaultDashboardMonthCycle()));
         $dashboardCategoryCards = $this->buildDashboardCategoryCards($dashboardMonthCycle);
 
         $recentCycles = BillingCycle::query()->latest('month_cycle')->limit(5)->get()->map(function (BillingCycle $cycle) {
@@ -62,8 +62,9 @@ class DashboardController extends Controller
 
     private function buildDashboardCategoryCards(string $monthCycle): array
     {
-        $month = Carbon::createFromFormat('Y-m', $monthCycle)->startOfMonth();
-        [$rangeStart, $rangeEnd] = $this->dashboardCycleRange($month);
+        $cycle = BusinessMonthCycle::resolve($monthCycle);
+        $rangeStart = $cycle['cycle_start'];
+        $rangeEnd = $cycle['cycle_end'];
 
         $messTotals = Billing::query()
             ->selectRaw('UPPER(COALESCE(messes.code, messes.name, "")) as mess_code, COALESCE(SUM(billings.net_payable), 0) as total_expenses')
@@ -115,34 +116,4 @@ class DashboardController extends Controller
         ];
     }
 
-    private function dashboardCycleRange(Carbon $month): array
-    {
-        $daysInMonth = $month->daysInMonth;
-
-        if ($daysInMonth === 31) {
-            return [
-                $month->copy()->subMonthNoOverflow()->setDay(26),
-                $month->copy()->setDay(26),
-            ];
-        }
-
-        if ($daysInMonth === 30) {
-            return [
-                $month->copy()->subMonthNoOverflow()->setDay(26),
-                $month->copy()->setDay(25),
-            ];
-        }
-
-        if ($daysInMonth === 28) {
-            return [
-                $month->copy()->subMonthNoOverflow()->setDay(27),
-                $month->copy()->setDay(23),
-            ];
-        }
-
-        return [
-            $month->copy()->subMonthNoOverflow()->setDay(27),
-            $month->copy()->setDay(24),
-        ];
-    }
 }

@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Member;
 use App\Models\MemberLedger;
 use App\Models\Payment;
+use App\Support\BusinessMonthCycle;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -341,9 +342,9 @@ class ReportController extends Controller
 
     private function billsDownloadRows(string $monthCycle, bool $includePrevNonzero = true, ?int $departmentId = null, ?string $messBucket = null): array
     {
-        $month = Carbon::createFromFormat('Y-m', $monthCycle);
-        $start = $month->copy()->startOfMonth()->toDateString();
-        $end = $month->copy()->endOfMonth()->toDateString();
+        $cycle = BusinessMonthCycle::resolve($monthCycle);
+        $start = $cycle['cycle_start_date'];
+        $end = $cycle['cycle_end_date'];
 
         $billedMembers = Billing::query()
             ->where('month_cycle', $monthCycle)

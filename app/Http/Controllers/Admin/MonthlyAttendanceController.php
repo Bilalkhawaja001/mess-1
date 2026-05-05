@@ -7,6 +7,7 @@ use App\Http\Requests\Attendance\MonthlyAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\Member;
 use App\Models\MonthlyAttendance;
+use App\Support\BusinessMonthCycle;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,8 +21,9 @@ class MonthlyAttendanceController extends Controller
     public function index(Request $request): View
     {
         $monthCycle = (string) $request->input('month_cycle', now()->format('Y-m'));
-        $start = $monthCycle.'-01';
-        $end = date('Y-m-t', strtotime($start));
+        $cycle = BusinessMonthCycle::resolve($monthCycle);
+        $start = $cycle['cycle_start_date'];
+        $end = $cycle['cycle_end_date'];
 
         $members = Member::query()->where('is_active', true)->orderBy('member_code')->get();
         $snap = MonthlyAttendance::query()->where('month_cycle', $monthCycle)->get()->keyBy('member_id');
@@ -45,6 +47,16 @@ class MonthlyAttendanceController extends Controller
     public function store(MonthlyAttendanceRequest $request): RedirectResponse
     {
         $monthCycle = $request->input('month_cycle');
+        $cycle = BusinessMonthCycle::resolve((string) $monthCycle);
+
+        foreach ($request->input('rows', []) as $row) {
+            $presentDays = (int) $row['present_days'];
+            $validationError = $this->validateCyclePresentDays((string) $monthCycle, $presentDays, $cycle['cycle_days']);
+            if ($validationError !== null) {
+                return redirect()->route('admin.attendance-monthly.index', ['month_cycle' => $monthCycle])->with('error', $validationError)->withInput();
+            }
+        }
+
         foreach ($request->input('rows', []) as $row) {
             $rec = MonthlyAttendance::query()->updateOrCreate(
                 ['month_cycle' => $monthCycle, 'member_id' => $row['member_id']],
@@ -83,9 +95,9 @@ class MonthlyAttendanceController extends Controller
         $memberId = (int) $payload['member_id'];
         $presentDays = (int) $payload['present_days'];
 
-        $monthDays = (int) date('t', strtotime($monthCycle . '-01'));
-        if ($presentDays > $monthDays) {
-            return back()->with('error', "present_days cannot exceed {$monthDays} for {$monthCycle}.")->withInput();
+        $cycle = BusinessMonthCycle::resolve($monthCycle);
+        if ($presentDays > $cycle['cycle_days']) {
+            return back()->with('error', "present_days cannot exceed {$cycle['cycle_days']} for business cycle {$monthCycle}.")->withInput();
         }
 
         $existing = MonthlyAttendance::query()
@@ -168,6 +180,12 @@ class MonthlyAttendanceController extends Controller
             $presentDays = (int) $presentRaw;
             if ($presentDays < 0) {
                 $errors[] = "Line {$line}: present_days must be >= 0.";
+                continue;
+            }
+
+            $cycle = BusinessMonthCycle::resolve($monthCycle);
+            if ($presentDays > $cycle['cycle_days']) {
+                $errors[] = "Line {$line}: present_days cannot exceed {$cycle['cycle_days']} for business cycle {$monthCycle}.";
                 continue;
             }
 
@@ -285,8 +303,12 @@ class MonthlyAttendanceController extends Controller
 
         $cards = [];
         foreach ($cardMonths as $monthCycle) {
+            $cycle = BusinessMonthCycle::resolve($monthCycle);
             $cards[$monthCycle] = [
                 'month_cycle' => $monthCycle,
+                'cycle_start' => $cycle['cycle_start_date'],
+                'cycle_end' => $cycle['cycle_end_date'],
+                'cycle_days' => $cycle['cycle_days'],
                 'contractors' => 0,
                 'executive' => 0,
                 'centralized' => 0,
@@ -320,5 +342,18 @@ class MonthlyAttendanceController extends Controller
             'CENTRAL', 'CENTRALIZE', 'CENTRALIZED' => 'centralized',
             default => null,
         };
+    }
+
+    private function validateCyclePresentDays(string $monthCycle, int $presentDays, int $cycleDays): ?string
+    {
+        if ($presentDays < 0) {
+            return 'present_days must be >= 0.';
+        }
+
+        if ($presentDays > $cycleDays) {
+            return "present_days cannot exceed {$cycleDays} for business cycle {$monthCycle}.";
+        }
+
+        return null;
     }
 }

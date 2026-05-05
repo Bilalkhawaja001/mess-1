@@ -79,6 +79,8 @@
     $outstanding = $stats['outstanding'] ?? null;
     $recentCycles = $stats['recentCycles'] ?? ($stats['recent_cycles'] ?? []);
     $recentActivity = $stats['recentActivity'] ?? ($stats['recent_activity'] ?? []);
+    $dashboardMonthCycle = $stats['dashboard_month_cycle'] ?? null;
+    $dashboardCategoryCards = $stats['dashboard_category_cards'] ?? [];
 @endphp
 
 <div class="hero-panel p-4 mb-4">
@@ -92,6 +94,30 @@
             <div class="small text-muted text-uppercase fw-semibold mb-1">Live focus</div>
             <div class="fw-semibold small">Collections, member lifecycle, and billing governance</div>
         </div>
+    </div>
+</div>
+
+<div class="card p-3 mb-4 dashboard-billing-overview">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+            <h5 class="mb-1">Last Month Category Expenses</h5>
+            <div class="text-muted small">Showing {{ $dashboardMonthCycle ? \Carbon\Carbon::createFromFormat('Y-m', $dashboardMonthCycle)->format('F Y') : 'last month' }} cycle totals on the dashboard.</div>
+        </div>
+        @if($dashboardMonthCycle)
+            <span class="badge text-bg-light">Cycle {{ $dashboardMonthCycle }}</span>
+        @endif
+    </div>
+    <div class="row g-2">
+        @foreach($dashboardCategoryCards as $card)
+            <div class="col-md-4">
+                <div class="p-3 rounded-4 border bg-white summary-card h-100">
+                    <div class="small text-muted summary-label">{{ $card['label'] }}</div>
+                    <div class="fw-semibold fs-5 summary-value">{{ number_format((float) ($card['total_expenses'] ?? 0), 2) }}</div>
+                    <div class="small text-muted mt-1">Total Expenses</div>
+                    <div class="small text-muted mt-2">{{ $card['range_label'] ?? '' }}</div>
+                </div>
+            </div>
+        @endforeach
     </div>
 </div>
 

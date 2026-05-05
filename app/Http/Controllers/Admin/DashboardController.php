@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Billing;
 use App\Models\BillingCycle;
+use App\Models\GuestMeal;
 use App\Models\Member;
 use App\Models\MemberLedger;
 use App\Models\Payment;
@@ -72,6 +73,12 @@ class DashboardController extends Controller
             ->groupByRaw('UPPER(COALESCE(messes.code, messes.name, ""))')
             ->pluck('total_expenses', 'mess_code');
 
+        $guestTotal = (float) GuestMeal::query()
+            ->whereNotNull('approved_at')
+            ->whereDate('meal_date', '>=', $rangeStart->toDateString())
+            ->whereDate('meal_date', '<=', $rangeEnd->toDateString())
+            ->sum('amount');
+
         return [
             [
                 'label' => 'Contractors',
@@ -79,6 +86,7 @@ class DashboardController extends Controller
                 'month_cycle' => $monthCycle,
                 'range_label' => $rangeStart->format('d M') . ' to ' . $rangeEnd->format('d M'),
                 'total_expenses' => round((float) ($messTotals['CONTRACTORS'] ?? $messTotals['CONTRACTOR'] ?? 0), 2),
+                'theme' => 'contractors',
             ],
             [
                 'label' => 'Executive',
@@ -86,6 +94,7 @@ class DashboardController extends Controller
                 'month_cycle' => $monthCycle,
                 'range_label' => $rangeStart->format('d M') . ' to ' . $rangeEnd->format('d M'),
                 'total_expenses' => round((float) ($messTotals['EXECUTIVE'] ?? $messTotals['EXEC'] ?? 0), 2),
+                'theme' => 'executive',
             ],
             [
                 'label' => 'Centralized',
@@ -93,6 +102,15 @@ class DashboardController extends Controller
                 'month_cycle' => $monthCycle,
                 'range_label' => $rangeStart->format('d M') . ' to ' . $rangeEnd->format('d M'),
                 'total_expenses' => round((float) ($messTotals['CENTRALIZED'] ?? $messTotals['CENTRALIZE'] ?? $messTotals['CENTRAL'] ?? 0), 2),
+                'theme' => 'centralized',
+            ],
+            [
+                'label' => 'Guest',
+                'mess_code' => 'GUEST',
+                'month_cycle' => $monthCycle,
+                'range_label' => $rangeStart->format('d M') . ' to ' . $rangeEnd->format('d M'),
+                'total_expenses' => round($guestTotal, 2),
+                'theme' => 'guest',
             ],
         ];
     }

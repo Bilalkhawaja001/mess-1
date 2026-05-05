@@ -53,6 +53,23 @@
         font-size: 1rem;
     }
 
+    .dashboard-category-card {
+        color: #fff;
+        border: 0;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .dashboard-category-card .summary-label,
+    .dashboard-category-card .summary-meta,
+    .dashboard-category-card .summary-range {
+        color: rgba(255, 255, 255, 0.88) !important;
+    }
+
+    .dashboard-category-card.theme-contractors { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .dashboard-category-card.theme-executive { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    .dashboard-category-card.theme-centralized { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+    .dashboard-category-card.theme-guest { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+
     .dashboard-recent-cycles table tbody td {
         font-size: 0.82rem;
     }
@@ -109,12 +126,12 @@
     </div>
     <div class="row g-2">
         @foreach($dashboardCategoryCards as $card)
-            <div class="col-md-4">
-                <div class="p-3 rounded-4 border bg-white summary-card h-100">
-                    <div class="small text-muted summary-label">{{ $card['label'] }}</div>
+            <div class="col-lg-3 col-md-6">
+                <div class="p-3 rounded-4 summary-card h-100 dashboard-category-card theme-{{ $card['theme'] ?? 'executive' }}">
+                    <div class="small summary-label">{{ $card['label'] }}</div>
                     <div class="fw-semibold fs-5 summary-value">{{ number_format((float) ($card['total_expenses'] ?? 0), 2) }}</div>
-                    <div class="small text-muted mt-1">Total Expenses</div>
-                    <div class="small text-muted mt-2">{{ $card['range_label'] ?? '' }}</div>
+                    <div class="small mt-1 summary-meta">Total Expenses</div>
+                    <div class="small mt-2 summary-range">{{ $card['range_label'] ?? '' }}</div>
                 </div>
             </div>
         @endforeach

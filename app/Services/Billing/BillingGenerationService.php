@@ -56,13 +56,13 @@ class BillingGenerationService
         ], JSON_UNESCAPED_SLASHES));
     }
 
-    public function generate(string $monthCycle, int $actorId, float $fallbackRatePerDay = 100): array
+    public function generate(string $monthCycle, int $actorId): array
     {
         [$year, $month] = array_map('intval', explode('-', $monthCycle));
         $start = sprintf('%04d-%02d-01', $year, $month);
         $end = date('Y-m-t', strtotime($start));
 
-        return DB::transaction(function () use ($monthCycle, $actorId, $fallbackRatePerDay, $start, $end) {
+        return DB::transaction(function () use ($monthCycle, $actorId, $start, $end) {
             $closure = MonthClosure::query()->where('month_cycle', $monthCycle)->latest('id')->first();
             if ($closure && $closure->status === MonthClosure::STATUS_CLOSED) {
                 throw new RuntimeException("Month {$monthCycle} is closed. Reopen before billing generation.");
@@ -78,7 +78,7 @@ class BillingGenerationService
             }
 
             $members = Member::query()
-                ->where('is_active', true)
+                ->with('mess')
                 ->whereDate('join_date', '<=', $end)
                 ->where(function ($q) use ($start) {
                     $q->whereNull('leave_date')->orWhereDate('leave_date', '>=', $start);
@@ -105,18 +105,6 @@ class BillingGenerationService
                 ];
             }
 
-            $rate = RatePolicy::query()
-                ->where('is_active', true)
-                ->where('rate_type', 'PER_DAY')
-                ->whereDate('effective_from', '<=', $end)
-                ->where(function ($q) use ($start) {
-                    $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $start);
-                })
-                ->whereNotNull('approved_at')
-                ->orderByDesc('effective_from')
-                ->value('value');
-
-            $ratePerDay = $rate !== null ? (float) $rate : $fallbackRatePerDay;
             $monthlySnapshots = MonthlyAttendance::query()->where('month_cycle', $monthCycle)->get()->keyBy('member_id');
 
             $inserted = 0;
@@ -157,6 +145,7 @@ class BillingGenerationService
                     : 0;
                 $presentDays = max(0, min($presentDays, $employmentWindowDays));
 
+                $ratePerDay = $this->resolveRatePerDay($member, $start);
                 $base = round($presentDays * $ratePerDay, 2);
                 $extras = (float) Extra::query()
                     ->where('member_id', $member->id)
@@ -216,5 +205,38 @@ class BillingGenerationService
                 'skipped' => $skipped,
             ];
         });
+    }
+
+    private function resolveRatePerDay(Member $member, string $startDate): float
+    {
+        $messCode = strtoupper((string) ($member->mess?->code ?: $member->mess?->name ?: ''));
+
+        $rateType = match ($messCode) {
+            'EXECUTIVE' => 'RATE_PER_DAY_EXECUTIVE',
+            'CENTRALIZED', 'CENTRALIZE', 'CENTRAL' => 'RATE_PER_DAY_CENTRALIZED',
+            'CONTRACTORS', 'CONTRACTOR' => 'RATE_PER_DAY_CONTRACTORS',
+            default => 'PER_DAY',
+        };
+
+        $rate = RatePolicy::query()
+            ->where('is_active', true)
+            ->where('rate_type', $rateType)
+            ->whereDate('effective_from', '<=', $startDate)
+            ->where(function ($q) use ($startDate) {
+                $q->whereNull('effective_to')->orWhereDate('effective_to', '>', $startDate);
+            })
+            ->whereNotNull('approved_at')
+            ->orderByDesc('effective_from')
+            ->value('value');
+
+        if ($rate !== null) {
+            return (float) $rate;
+        }
+
+        if ($rateType === 'PER_DAY') {
+            return 100.0;
+        }
+
+        throw new RuntimeException("No approved active {$rateType} rate found for {$startDate}.");
     }
 }

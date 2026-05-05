@@ -16,7 +16,8 @@
         </form>
         <form method="POST" action="{{ route('admin.month.hard-reset') }}" class="row g-2">@csrf
             <div class="col-md-2"><input class="form-control" name="month_cycle" placeholder="YYYY-MM" required></div>
-            <div class="col-md-6"><input class="form-control" name="reason" placeholder="Reason" required></div>
+            <div class="col-md-3"><input class="form-control" name="confirm_text" placeholder="RESET-2026-01" required></div>
+            <div class="col-md-5"><input class="form-control" name="reason" placeholder="Reason" required></div>
             <div class="col-md-2"><button class="btn btn-danger">Hard Reset</button></div>
         </form>
     </div>

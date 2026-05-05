@@ -15,7 +15,6 @@ class GenerateBillingRequest extends FormRequest
     {
         return [
             'month_cycle' => ['required', 'regex:/^\d{4}-\d{2}$/'],
-            'rate_per_day' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

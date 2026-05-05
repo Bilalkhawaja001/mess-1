@@ -38,7 +38,16 @@ class MonthGovernanceController extends Controller
 
     public function hardReset(Request $request): RedirectResponse
     {
-        $payload = $request->validate(['month_cycle' => ['required', 'regex:/^\\d{4}-\\d{2}$/'], 'reason' => ['required', 'string', 'max:500']]);
+        $payload = $request->validate([
+            'month_cycle' => ['required', 'regex:/^\\d{4}-\\d{2}$/'],
+            'confirm_text' => ['required', 'string'],
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        if ((string) $payload['confirm_text'] !== 'RESET-' . (string) $payload['month_cycle']) {
+            return back()->withErrors(['confirm_text' => 'Confirm text must exactly match RESET-' . (string) $payload['month_cycle']])->withInput();
+        }
+
         $this->monthClosureService->hardReset((string) $payload['month_cycle'], (int) Auth::id(), (string) $payload['reason']);
         return back()->with('success', 'Month hard reset completed.');
     }

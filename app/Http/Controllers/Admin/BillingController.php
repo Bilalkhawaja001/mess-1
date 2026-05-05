@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Billing\GenerateBillingRequest;
 use App\Models\Billing;
+use App\Models\MonthClosure;
 use App\Services\Billing\BillingCorrectionService;
 use App\Services\Billing\BillingGenerationService;
 use Illuminate\Http\RedirectResponse;
@@ -16,25 +17,26 @@ class BillingController extends Controller
 {
     public function index(Request $request): View
     {
-        $monthCycle = $request->input('month_cycle');
+        $monthCycle = (string) $request->input('month_cycle', '');
 
         $q = Billing::query()->with('member')->orderByDesc('month_cycle')->orderBy('member_id');
-        if ($monthCycle) {
+        if ($monthCycle !== '') {
             $q->where('month_cycle', $monthCycle);
         }
 
         $rows = $q->limit(500)->get();
         $months = Billing::query()->select('month_cycle')->distinct()->orderByDesc('month_cycle')->pluck('month_cycle');
+        $monthClosures = MonthClosure::query()->orderByDesc('month_cycle')->limit(24)->get()->keyBy('month_cycle');
+        $isSuperAdmin = Auth::user()?->role?->code === 'SUPER_ADMIN';
 
-        return view('admin.billing.index', compact('rows', 'months', 'monthCycle'));
+        return view('admin.billing.index', compact('rows', 'months', 'monthCycle', 'monthClosures', 'isSuperAdmin'));
     }
 
     public function generate(GenerateBillingRequest $request, BillingGenerationService $service): RedirectResponse
     {
         $monthCycle = (string) $request->input('month_cycle');
-        $ratePerDay = (float) $request->input('rate_per_day', 100);
 
-        $result = $service->generate($monthCycle, (int) Auth::id(), $ratePerDay);
+        $result = $service->generate($monthCycle, (int) Auth::id());
 
         if (($result['status'] ?? '') === 'already_generated') {
             return redirect()->route('admin.billing.index', ['month_cycle' => $monthCycle])

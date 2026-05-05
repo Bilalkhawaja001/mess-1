@@ -36,7 +36,7 @@ class BillingGenerationService
         $attendance = MonthlyAttendance::query()
             ->where('month_cycle', $monthCycle)
             ->orderBy('member_id')
-            ->get(['member_id', 'present_days', 'is_locked', 'approved_at'])
+            ->get(['member_id', 'present_days'])
             ->toArray();
 
         return hash('sha256', json_encode([
@@ -122,20 +122,6 @@ class BillingGenerationService
                     continue;
                 }
 
-                $presentDays = null;
-                $monthly = $monthlySnapshots->get($member->id);
-                if ($monthly && $monthly->approved_at && $monthly->is_locked) {
-                    $presentDays = (int) $monthly->present_days;
-                }
-
-                if ($presentDays === null) {
-                    $presentDays = Attendance::query()
-                        ->where('member_id', $member->id)
-                        ->whereBetween('attendance_date', [$start, $end])
-                        ->where('present', true)
-                        ->count();
-                }
-
                 $effectiveStart = max(strtotime($start), strtotime((string) $member->join_date));
                 $effectiveEnd = $member->leave_date
                     ? min(strtotime($end), strtotime((string) $member->leave_date))
@@ -143,7 +129,25 @@ class BillingGenerationService
                 $employmentWindowDays = $effectiveEnd >= $effectiveStart
                     ? ((int) floor(($effectiveEnd - $effectiveStart) / 86400) + 1)
                     : 0;
-                $presentDays = max(0, min($presentDays, $employmentWindowDays));
+
+                $monthly = $monthlySnapshots->get($member->id);
+                if ($monthly) {
+                    $presentDays = (int) $monthly->present_days;
+                    if ($presentDays < 0) {
+                        throw new RuntimeException("Invalid monthly attendance for member {$member->member_code}: present_days must be >= 0");
+                    }
+                    if ($presentDays > $employmentWindowDays) {
+                        throw new RuntimeException("Invalid monthly attendance for member {$member->member_code} in {$monthCycle}: present_days={$presentDays} exceeds valid employment-window days={$employmentWindowDays}");
+                    }
+                } else {
+                    $presentDays = $employmentWindowDays > 0
+                        ? Attendance::query()
+                            ->where('member_id', $member->id)
+                            ->whereBetween('attendance_date', [date('Y-m-d', $effectiveStart), date('Y-m-d', $effectiveEnd)])
+                            ->where('present', true)
+                            ->count()
+                        : 0;
+                }
 
                 $ratePerDay = $this->resolveRatePerDay($member, $start);
                 $base = round($presentDays * $ratePerDay, 2);

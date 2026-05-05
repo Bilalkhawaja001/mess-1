@@ -169,18 +169,27 @@
             </div>
         </div>
 
-        <form method="GET" class="d-flex flex-wrap gap-2 align-items-end no-print">
-            <div>
-                <label class="form-label small mb-1">From Date</label>
-                <input type="date" name="from_date" value="{{ $gmFrom }}" class="form-control form-control-sm">
-            </div>
-            <div>
-                <label class="form-label small mb-1">To Date</label>
-                <input type="date" name="to_date" value="{{ $gmTo }}" class="form-control form-control-sm">
-            </div>
-            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-            <button type="button" onclick="window.print()" class="btn btn-outline-dark btn-sm">Print</button>
-        </form>
+        <div class="d-flex flex-wrap gap-2 align-items-end no-print">
+            <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                    <label class="form-label small mb-1">From Date</label>
+                    <input type="date" name="from_date" value="{{ $gmFrom }}" class="form-control form-control-sm">
+                </div>
+                <div>
+                    <label class="form-label small mb-1">To Date</label>
+                    <input type="date" name="to_date" value="{{ $gmTo }}" class="form-control form-control-sm">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                <button type="button" onclick="window.print()" class="btn btn-outline-dark btn-sm">Print</button>
+            </form>
+
+            <form method="POST" action="{{ route('admin.guests.meals.approve-range') }}" class="d-flex align-items-end">
+                @csrf
+                <input type="hidden" name="from_date" value="{{ $gmFrom }}">
+                <input type="hidden" name="to_date" value="{{ $gmTo }}">
+                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Approve all unapproved guest meals in selected date range?')">Approve Date Range</button>
+            </form>
+        </div>
     </div>
 
     <div class="card-body">

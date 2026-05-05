@@ -271,6 +271,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/guests/meals/{meal}/update', [GuestController::class, 'updateMeal'])->name('guests.meals.update.legacy');
         Route::post('/guests/meals/{meal}/delete', [GuestController::class, 'deleteMeal'])->name('guests.meals.delete.legacy');
         Route::post('/guests/meals/{meal}/approve', [GuestController::class, 'approveMeal'])->name('guests.meals.approve.legacy');
+        Route::post('/guests/meals/approve-range', [GuestController::class, 'approveMealRange'])->name('guests.meals.approve-range');
         Route::get('/guests/meals/export', [GuestController::class, 'exportMeals'])->name('guests.meals.export');
         Route::post('/guests/import', [GuestController::class, 'importGuests'])->name('guests.import');
         Route::post('/guests/meals/import', [GuestController::class, 'importMeals'])->name('guests.meals.import');

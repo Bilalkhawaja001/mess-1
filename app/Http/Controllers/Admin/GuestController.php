@@ -341,30 +341,64 @@ class GuestController extends Controller
         }
 
         try {
-            $rate = $this->guestRateForDate((string) $meal->meal_date);
+            [$rate, $amount] = $this->resolveGuestMealRateAmount($meal->meal_date, (int) $meal->quantity);
         } catch (\Throwable $e) {
             return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage());
         }
 
-        $amount = round($rate * (int) $meal->quantity, 2);
-
         DB::transaction(function () use ($meal, $rate, $amount) {
-            $meal->update([
-                'rate' => $rate,
-                'rate_applied' => $rate,
-                'amount' => $amount,
-                'approved_by' => auth()->id(),
-                'approved_at' => now(),
-            ]);
-
-            $this->appendDepartmentLedgerEntryForMeal(
-                meal: $meal->fresh(['guest']),
-                entryType: 'DEBIT',
-                remarks: 'Guest meal chargeback approval'
-            );
+            $this->approveGuestMealRecord($meal, $rate, $amount, (int) auth()->id(), now());
         });
 
         return back()->with('success', 'Guest meal approved. Department ledger updated.');
+    }
+
+    public function approveMealRange(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'from_date' => ['required', 'date'],
+            'to_date' => ['required', 'date', 'after_or_equal:from_date'],
+        ]);
+
+        $fromDate = (string) $data['from_date'];
+        $toDate = (string) $data['to_date'];
+
+        $meals = GuestMeal::query()
+            ->with(['guest'])
+            ->whereNull('approved_at')
+            ->whereDate('meal_date', '>=', $fromDate)
+            ->whereDate('meal_date', '<=', $toDate)
+            ->orderBy('meal_date')
+            ->orderBy('id')
+            ->get();
+
+        if ($meals->isEmpty()) {
+            return back()->with('error', 'No unapproved guest meals found in selected date range.');
+        }
+
+        $ratePayloads = [];
+        foreach ($meals as $meal) {
+            try {
+                $ratePayloads[$meal->id] = $this->resolveGuestMealRateAmount($meal->meal_date, (int) $meal->quantity);
+            } catch (\Throwable $e) {
+                return back()->with('error', 'Bulk approve blocked. Missing guest rate for ' . Carbon::parse((string) $meal->meal_date)->format('Y-m-d') . ' on meal #' . $meal->id . '. ' . $e->getMessage());
+            }
+        }
+
+        $actorId = (int) auth()->id();
+        $approvedAt = now();
+
+        DB::transaction(function () use ($meals, $ratePayloads, $actorId, $approvedAt) {
+            foreach ($meals as $meal) {
+                [$rate, $amount] = $ratePayloads[$meal->id];
+                $this->approveGuestMealRecord($meal, $rate, $amount, $actorId, $approvedAt);
+            }
+        });
+
+        $count = $meals->count();
+
+        return redirect()->route('admin.guests.index', ['from_date' => $fromDate, 'to_date' => $toDate])
+            ->with('success', "Approved {$count} guest meal(s) for selected date range.");
     }
 
     public function exportMeals(Request $request): StreamedResponse
@@ -574,13 +608,37 @@ class GuestController extends Controller
     private function dynamicRatePayload(GuestMeal $meal): array
     {
         try {
-            $rate = $this->guestRateForDate((string) $meal->meal_date);
-            $amount = round($rate * (int) $meal->quantity, 2);
+            [$rate, $amount] = $this->resolveGuestMealRateAmount($meal->meal_date, (int) $meal->quantity);
 
             return [$rate, $amount, false, null];
         } catch (\Throwable $e) {
             return [null, null, true, $e->getMessage()];
         }
+    }
+
+    private function resolveGuestMealRateAmount(mixed $mealDate, int $quantity): array
+    {
+        $rate = $this->guestRateForDate((string) $mealDate);
+        $amount = round($rate * $quantity, 2);
+
+        return [$rate, $amount];
+    }
+
+    private function approveGuestMealRecord(GuestMeal $meal, float $rate, float $amount, int $actorId, mixed $approvedAt): void
+    {
+        $meal->update([
+            'rate' => $rate,
+            'rate_applied' => $rate,
+            'amount' => $amount,
+            'approved_by' => $actorId,
+            'approved_at' => $approvedAt,
+        ]);
+
+        $this->appendDepartmentLedgerEntryForMeal(
+            meal: $meal->fresh(['guest']),
+            entryType: 'DEBIT',
+            remarks: 'Guest meal chargeback approval'
+        );
     }
 
     private function appendDepartmentLedgerEntryForMeal(GuestMeal $meal, string $entryType, string $remarks): void

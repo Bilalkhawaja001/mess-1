@@ -26,7 +26,7 @@ class BusinessMonthCycle
         };
 
         $cycleStart = $month->copy()->subMonthNoOverflow()->setDay($startDay)->startOfDay();
-        $cycleEnd = $month->copy()->setDay($endDay)->endOfDay();
+        $cycleEnd = $month->copy()->setDay($endDay)->startOfDay();
 
         return [
             'month_cycle' => $monthCycle,
@@ -34,7 +34,7 @@ class BusinessMonthCycle
             'cycle_end' => $cycleEnd,
             'cycle_start_date' => $cycleStart->toDateString(),
             'cycle_end_date' => $cycleEnd->toDateString(),
-            'cycle_days' => $cycleStart->diffInDays($cycleEnd) + 1,
+            'cycle_days' => (int) $daysInMonth,
         ];
     }
 

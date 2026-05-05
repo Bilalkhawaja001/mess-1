@@ -13,6 +13,7 @@ use App\Models\MonthClosure;
 use App\Models\MonthlyAttendance;
 use App\Models\RatePolicy;
 use App\Support\BusinessMonthCycle;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -124,12 +125,17 @@ class BillingGenerationService
                     continue;
                 }
 
-                $effectiveStart = max(strtotime($cycleStart), strtotime((string) $member->join_date));
-                $effectiveEnd = $member->leave_date
-                    ? min(strtotime($cycleEnd), strtotime((string) $member->leave_date))
-                    : strtotime($cycleEnd);
-                $employmentWindowDays = $effectiveEnd >= $effectiveStart
-                    ? ((int) floor(($effectiveEnd - $effectiveStart) / 86400) + 1)
+                $cycleStartAt = Carbon::parse($cycleStart)->startOfDay();
+                $cycleEndAt = Carbon::parse($cycleEnd)->startOfDay();
+                $memberJoinAt = Carbon::parse((string) $member->join_date)->startOfDay();
+                $memberLeaveAt = $member->leave_date
+                    ? Carbon::parse((string) $member->leave_date)->startOfDay()
+                    : null;
+
+                $effectiveStartAt = $cycleStartAt->greaterThan($memberJoinAt) ? $cycleStartAt->copy() : $memberJoinAt->copy();
+                $effectiveEndAt = $memberLeaveAt && $memberLeaveAt->lessThan($cycleEndAt) ? $memberLeaveAt->copy() : $cycleEndAt->copy();
+                $employmentWindowDays = $effectiveEndAt->greaterThanOrEqualTo($effectiveStartAt)
+                    ? ((int) $effectiveStartAt->diffInDays($effectiveEndAt) + 1)
                     : 0;
 
                 $monthly = $monthlySnapshots->get($member->id);
@@ -145,7 +151,7 @@ class BillingGenerationService
                     $presentDays = $employmentWindowDays > 0
                         ? Attendance::query()
                             ->where('member_id', $member->id)
-                            ->whereBetween('attendance_date', [date('Y-m-d', $effectiveStart), date('Y-m-d', $effectiveEnd)])
+                            ->whereBetween('attendance_date', [$effectiveStartAt->toDateString(), $effectiveEndAt->toDateString()])
                             ->where('present', true)
                             ->count()
                         : 0;

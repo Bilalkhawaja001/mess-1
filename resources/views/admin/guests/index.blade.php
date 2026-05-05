@@ -109,7 +109,7 @@
                             <input type="number" min="1" name="quantity" class="form-control" value="1" required>
                         </div>
                         <div class="col-md-9 d-flex align-items-end">
-                            <div class="small text-muted">Draft save keeps rate/amount zero until edit/approve, matching Flask flow.</div>
+                            <div class="small text-muted">Draft save validates guest rate first. Report shows calculated draft rate/amount; approval stores final rate/amount.</div>
                         </div>
                         <div class="col-12">
                             <button class="btn btn-primary">Save Meal Draft</button>
@@ -158,44 +158,6 @@
 @php
     $gmFrom = request('from_date') ?: request('gm_from');
     $gmTo = request('to_date') ?: request('gm_to');
-
-    $guestMealReportQuery = \Illuminate\Support\Facades\DB::table('guest_meals')
-        ->leftJoin('guests', 'guest_meals.guest_id', '=', 'guests.id')
-        ->select(
-            'guest_meals.id',
-            'guest_meals.meal_date',
-            'guest_meals.meal_type',
-            'guest_meals.quantity',
-            'guest_meals.rate',
-            'guest_meals.rate_applied',
-            'guest_meals.amount',
-            'guests.name as guest_name',
-            'guests.came_from as guest_came_from',
-            'guests.guest_code as guest_code'
-        );
-
-    if ($gmFrom) {
-        $guestMealReportQuery->whereDate('guest_meals.meal_date', '>=', $gmFrom);
-    }
-
-    if ($gmTo) {
-        $guestMealReportQuery->whereDate('guest_meals.meal_date', '<=', $gmTo);
-    }
-
-    $guestMealReportRows = $guestMealReportQuery
-        ->orderBy('guest_meals.meal_date')
-        ->orderBy('guests.name')
-        ->orderBy('guest_meals.id')
-        ->limit(1000)
-        ->get();
-
-    $guestMealReportQtyTotal = $guestMealReportRows->sum(function ($row) {
-        return (float) ($row->quantity ?? 0);
-    });
-
-    $guestMealReportGrandTotal = $guestMealReportRows->sum(function ($row) {
-        return (float) ($row->amount ?? 0);
-    });
 @endphp
 
 <div class="card shadow-sm mb-3 guest-meal-report-print-area">
@@ -235,6 +197,7 @@
                         <th>Guest Name</th>
                         <th>Company/Came From</th>
                         <th>Meal Type</th>
+                        <th>Status</th>
                         <th class="text-end">Qty</th>
                         <th class="text-end">Rate</th>
                         <th class="text-end">Amount</th>
@@ -242,32 +205,36 @@
                 </thead>
                 <tbody>
                     @forelse($guestMealReportRows as $row)
-                        @php
-                            $displayRate = $row->rate ?? $row->rate_applied ?? 0;
-                        @endphp
                         <tr>
-                            <td>{{ \Carbon\Carbon::parse($row->meal_date)->format('d-M-Y') }}</td>
+                            <td>{{ optional($row->meal_date)->format('d-M-Y') }}</td>
                             <td>
-                                {{ $row->guest_name ?: '-' }}
-                                @if($row->guest_code)
-                                    <span class="text-muted small">({{ $row->guest_code }})</span>
+                                {{ $row->guest?->name ?: '-' }}
+                                @if($row->guest?->guest_code)
+                                    <span class="text-muted small">({{ $row->guest->guest_code }})</span>
                                 @endif
                             </td>
-                            <td>{{ $row->guest_came_from ?: '-' }}</td>
+                            <td>{{ $row->guest?->came_from ?: '-' }}</td>
                             <td>{{ $row->meal_type ?: '-' }}</td>
+                            <td>
+                                @if($row->rate_missing)
+                                    <span class="badge bg-danger">Rate Missing</span>
+                                @else
+                                    <span class="badge {{ $row->approved_at ? 'bg-success' : 'bg-warning text-dark' }}">{{ $row->approval_status }}</span>
+                                @endif
+                            </td>
                             <td class="text-end">{{ number_format((float) $row->quantity, 2) }}</td>
-                            <td class="text-end">{{ number_format((float) $displayRate, 2) }}</td>
-                            <td class="text-end">{{ number_format((float) $row->amount, 2) }}</td>
+                            <td class="text-end">{{ $row->rate_missing ? 'Missing' : number_format((float) $row->rate_display, 2) }}</td>
+                            <td class="text-end">{{ $row->rate_missing ? '-' : number_format((float) $row->amount_display, 2) }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No guest meal records found.</td>
+                            <td colspan="8" class="text-center text-muted py-4">No guest meal records found.</td>
                         </tr>
                     @endforelse
                 </tbody>
                 <tfoot>
                     <tr class="fw-bold table-light">
-                        <td colspan="4" class="text-end">Grand Total</td>
+                        <td colspan="5" class="text-end">Grand Total</td>
                         <td class="text-end">{{ number_format((float) $guestMealReportQtyTotal, 2) }}</td>
                         <td></td>
                         <td class="text-end">{{ number_format((float) $guestMealReportGrandTotal, 2) }}</td>

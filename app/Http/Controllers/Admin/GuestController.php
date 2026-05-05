@@ -87,7 +87,45 @@ class GuestController extends Controller
             return $meal;
         });
 
+        $reportQuery = GuestMeal::query()
+            ->with(['guest'])
+            ->orderBy('meal_date')
+            ->orderBy('guest_id')
+            ->orderBy('meal_type')
+            ->orderBy('id');
+
+        if ($fromDate !== '') {
+            $reportQuery->whereDate('meal_date', '>=', $fromDate);
+        }
+        if ($toDate !== '') {
+            $reportQuery->whereDate('meal_date', '<=', $toDate);
+        }
+
+        $guestMealReportRows = $reportQuery->limit(1000)->get()->map(function (GuestMeal $meal) {
+            [$rate, $amount, $rateMissing, $rateError] = $this->dynamicRatePayload($meal);
+
+            $meal->rate_display = $meal->approved_at
+                ? (float) ($meal->rate_applied ?: $meal->rate ?: $rate)
+                : $rate;
+            $meal->amount_display = $meal->approved_at
+                ? (float) ($meal->amount ?: $amount)
+                : $amount;
+            $meal->rate_missing = $rateMissing;
+            $meal->rate_error = $rateError;
+            $meal->approval_status = $meal->approved_at ? 'Approved' : 'Draft';
+
+            return $meal;
+        });
+
         $summary = round((float) $meals->sum(fn (GuestMeal $meal) => (float) ($meal->amount_dynamic ?? $meal->amount ?? 0)), 2);
+        $guestMealReportQtyTotal = round((float) $guestMealReportRows->sum(fn (GuestMeal $meal) => (float) ($meal->quantity ?? 0)), 2);
+        $guestMealReportGrandTotal = round((float) $guestMealReportRows->sum(function (GuestMeal $meal) {
+            if ($meal->rate_missing) {
+                return 0;
+            }
+
+            return (float) ($meal->amount_display ?? 0);
+        }), 2);
 
         $today = now()->toDateString();
         $currentRate = null;
@@ -112,6 +150,9 @@ class GuestController extends Controller
             'toDate' => $toDate,
             'today' => $today,
             'currentRate' => $currentRate,
+            'guestMealReportRows' => $guestMealReportRows,
+            'guestMealReportQtyTotal' => $guestMealReportQtyTotal,
+            'guestMealReportGrandTotal' => $guestMealReportGrandTotal,
         ]);
     }
 
@@ -182,6 +223,12 @@ class GuestController extends Controller
             return back()->with('error', 'Invalid meal type.');
         }
 
+        try {
+            $this->guestRateForDate((string) $data['meal_date']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage())->withInput();
+        }
+
         GuestMeal::query()->create([
             'guest_id' => $data['guest_id'],
             'meal_date' => $data['meal_date'],
@@ -196,7 +243,7 @@ class GuestController extends Controller
             'approved_at' => null,
         ]);
 
-        return back()->with('success', 'Guest meal draft saved.');
+        return back()->with('success', 'Guest meal draft saved. Calculated rate/amount will show in report and store on approval.');
     }
 
     public function updateMeal(Request $request, GuestMeal $meal): RedirectResponse
@@ -219,7 +266,12 @@ class GuestController extends Controller
         $oldMealDate = $meal->meal_date;
         $oldAmount = (float) ($meal->amount ?? 0);
 
-        $rate = $this->guestRateForDate($data['meal_date']);
+        try {
+            $rate = $this->guestRateForDate((string) $data['meal_date']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage())->withInput();
+        }
+
         $amount = round($rate * (int) $data['quantity'], 2);
 
         DB::transaction(function () use ($meal, $data, $mealType, $rate, $amount, $wasApproved, $oldDepartmentId, $oldMealDate, $oldAmount) {
@@ -288,7 +340,12 @@ class GuestController extends Controller
             return back()->with('error', 'Approved record is immutable.');
         }
 
-        $rate = $this->guestRateForDate($meal->meal_date);
+        try {
+            $rate = $this->guestRateForDate((string) $meal->meal_date);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage());
+        }
+
         $amount = round($rate * (int) $meal->quantity, 2);
 
         DB::transaction(function () use ($meal, $rate, $amount) {

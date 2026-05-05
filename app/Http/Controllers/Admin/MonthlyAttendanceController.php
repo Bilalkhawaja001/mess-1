@@ -7,6 +7,7 @@ use App\Http\Requests\Attendance\MonthlyAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\Member;
 use App\Models\MonthlyAttendance;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,7 @@ class MonthlyAttendanceController extends Controller
 
         $members = Member::query()->where('is_active', true)->orderBy('member_code')->get();
         $snap = MonthlyAttendance::query()->where('month_cycle', $monthCycle)->get()->keyBy('member_id');
+        $monthCards = $this->buildMonthCards($monthCycle);
 
         $rows = $members->map(function ($m) use ($start, $end, $snap) {
             $present = Attendance::query()->where('member_id', $m->id)->whereBetween('attendance_date', [$start, $end])->where('present', true)->count();
@@ -37,7 +39,7 @@ class MonthlyAttendanceController extends Controller
             ];
         });
 
-        return view('admin.attendance_monthly.index', compact('monthCycle', 'rows'));
+        return view('admin.attendance_monthly.index', compact('monthCycle', 'rows', 'monthCards'));
     }
 
     public function store(MonthlyAttendanceRequest $request): RedirectResponse
@@ -272,5 +274,51 @@ class MonthlyAttendanceController extends Controller
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private function buildMonthCards(string $baseMonthCycle): array
+    {
+        $baseMonth = Carbon::createFromFormat('Y-m', $baseMonthCycle)->startOfMonth();
+        $cardMonths = collect(range(0, 3))
+            ->map(fn (int $offset) => $baseMonth->copy()->subMonths($offset)->format('Y-m'))
+            ->all();
+
+        $cards = [];
+        foreach ($cardMonths as $monthCycle) {
+            $cards[$monthCycle] = [
+                'month_cycle' => $monthCycle,
+                'contractors' => 0,
+                'executive' => 0,
+                'centralized' => 0,
+            ];
+        }
+
+        $rows = MonthlyAttendance::query()
+            ->with('member.mess')
+            ->whereIn('month_cycle', $cardMonths)
+            ->get();
+
+        foreach ($rows as $row) {
+            $messBucket = $this->normalizeMonthCardMess((string) ($row->member?->mess?->code ?: $row->member?->mess?->name ?: ''));
+            if ($messBucket === null || ! isset($cards[$row->month_cycle])) {
+                continue;
+            }
+
+            $cards[$row->month_cycle][$messBucket] += (int) $row->present_days;
+        }
+
+        return array_values(array_map(fn (string $monthCycle) => $cards[$monthCycle], $cardMonths));
+    }
+
+    private function normalizeMonthCardMess(string $messCode): ?string
+    {
+        $messCode = strtoupper(trim($messCode));
+
+        return match ($messCode) {
+            'CONTRACTOR', 'CONTRACTORS' => 'contractors',
+            'EXEC', 'EXECUTIVE' => 'executive',
+            'CENTRAL', 'CENTRALIZE', 'CENTRALIZED' => 'centralized',
+            default => null,
+        };
     }
 }

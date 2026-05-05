@@ -2,9 +2,24 @@
 @section('title','Monthly Attendance')
 @section('page_title','Monthly Attendance')
 @section('content')
+<div class="row g-2 mb-3">
+    @foreach($monthCards as $card)
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="fw-semibold">{{ $card['month_cycle'] }}</div>
+                    <div class="small">Contractors: {{ $card['contractors'] }}</div>
+                    <div class="small">Executive: {{ $card['executive'] }}</div>
+                    <div class="small">Centralized: {{ $card['centralized'] }}</div>
+                </div>
+            </div>
+        </div>
+    @endforeach
+</div>
+
 <div class="card shadow-sm mb-3"><div class="card-body">
 <form method="GET" class="row g-2 align-items-end">
-<div class="col-md-3"><label class="form-label">Month Cycle</label><input name="month_cycle" value="{{ $monthCycle }}" class="form-control" placeholder="YYYY-MM"></div>
+<div class="col-md-3"><label class="form-label">Month Cycle</label><input name="month_cycle" type="month" value="{{ $monthCycle }}" class="form-control" placeholder="YYYY-MM"></div>
 <div class="col-md-2"><button class="btn btn-outline-primary">Load</button></div>
 </form></div></div>
 

@@ -85,10 +85,10 @@
                         @csrf
                         <div class="col-md-6">
                             <label class="form-label">Guest</label>
-                            <select name="guest_id" class="form-select" required>
+                            <select name="guest_id" class="form-select js-guest-meal-search" required>
                                 <option value="">Select guest</option>
                                 @foreach($guests as $guest)
-                                    <option value="{{ $guest->id }}">{{ $guest->guest_code }} - {{ $guest->name }}</option>
+                                    <option value="{{ $guest->id }}">{{ $guest->name ?? "Guest" }} — {{ $guest->came_from ?? "-" }} — {{ $guest->guest_code ?? "" }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -152,7 +152,163 @@
         </div>
     </div>
 
-    <div class="card shadow-sm mb-3">
+    
+
+{{-- Guest Meal Printable Report --}}
+@php
+    $gmFrom = request('from_date') ?: request('gm_from');
+    $gmTo = request('to_date') ?: request('gm_to');
+
+    $guestMealReportQuery = \Illuminate\Support\Facades\DB::table('guest_meals')
+        ->leftJoin('guests', 'guest_meals.guest_id', '=', 'guests.id')
+        ->select(
+            'guest_meals.id',
+            'guest_meals.meal_date',
+            'guest_meals.meal_type',
+            'guest_meals.quantity',
+            'guest_meals.rate',
+            'guest_meals.rate_applied',
+            'guest_meals.amount',
+            'guests.name as guest_name',
+            'guests.came_from as guest_came_from',
+            'guests.guest_code as guest_code'
+        );
+
+    if ($gmFrom) {
+        $guestMealReportQuery->whereDate('guest_meals.meal_date', '>=', $gmFrom);
+    }
+
+    if ($gmTo) {
+        $guestMealReportQuery->whereDate('guest_meals.meal_date', '<=', $gmTo);
+    }
+
+    $guestMealReportRows = $guestMealReportQuery
+        ->orderBy('guest_meals.meal_date')
+        ->orderBy('guests.name')
+        ->orderBy('guest_meals.id')
+        ->limit(1000)
+        ->get();
+
+    $guestMealReportQtyTotal = $guestMealReportRows->sum(function ($row) {
+        return (float) ($row->quantity ?? 0);
+    });
+
+    $guestMealReportGrandTotal = $guestMealReportRows->sum(function ($row) {
+        return (float) ($row->amount ?? 0);
+    });
+@endphp
+
+<div class="card shadow-sm mb-3 guest-meal-report-print-area">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <strong>Guest Meal Print Report</strong>
+            <div class="small text-muted">
+                {{ $gmFrom ?: 'All dates' }} to {{ $gmTo ?: 'All dates' }}
+            </div>
+        </div>
+
+        <form method="GET" class="d-flex flex-wrap gap-2 align-items-end no-print">
+            <div>
+                <label class="form-label small mb-1">From Date</label>
+                <input type="date" name="from_date" value="{{ $gmFrom }}" class="form-control form-control-sm">
+            </div>
+            <div>
+                <label class="form-label small mb-1">To Date</label>
+                <input type="date" name="to_date" value="{{ $gmTo }}" class="form-control form-control-sm">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+            <button type="button" onclick="window.print()" class="btn btn-outline-dark btn-sm">Print</button>
+        </form>
+    </div>
+
+    <div class="card-body">
+        <div class="print-title d-none">
+            <h3 class="mb-1">Guest Meal Report</h3>
+            <p class="mb-2">Date: {{ $gmFrom ?: 'All' }} to {{ $gmTo ?: 'All' }}</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Meal Date</th>
+                        <th>Guest Name</th>
+                        <th>Company/Came From</th>
+                        <th>Meal Type</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Rate</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($guestMealReportRows as $row)
+                        @php
+                            $displayRate = $row->rate ?? $row->rate_applied ?? 0;
+                        @endphp
+                        <tr>
+                            <td>{{ \Carbon\Carbon::parse($row->meal_date)->format('d-M-Y') }}</td>
+                            <td>
+                                {{ $row->guest_name ?: '-' }}
+                                @if($row->guest_code)
+                                    <span class="text-muted small">({{ $row->guest_code }})</span>
+                                @endif
+                            </td>
+                            <td>{{ $row->guest_came_from ?: '-' }}</td>
+                            <td>{{ $row->meal_type ?: '-' }}</td>
+                            <td class="text-end">{{ number_format((float) $row->quantity, 2) }}</td>
+                            <td class="text-end">{{ number_format((float) $displayRate, 2) }}</td>
+                            <td class="text-end">{{ number_format((float) $row->amount, 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No guest meal records found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold table-light">
+                        <td colspan="4" class="text-end">Grand Total</td>
+                        <td class="text-end">{{ number_format((float) $guestMealReportQtyTotal, 2) }}</td>
+                        <td></td>
+                        <td class="text-end">{{ number_format((float) $guestMealReportGrandTotal, 2) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    .guest-meal-report-print-area,
+    .guest-meal-report-print-area * {
+        visibility: visible !important;
+    }
+    .guest-meal-report-print-area {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+    .no-print,
+    .sidebar,
+    .topbar,
+    .navbar {
+        display: none !important;
+    }
+    .print-title {
+        display: block !important;
+    }
+}
+</style>
+
+
+<div class="card shadow-sm mb-3">
         <div class="card-header">Guest Search</div>
         <div class="card-body">
             <form method="GET" action="{{ route('admin.guests.index') }}" class="row g-2">
@@ -344,3 +500,35 @@
     </div>
 </div>
 @endsection
+
+
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+.ts-wrapper.js-guest-meal-search .ts-control{
+    min-height:42px;
+    border-radius:10px;
+    border-color:#dbe3ef;
+}
+.ts-dropdown{ z-index:9999; }
+</style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('select.js-guest-meal-search').forEach(function (el) {
+        if (el.tomselect) return;
+        new TomSelect(el, {
+            create: false,
+            allowEmptyOption: true,
+            maxOptions: 1000,
+            searchField: ['text'],
+            placeholder: 'Search guest by name, company/came from, or code'
+        });
+    });
+});
+</script>
+@endpush
+

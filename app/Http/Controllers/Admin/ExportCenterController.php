@@ -43,10 +43,33 @@ class ExportCenterController extends Controller
         return $this->csv('stock-ledger.csv', ['txn_at', 'item_id', 'txn_type', 'quantity', 'unit_cost', 'remarks'], $rows);
     }
 
-    public function guestMeals()
+    public function guestMeals(Request $request)
     {
-        $rows = GuestMeal::orderBy('meal_date')->get()->map(fn ($row) => [$row->meal_date, $row->guest_id, $row->meal_type, $row->quantity, $row->rate, $row->amount]);
-        return $this->csv('guest-meals.csv', ['meal_date', 'guest_id', 'meal_type', 'quantity', 'rate', 'amount'], $rows);
+        [$fromDate, $toDate] = $this->resolveDates($request);
+        $query = GuestMeal::query()->with(['guest.department'])->orderBy('meal_date')->orderBy('id');
+
+        if ($fromDate) {
+            $query->whereDate('meal_date', '>=', $fromDate->toDateString());
+        }
+        if ($toDate) {
+            $query->whereDate('meal_date', '<=', $toDate->toDateString());
+        }
+
+        $rows = $query->get()->map(fn ($row) => [
+            optional($row->meal_date)->format('Y-m-d'),
+            $row->guest_id,
+            $row->guest?->name ?? '',
+            $row->guest?->came_from ?? '',
+            $row->guest?->department?->code ?? '',
+            $row->meal_type,
+            $row->quantity,
+            $row->rate_applied ?? $row->rate,
+            $row->amount,
+            $row->guest?->remarks ?? '',
+            $row->approved_at ? 'NO' : (($row->rate_applied ?? $row->rate) ? 'NO' : 'YES'),
+        ]);
+
+        return $this->csv('guest-meals.csv', ['date', 'guest_id', 'guest_name', 'company / came_from', 'department', 'meal_type', 'qty', 'rate', 'total_amount', 'remarks', 'rate_missing'], $rows);
     }
 
     public function departmentLedger()

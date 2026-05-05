@@ -286,7 +286,7 @@
                             <td>{{ $meal->id }}</td>
                             <td>{{ optional($meal->meal_date)->format('Y-m-d') }}</td>
                             <td>{{ $meal->guest?->guest_code }} - {{ $meal->guest?->name }}</td>
-                            <td>{{ $meal->guest?->department?->code ?: '-' }}</td>
+                            <td>{{ is_object($meal->guest?->department) ? (($meal->guest->department->code ?? $meal->guest->department->name ?? '-') ?: '-') : (($meal->guest?->department ?? '-') ?: '-') }}</td>
                             <td>{{ $meal->meal_type }}</td>
                             <td>{{ $meal->quantity }}</td>
                             <td>{{ $meal->rate_missing ? 'Missing' : number_format((float) $meal->rate_dynamic, 2) }}</td>

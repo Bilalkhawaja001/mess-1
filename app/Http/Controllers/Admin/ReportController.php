@@ -106,7 +106,8 @@ class ReportController extends Controller
             $needle = mb_strtolower($q);
             $rows = $rows->filter(function (array $r) use ($needle) {
                 return str_contains(mb_strtolower($r['member_id']), $needle)
-                    || str_contains(mb_strtolower($r['member_name']), $needle);
+                    || str_contains(mb_strtolower($r['member_name']), $needle)
+                    || str_contains(mb_strtolower($r['department']), $needle);
             })->values();
         }
 
@@ -152,6 +153,45 @@ class ReportController extends Controller
                 fputcsv($out, ['Totals', '', '', number_format($totals['total_debit'], 2, '.', ''), number_format($totals['total_credit'], 2, '.', ''), number_format($totals['total_closing'], 2, '.', ''), '']);
                 fclose($out);
             }, $filename, ['Content-Type' => 'text/csv']);
+        }
+
+        if ((string) $request->input('export', '') === 'excel') {
+            $filename = 'overall_recovery_' . now()->format('Ymd_His') . '.xlsx';
+            return Response::streamDownload(function () use ($rows, $totals) {
+                $spreadsheet = new Spreadsheet();
+                $sheet = $spreadsheet->getActiveSheet();
+                $sheet->fromArray(['Member ID', 'Member Name', 'Department', 'Total Debit', 'Total Credit', 'Closing Balance', 'Status'], null, 'A1');
+
+                $rowIndex = 2;
+                foreach ($rows as $r) {
+                    $sheet->fromArray([
+                        $r['member_id'],
+                        $r['member_name'],
+                        $r['department'],
+                        (float) $r['total_debit'],
+                        (float) $r['total_credit'],
+                        (float) $r['closing_balance'],
+                        $r['status'],
+                    ], null, 'A' . $rowIndex);
+                    $rowIndex++;
+                }
+
+                $rowIndex++;
+                $sheet->fromArray([
+                    'Totals',
+                    '',
+                    '',
+                    (float) $totals['total_debit'],
+                    (float) $totals['total_credit'],
+                    (float) $totals['total_closing'],
+                    '',
+                ], null, 'A' . $rowIndex);
+
+                $writer = new Xlsx($spreadsheet);
+                $writer->save('php://output');
+            }, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
         }
 
         return view('admin.reports.overall_recovery', [

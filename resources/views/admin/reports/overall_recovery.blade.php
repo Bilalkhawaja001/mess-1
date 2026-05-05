@@ -18,13 +18,16 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Member Search</label>
-                <input class="form-control" type="text" name="q" value="{{ $q }}" placeholder="Member Code or Name">
+                <input class="form-control" type="text" name="q" value="{{ $q }}" placeholder="Member Code, Name, or Department">
             </div>
             <div class="col-md-2 d-grid">
                 <button class="btn btn-outline-primary">View</button>
             </div>
-            <div class="col-md-3 d-grid">
-                <button class="btn btn-success" name="export" value="csv">Export CSV</button>
+            <div class="col-md-1 d-grid">
+                <button class="btn btn-outline-success" name="export" value="csv">CSV</button>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-success" name="export" value="excel">Excel</button>
             </div>
         </form>
     </div>

@@ -234,7 +234,12 @@ class BillingGenerationService
         }
 
         if ($rateType === 'PER_DAY') {
-            return 100.0;
+            $fallback = (float) env('MESS_RATE_PER_DAY', 100.0);
+            if ($fallback < 0) {
+                throw new RuntimeException('MESS_RATE_PER_DAY cannot be negative');
+            }
+
+            return $fallback;
         }
 
         throw new RuntimeException("No approved active {$rateType} rate found for {$startDate}.");

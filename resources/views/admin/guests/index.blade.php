@@ -343,4 +343,168 @@
         </div>
     </div>
 </div>
+
+
+{{-- Guest Meal Drafts Printable Register --}}
+@php
+    $gmFrom = request('gm_from');
+    $gmTo = request('gm_to');
+
+    $guestCols = \Illuminate\Support\Facades\Schema::getColumnListing('guests');
+    $guestNameCol = in_array('name', $guestCols) ? 'name' : (in_array('guest_name', $guestCols) ? 'guest_name' : 'id');
+    $guestCodeCol = in_array('guest_code', $guestCols) ? 'guest_code' : (in_array('code', $guestCols) ? 'code' : null);
+    $guestCompanyCol = in_array('company', $guestCols) ? 'company' : (in_array('came_from', $guestCols) ? 'came_from' : (in_array('company_came_from', $guestCols) ? 'company_came_from' : null));
+
+    $gmQuery = \Illuminate\Support\Facades\DB::table('guest_meals')
+        ->leftJoin('guests', 'guest_meals.guest_id', '=', 'guests.id')
+        ->select(
+            'guest_meals.*',
+            \Illuminate\Support\Facades\DB::raw("guests.`{$guestNameCol}` as guest_display_name")
+        );
+
+    if ($guestCodeCol) {
+        $gmQuery->addSelect(\Illuminate\Support\Facades\DB::raw("guests.`{$guestCodeCol}` as guest_display_code"));
+    } else {
+        $gmQuery->addSelect(\Illuminate\Support\Facades\DB::raw("'' as guest_display_code"));
+    }
+
+    if ($guestCompanyCol) {
+        $gmQuery->addSelect(\Illuminate\Support\Facades\DB::raw("guests.`{$guestCompanyCol}` as guest_display_company"));
+    } else {
+        $gmQuery->addSelect(\Illuminate\Support\Facades\DB::raw("'' as guest_display_company"));
+    }
+
+    if ($gmFrom) {
+        $gmQuery->whereDate('guest_meals.meal_date', '>=', $gmFrom);
+    }
+
+    if ($gmTo) {
+        $gmQuery->whereDate('guest_meals.meal_date', '<=', $gmTo);
+    }
+
+    if (!$gmFrom && !$gmTo) {
+        $gmRows = $gmQuery->orderByDesc('guest_meals.meal_date')->orderByDesc('guest_meals.id')->limit(100)->get();
+    } else {
+        $gmRows = $gmQuery->orderBy('guest_meals.meal_date')->orderBy('guest_display_name')->get();
+    }
+
+    $gmTotalQty = $gmRows->sum('quantity');
+    $gmGrandTotal = $gmRows->sum(function($r){ return (float)($r->amount ?? 0); });
+@endphp
+
+<div class="card mt-4 guest-meal-print-area">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="mb-0">Guest Meal Drafts / Register</h5>
+            <small class="text-muted">Meal Date wise printable report</small>
+        </div>
+
+        <form method="GET" class="d-flex flex-wrap gap-2 align-items-end no-print">
+            <div>
+                <label class="form-label mb-1 small">From Date</label>
+                <input type="date" name="gm_from" value="{{ $gmFrom }}" class="form-control form-control-sm">
+            </div>
+            <div>
+                <label class="form-label mb-1 small">To Date</label>
+                <input type="date" name="gm_to" value="{{ $gmTo }}" class="form-control form-control-sm">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                <button type="button" onclick="window.print()" class="btn btn-outline-dark btn-sm">Print</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card-body">
+        <div class="print-title d-none">
+            <h3 class="mb-1">Guest Meal Register</h3>
+            <p class="mb-2">
+                Date:
+                {{ $gmFrom ?: 'All' }}
+                to
+                {{ $gmTo ?: 'All' }}
+            </p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm align-middle mb-0 guest-meal-register-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Meal Date</th>
+                        <th>Guest Name</th>
+                        <th>Company/Came From</th>
+                        <th>Meal Type</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Rate</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($gmRows as $gm)
+                        <tr>
+                            <td>{{ \Carbon\Carbon::parse($gm->meal_date)->format('d-M-Y') }}</td>
+                            <td>
+                                {{ $gm->guest_display_name ?? '-' }}
+                                @if(!empty($gm->guest_display_code))
+                                    <small class="text-muted">({{ $gm->guest_display_code }})</small>
+                                @endif
+                            </td>
+                            <td>{{ $gm->guest_display_company ?: '-' }}</td>
+                            <td>{{ $gm->meal_type }}</td>
+                            <td class="text-end">{{ number_format((float)($gm->quantity ?? 0), 2) }}</td>
+                            <td class="text-end">{{ number_format((float)($gm->rate ?? $gm->rate_applied ?? 0), 2) }}</td>
+                            <td class="text-end">{{ number_format((float)($gm->amount ?? 0), 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No guest meal records found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold table-light">
+                        <td colspan="4" class="text-end">Grand Total</td>
+                        <td class="text-end">{{ number_format((float)$gmTotalQty, 2) }}</td>
+                        <td></td>
+                        <td class="text-end">{{ number_format((float)$gmGrandTotal, 2) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    .guest-meal-print-area,
+    .guest-meal-print-area * {
+        visibility: visible !important;
+    }
+    .guest-meal-print-area {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: 0 !important;
+    }
+    .no-print,
+    .sidebar,
+    .navbar,
+    .topbar {
+        display: none !important;
+    }
+    .print-title {
+        display: block !important;
+    }
+    .guest-meal-register-table {
+        font-size: 12px !important;
+    }
+}
+</style>
+
+
 @endsection

@@ -4,7 +4,7 @@
 @section('page_title', 'Guest Management')
 
 @section('content')
-<div class="container-fluid px-0">
+<div class="container-fluid px-0 guest-management-page">
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -21,71 +21,71 @@
         </div>
     @endif
 
-    <div class="row g-3 mb-3">
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="row g-3 g-xl-4 mb-4">
+        <div class="col-xl-6 col-12">
+            <div class="card guest-panel h-100">
+                <div class="card-header guest-panel-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
                     <span>Create Guest</span>
                     <span class="text-muted small">Today Guest Rate: {{ $currentRate !== null ? number_format($currentRate, 2) : 'Not configured' }}</span>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('admin.guests.store') }}" class="row g-2">
+                <div class="card-body p-3 p-xl-4">
+                    <form method="POST" action="{{ route('admin.guests.store') }}" class="row g-3">
                         @csrf
                         <div class="col-md-4">
                             <label class="form-label">Guest Code</label>
-                            <input type="text" name="guest_code" class="form-control" placeholder="Auto G00001">
+                            <input type="text" name="guest_code" class="form-control guest-control" placeholder="Auto G00001">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Date</label>
-                            <input type="date" name="date" class="form-control" value="{{ $today }}">
+                            <input type="date" name="date" class="form-control guest-control" value="{{ $today }}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Host Member</label>
-                            <select name="host_member_id" class="form-select">
+                            <select name="host_member_id" class="form-select guest-control">
                                 <option value="">None</option>
                                 @foreach($members as $member)
                                     <option value="{{ $member->id }}">{{ $member->member_code }} - {{ $member->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-6 col-12">
                             <label class="form-label">Name</label>
-                            <input type="text" name="name" class="form-control" required>
+                            <input type="text" name="name" class="form-control guest-control" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-6 col-12">
                             <label class="form-label">Company / Came From</label>
-                            <input type="text" name="came_from" class="form-control">
+                            <input type="text" name="came_from" class="form-control guest-control">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-6 col-12">
                             <label class="form-label">Department</label>
-                            <select name="department_id" class="form-select" required>
+                            <select name="department_id" class="form-select guest-control" required>
                                 <option value="">Select department</option>
                                 @foreach($departments as $department)
                                     <option value="{{ $department->id }}">{{ is_object($department) ? ($department->code ?? '') : $department }} - {{ $department->name }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-6 col-12">
                             <label class="form-label">Remarks</label>
-                            <input type="text" name="remarks" class="form-control">
+                            <input type="text" name="remarks" class="form-control guest-control">
                         </div>
                         <div class="col-12">
-                            <button class="btn btn-primary">Save Guest</button>
+                            <button class="btn btn-primary guest-btn-primary">Save Guest</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">Create Guest Meal Draft</div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('admin.guests.meals.store') }}" class="row g-2">
+        <div class="col-xl-6 col-12">
+            <div class="card guest-panel h-100">
+                <div class="card-header guest-panel-header">Create Guest Meal Draft</div>
+                <div class="card-body p-3 p-xl-4">
+                    <form method="POST" action="{{ route('admin.guests.meals.store') }}" class="row g-3">
                         @csrf
-                        <div class="col-md-6">
+                        <div class="col-lg-6 col-12">
                             <label class="form-label">Guest</label>
-                            <select name="guest_id" class="form-select js-guest-meal-search" required>
+                            <select name="guest_id" class="form-select guest-control js-guest-meal-search" required>
                                 <option value="">Select guest</option>
                                 @foreach($guests as $guest)
                                     <option value="{{ $guest->id }}">{{ $guest->name ?? "Guest" }} — {{ $guest->came_from ?? "-" }} — {{ $guest->guest_code ?? "" }}</option>
@@ -94,11 +94,11 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Date</label>
-                            <input type="date" name="meal_date" class="form-control" value="{{ $today }}" required>
+                            <input type="date" name="meal_date" class="form-control guest-control" value="{{ $today }}" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Meal Type</label>
-                            <select name="meal_type" class="form-select" required>
+                            <select name="meal_type" class="form-select guest-control" required>
                                 @foreach($mealTypes as $mealType)
                                     <option value="{{ $mealType }}">{{ $mealType }}</option>
                                 @endforeach
@@ -106,13 +106,13 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Qty</label>
-                            <input type="number" min="1" name="quantity" class="form-control" value="1" required>
+                            <input type="number" min="1" name="quantity" class="form-control guest-control" value="1" required>
                         </div>
                         <div class="col-md-9 d-flex align-items-end">
                             <div class="small text-muted">Draft save validates guest rate first. Report shows calculated draft rate/amount; approval stores final rate/amount.</div>
                         </div>
                         <div class="col-12">
-                            <button class="btn btn-primary">Save Meal Draft</button>
+                            <button class="btn btn-primary guest-btn-primary">Save Meal Draft</button>
                         </div>
                     </form>
                 </div>
@@ -120,30 +120,30 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header">Bulk Import Guests</div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('admin.guests.import') }}" enctype="multipart/form-data" class="row g-2">
+    <div class="row g-3 g-xl-4 mb-4">
+        <div class="col-lg-6 col-12">
+            <div class="card guest-panel h-100">
+                <div class="card-header guest-panel-header">Bulk Import Guests</div>
+                <div class="card-body p-3 p-xl-4">
+                    <form method="POST" action="{{ route('admin.guests.import') }}" enctype="multipart/form-data" class="row g-3">
                         @csrf
-                        <div class="col-12"><input type="file" name="file" class="form-control" accept=".csv,.txt" required></div>
-                        <div class="col-12"><button class="btn btn-outline-primary">Import Guests CSV</button></div>
+                        <div class="col-12"><input type="file" name="file" class="form-control guest-control" accept=".csv,.txt" required></div>
+                        <div class="col-12"><button class="btn btn-outline-primary guest-btn-outline">Import Guests CSV</button></div>
                         <div class="col-12 text-muted small">Headers: guest_code,date,name,came_from/company,remarks,department_id/department_code/department,host_member_id/host_member_code,is_active,is_deleted</div>
                     </form>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header">Bulk Import Guest Meals</div>
-                <div class="card-body">
-                    <form method="POST" action="{{ route('admin.guests.meals.import') }}" enctype="multipart/form-data" class="row g-2">
+        <div class="col-lg-6 col-12">
+            <div class="card guest-panel h-100">
+                <div class="card-header guest-panel-header">Bulk Import Guest Meals</div>
+                <div class="card-body p-3 p-xl-4">
+                    <form method="POST" action="{{ route('admin.guests.meals.import') }}" enctype="multipart/form-data" class="row g-3">
                         @csrf
-                        <div class="col-12"><input type="file" name="file" class="form-control" accept=".csv,.txt" required></div>
+                        <div class="col-12"><input type="file" name="file" class="form-control guest-control" accept=".csv,.txt" required></div>
                         <div class="col-12 d-flex gap-2 flex-wrap">
-                            <button class="btn btn-outline-primary">Import Meals CSV</button>
-                            <a href="{{ route('admin.guests.meals.export', ['from' => $fromDate, 'to' => $toDate]) }}" class="btn btn-outline-secondary">Export Meals</a>
+                            <button class="btn btn-outline-primary guest-btn-outline">Import Meals CSV</button>
+                            <a href="{{ route('admin.guests.meals.export', ['from' => $fromDate, 'to' => $toDate]) }}" class="btn btn-outline-secondary guest-btn-outline">Export Meals</a>
                         </div>
                         <div class="col-12 text-muted small">Headers: guest_id/guest_code,date/meal_date,meal_type,qty/quantity</div>
                     </form>
@@ -160,8 +160,8 @@
     $gmTo = request('to_date') ?: request('gm_to');
 @endphp
 
-<div class="card shadow-sm mb-3 guest-meal-report-print-area">
-    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+<div class="card guest-panel mb-4 guest-meal-report-print-area">
+    <div class="card-header guest-panel-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <strong>Guest Meal Print Report</strong>
             <div class="small text-muted">
@@ -173,26 +173,26 @@
             <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
                     <label class="form-label small mb-1">From Date</label>
-                    <input type="date" name="from_date" value="{{ $gmFrom }}" class="form-control form-control-sm">
+                    <input type="date" name="from_date" value="{{ $gmFrom }}" class="form-control form-control-sm guest-control">
                 </div>
                 <div>
                     <label class="form-label small mb-1">To Date</label>
-                    <input type="date" name="to_date" value="{{ $gmTo }}" class="form-control form-control-sm">
+                    <input type="date" name="to_date" value="{{ $gmTo }}" class="form-control form-control-sm guest-control">
                 </div>
-                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                <button type="button" onclick="window.print()" class="btn btn-outline-dark btn-sm">Print</button>
+                <button type="submit" class="btn btn-primary btn-sm guest-btn-primary">Apply</button>
+                <button type="button" onclick="window.print()" class="btn btn-outline-dark btn-sm guest-btn-outline">Print</button>
             </form>
 
             <form method="POST" action="{{ route('admin.guests.meals.approve-range') }}" class="d-flex align-items-end">
                 @csrf
                 <input type="hidden" name="from_date" value="{{ $gmFrom }}">
                 <input type="hidden" name="to_date" value="{{ $gmTo }}">
-                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Approve all unapproved guest meals in selected date range?')">Approve Date Range</button>
+                <button type="submit" class="btn btn-success btn-sm guest-btn-success" onclick="return confirm('Approve all unapproved guest meals in selected date range?')">Approve Date Range</button>
             </form>
         </div>
     </div>
 
-    <div class="card-body">
+    <div class="card-body p-3 p-xl-4">
         <div class="print-title d-none">
             <h3 class="mb-1">Guest Meal Report</h3>
             <p class="mb-2">Date: {{ $gmFrom ?: 'All' }} to {{ $gmTo ?: 'All' }}</p>
@@ -254,6 +254,98 @@
     </div>
 </div>
 
+
+<style>
+.guest-management-page {
+    padding: 0 1rem 1.5rem;
+}
+
+.guest-management-page .alert {
+    border: 0;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+}
+
+.guest-panel {
+    border: 1px solid rgba(148, 163, 184, .22);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, .06);
+    overflow: hidden;
+}
+
+.guest-panel-header {
+    min-height: 48px;
+    padding: .95rem 1.15rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, .18);
+    font-weight: 800;
+    color: #1f2937;
+    letter-spacing: -.01em;
+}
+
+.guest-management-page .form-label {
+    margin-bottom: .35rem;
+    color: #374151;
+    font-size: .86rem;
+    font-weight: 600;
+}
+
+.guest-control {
+    min-height: 42px;
+    border-radius: 12px;
+    border-color: #dbe3ef;
+    background-color: #fff;
+    color: #111827;
+}
+
+.guest-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .12);
+}
+
+.guest-btn-primary,
+.guest-btn-success,
+.guest-btn-outline {
+    min-height: 42px;
+    border-radius: 12px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-weight: 700;
+}
+
+.guest-btn-primary {
+    box-shadow: 0 8px 18px rgba(13, 110, 253, .18);
+}
+
+.guest-management-page .table {
+    border-color: #e5e7eb;
+}
+
+.guest-management-page .table thead th {
+    background: #f8fafc;
+    color: #334155;
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.guest-management-page .badge {
+    border-radius: 999px;
+    padding: .45rem .65rem;
+}
+
+@media (max-width: 767.98px) {
+    .guest-management-page {
+        padding: 0 .25rem 1rem;
+    }
+
+    .guest-panel-header {
+        padding: .85rem 1rem;
+    }
+}
+</style>
+
 <style>
 @media print {
     body * {
@@ -284,24 +376,24 @@
 </style>
 
 
-<div class="card shadow-sm mb-3">
-        <div class="card-header">Guest Search</div>
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.guests.index') }}" class="row g-2">
+<div class="card guest-panel mb-4">
+        <div class="card-header guest-panel-header">Guest Search</div>
+        <div class="card-body p-3 p-xl-4">
+            <form method="GET" action="{{ route('admin.guests.index') }}" class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Search</label>
-                    <input type="text" name="q" class="form-control" value="{{ $q }}" placeholder="name / guest code / came from">
+                    <input type="text" name="q" class="form-control guest-control" value="{{ $q }}" placeholder="name / guest code / came from">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">From Date</label>
-                    <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}">
+                    <input type="date" name="from_date" class="form-control guest-control" value="{{ $fromDate }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">To Date</label>
-                    <input type="date" name="to_date" class="form-control" value="{{ $toDate }}">
+                    <input type="date" name="to_date" class="form-control guest-control" value="{{ $toDate }}">
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-outline-dark w-100">Apply</button>
+                    <button class="btn btn-outline-dark guest-btn-outline w-100">Apply</button>
                 </div>
             </form>
         </div>
@@ -342,22 +434,22 @@
                             <td>{{ $guest->is_active ? 'Active' : 'Inactive' }}</td>
                             <td>
                                 <details>
-                                    <summary class="btn btn-sm btn-outline-secondary">Edit</summary>
+                                    <summary class="btn btn-sm btn-outline-secondary guest-btn-outline">Edit</summary>
                                     <form method="POST" action="{{ route('admin.guests.edit.legacy', $guest) }}" class="mt-2 row g-2">
                                         @csrf
-                                        <div class="col-md-4"><input type="date" name="date" class="form-control" value="{{ optional($guest->date)->format('Y-m-d') }}"></div>
-                                        <div class="col-md-8"><input type="text" name="name" class="form-control" value="{{ $guest->name }}" required></div>
-                                        <div class="col-md-6"><input type="text" name="came_from" class="form-control" value="{{ $guest->came_from }}" placeholder="Company / Came From"></div>
-                                        <div class="col-md-6"><input type="text" name="remarks" class="form-control" value="{{ $guest->remarks }}" placeholder="Remarks"></div>
-                                        <div class="col-md-6">
-                                            <select name="department_id" class="form-select" required>
+                                        <div class="col-md-4"><input type="date" name="date" class="form-control guest-control" value="{{ optional($guest->date)->format('Y-m-d') }}"></div>
+                                        <div class="col-md-8"><input type="text" name="name" class="form-control guest-control" value="{{ $guest->name }}" required></div>
+                                        <div class="col-lg-6 col-12"><input type="text" name="came_from" class="form-control guest-control" value="{{ $guest->came_from }}" placeholder="Company / Came From"></div>
+                                        <div class="col-lg-6 col-12"><input type="text" name="remarks" class="form-control guest-control" value="{{ $guest->remarks }}" placeholder="Remarks"></div>
+                                        <div class="col-lg-6 col-12">
+                                            <select name="department_id" class="form-select guest-control" required>
                                                 @foreach($departments as $department)
                                                     <option value="{{ $department->id }}" @selected($guest->department_id === $department->id)>{{ is_object($department) ? ($department->code ?? '') : $department }} - {{ $department->name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <select name="host_member_id" class="form-select">
+                                            <select name="host_member_id" class="form-select guest-control">
                                                 <option value="">None</option>
                                                 @foreach($members as $member)
                                                     <option value="{{ $member->id }}" @selected($guest->host_member_id === $member->id)>{{ $member->member_code }} - {{ $member->name }}</option>
@@ -372,7 +464,7 @@
                                             </div>
                                         </div>
                                         <div class="col-12 d-flex gap-2">
-                                            <button class="btn btn-sm btn-primary">Update</button>
+                                            <button class="btn btn-sm btn-primary guest-btn-primary">Update</button>
                                         </div>
                                     </form>
                                     <form method="POST" action="{{ route('admin.guests.delete.legacy', $guest) }}" class="mt-2" onsubmit="return confirm('Soft delete this guest?');">
@@ -390,8 +482,8 @@
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card guest-panel h-100">
+        <div class="card-header guest-panel-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
             <span>Guest Meals (Filtered Total: {{ number_format($summary, 2) }})</span>
             <span class="small text-muted">Approval uses rate_type = GUEST by meal date</span>
         </div>
@@ -431,27 +523,27 @@
                                     <form method="POST" action="{{ route('admin.guests.meals.update.legacy', $meal) }}" class="mt-2 row g-2">
                                         @csrf
                                         <div class="col-md-4">
-                                            <input type="date" name="meal_date" class="form-control" value="{{ optional($meal->meal_date)->format('Y-m-d') }}" required>
+                                            <input type="date" name="meal_date" class="form-control guest-control" value="{{ optional($meal->meal_date)->format('Y-m-d') }}" required>
                                         </div>
                                         <div class="col-md-4">
-                                            <select name="guest_id" class="form-select" required>
+                                            <select name="guest_id" class="form-select guest-control" required>
                                                 @foreach($guests as $guest)
                                                     <option value="{{ $guest->id }}" @selected($meal->guest_id === $guest->id)>{{ $guest->guest_code }} - {{ $guest->name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
                                         <div class="col-md-2">
-                                            <select name="meal_type" class="form-select" required>
+                                            <select name="meal_type" class="form-select guest-control" required>
                                                 @foreach($mealTypes as $mealType)
                                                     <option value="{{ $mealType }}" @selected($meal->meal_type === $mealType)>{{ $mealType }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="number" min="1" name="quantity" class="form-control" value="{{ $meal->quantity }}" required>
+                                            <input type="number" min="1" name="quantity" class="form-control guest-control" value="{{ $meal->quantity }}" required>
                                         </div>
                                         <div class="col-12 d-flex gap-2 flex-wrap">
-                                            <button class="btn btn-sm btn-primary">Update</button>
+                                            <button class="btn btn-sm btn-primary guest-btn-primary">Update</button>
                                         </div>
                                     </form>
                                     @if(! $meal->approved_at)

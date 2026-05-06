@@ -96,23 +96,32 @@
                             <label class="form-label">Date</label>
                             <input type="date" name="meal_date" class="form-control guest-control" value="{{ $today }}" required>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Meal Type</label>
-                            <select name="meal_type" class="form-select guest-control" required>
+                        <div class="col-12">
+                            <label class="form-label mb-2">Meal Type</label>
+                            <div class="d-flex flex-wrap gap-3 align-items-center guest-meal-type-checks">
                                 @foreach($mealTypes as $mealType)
-                                    <option value="{{ $mealType }}">{{ $mealType }}</option>
+                                    <label class="form-check d-flex align-items-center gap-2 mb-0">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            name="meal_types[]"
+                                            value="{{ $mealType }}"
+                                            @checked(is_array(old('meal_types')) && in_array($mealType, old('meal_types'), true))
+                                        >
+                                        <span class="form-check-label">{{ $mealType }}</span>
+                                    </label>
                                 @endforeach
-                            </select>
+                            </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-3 col-12">
                             <label class="form-label">Qty</label>
-                            <input type="number" min="1" name="quantity" class="form-control guest-control" value="1" required>
+                            <input type="number" min="1" name="quantity" class="form-control guest-control" value="{{ old('quantity', 1) }}" required>
                         </div>
-                        <div class="col-md-9 d-flex align-items-end">
-                            <div class="small text-muted">Draft save validates guest rate first. Report shows calculated draft rate/amount; approval stores final rate/amount.</div>
+                        <div class="col-md-9 col-12 d-flex align-items-end">
+                            <div class="small text-muted">Select one or more meal types. Separate draft rows will be created for selected meals.</div>
                         </div>
                         <div class="col-12">
-                            <button class="btn btn-primary guest-btn-primary">Save Meal Draft</button>
+                            <button class="btn btn-primary guest-btn-primary">Save</button>
                         </div>
                     </form>
                 </div>
@@ -333,6 +342,24 @@
 .guest-management-page .badge {
     border-radius: 999px;
     padding: .45rem .65rem;
+}
+
+
+.guest-meal-type-checks {
+    min-height: 42px;
+    padding: .55rem .75rem;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.guest-meal-type-checks .form-check-input {
+    margin-top: 0;
+}
+
+.guest-meal-type-checks .form-check-label {
+    font-weight: 600;
+    color: #374151;
 }
 
 @media (max-width: 767.98px) {

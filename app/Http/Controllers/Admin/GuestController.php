@@ -214,13 +214,22 @@ class GuestController extends Controller
         $data = $request->validate([
             'guest_id' => 'required|exists:guests,id',
             'meal_date' => 'required|date',
-            'meal_type' => 'required|string|max:30',
+            'meal_types' => 'required|array|min:1',
+            'meal_types.*' => 'required|string|max:30',
             'quantity' => 'required|integer|min:1',
         ]);
 
-        $mealType = strtoupper(trim((string) $data['meal_type']));
-        if (! in_array($mealType, self::MEAL_TYPES, true)) {
-            return back()->with('error', 'Invalid meal type.');
+        $mealTypes = collect($data['meal_types'])
+            ->map(fn ($mealType) => strtoupper(trim((string) $mealType)))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($mealTypes as $mealType) {
+            if (! in_array($mealType, self::MEAL_TYPES, true)) {
+                return back()->with('error', 'Invalid meal type.')->withInput();
+            }
         }
 
         try {
@@ -229,21 +238,23 @@ class GuestController extends Controller
             return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage())->withInput();
         }
 
-        GuestMeal::query()->create([
-            'guest_id' => $data['guest_id'],
-            'meal_date' => $data['meal_date'],
-            'meal_type' => $mealType,
-            'quantity' => $data['quantity'],
-            'rate' => 0,
-            'rate_applied' => 0,
-            'amount' => 0,
-            'posted_by' => auth()->id(),
-            'approved_by' => null,
-            'posted_at' => now(),
-            'approved_at' => null,
-        ]);
+        foreach ($mealTypes as $mealType) {
+            GuestMeal::query()->create([
+                'guest_id' => $data['guest_id'],
+                'meal_date' => $data['meal_date'],
+                'meal_type' => $mealType,
+                'quantity' => $data['quantity'],
+                'rate' => 0,
+                'rate_applied' => 0,
+                'amount' => 0,
+                'posted_by' => auth()->id(),
+                'approved_by' => null,
+                'posted_at' => now(),
+                'approved_at' => null,
+            ]);
+        }
 
-        return back()->with('success', 'Guest meal draft saved. Calculated rate/amount will show in report and store on approval.');
+        return back()->with('success', count($mealTypes) . ' guest meal draft(s) saved. Calculated rate/amount will show in report and store on approval.');
     }
 
     public function updateMeal(Request $request, GuestMeal $meal): RedirectResponse

@@ -71,7 +71,7 @@
                 };
 
                 const selectMatch = (match) => {
-                    memberInput.value = match.member_code + ' - ' + match.member_name;
+                    memberInput.value = match.member_code + ' - ' + match.member_name + ' - ' + (match.department || '');
                     memberIdInput.value = match.member_id || '';
                     billIdInput.value = match.bill_id || '';
                     clearSuggestions();
@@ -84,7 +84,7 @@
                         const button = document.createElement('button');
                         button.type = 'button';
                         button.className = 'list-group-item list-group-item-action';
-                        button.textContent = match.member_code + ' - ' + match.member_name;
+                        button.textContent = match.member_code + ' - ' + match.member_name + ' - ' + (match.department || '');
                         button.addEventListener('click', function () {
                             selectMatch(match);
                         });

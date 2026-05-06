@@ -134,6 +134,7 @@ class PaymentController extends Controller
                 'member_id' => $member->id,
                 'member_code' => $member->member_code,
                 'member_name' => $member->name,
+                'department' => $member->department_name,
                 'bill_id' => $bill?->id,
                 'message' => $bill ? 'Bill found' : 'No bill found for this member',
             ];

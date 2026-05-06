@@ -361,12 +361,25 @@ class ReportController extends Controller
         $prevNonzeroMembers = [];
         if ($includePrevNonzero) {
             $prevNonzeroMembers = MemberLedger::query()
-                ->selectRaw('member_id, COALESCE(SUM(debit - credit), 0) as balance')
-                ->whereDate('entry_date', '<', $start)
-                ->groupBy('member_id')
+                ->select('member_id')
+                ->where(function ($query) use ($start) {
+                    $query->whereDate('entry_date', '<', $start)
+                        ->orWhere(function ($sameDay) use ($start) {
+                            $sameDay->whereDate('entry_date', '=', $start)
+                                ->where('ref_type', '!=', 'BILL');
+                        });
+                })
+                ->orderBy('member_id')
+                ->orderByDesc('entry_date')
+                ->orderByDesc('id')
                 ->get()
-                ->filter(fn ($row) => round((float) $row->balance, 2) !== 0.0)
-                ->pluck('member_id')
+                ->groupBy('member_id')
+                ->filter(function ($entries) {
+                    $latest = $entries->first();
+                    return round((float) ($latest->balance_after ?? 0), 2) !== 0.0;
+                })
+                ->keys()
+                ->map(fn ($id) => (int) $id)
                 ->all();
         }
 
@@ -401,12 +414,6 @@ class ReportController extends Controller
                 continue;
             }
 
-            $previousBalance = round((float) (MemberLedger::query()
-                ->where('member_id', $memberId)
-                ->whereDate('entry_date', '<', $start)
-                ->selectRaw('COALESCE(SUM(debit - credit), 0) as balance')
-                ->value('balance')), 2);
-
             $billAgg = Billing::query()
                 ->where('member_id', $memberId)
                 ->where('month_cycle', $monthCycle)
@@ -419,7 +426,56 @@ class ReportController extends Controller
                 ->latest('id')
                 ->first();
 
-            $currentExpenses = round((float) ($billAgg?->current_expenses ?? 0), 2);
+            $billLedger = null;
+            if ($billRow) {
+                $billLedger = MemberLedger::query()
+                    ->where('member_id', $memberId)
+                    ->where('ref_type', 'BILL')
+                    ->where('ref_id', $billRow->id)
+                    ->orderBy('entry_date')
+                    ->orderBy('id')
+                    ->first();
+            }
+
+            if (! $billLedger && $billRow) {
+                $billLedger = MemberLedger::query()
+                    ->where('member_id', $memberId)
+                    ->where('ref_type', 'BILL')
+                    ->whereBetween('entry_date', [$start, $end])
+                    ->where(function ($query) use ($billRow) {
+                        $query->where('debit', (float) $billRow->net_payable)
+                            ->orWhere('description', 'like', '%' . $billRow->month_cycle . '%');
+                    })
+                    ->orderBy('entry_date')
+                    ->orderBy('id')
+                    ->first();
+            }
+
+            $previousLedger = null;
+            if ($billLedger) {
+                $previousLedger = MemberLedger::query()
+                    ->where('member_id', $memberId)
+                    ->where(function ($query) use ($billLedger) {
+                        $query->whereDate('entry_date', '<', $billLedger->entry_date)
+                            ->orWhere(function ($sameDay) use ($billLedger) {
+                                $sameDay->whereDate('entry_date', '=', $billLedger->entry_date)
+                                    ->where('id', '<', $billLedger->id);
+                            });
+                    })
+                    ->orderByDesc('entry_date')
+                    ->orderByDesc('id')
+                    ->first();
+            } else {
+                $previousLedger = MemberLedger::query()
+                    ->where('member_id', $memberId)
+                    ->whereDate('entry_date', '<', $start)
+                    ->orderByDesc('entry_date')
+                    ->orderByDesc('id')
+                    ->first();
+            }
+
+            $previousBalance = round((float) ($previousLedger->balance_after ?? 0), 2);
+            $currentExpenses = round((float) ($billLedger?->debit ?? ($billAgg?->current_expenses ?? 0)), 2);
             $totalDays = (int) ($billAgg?->total_days ?? 0);
             $ratePerDay = round((float) ($billRow?->rate_per_day ?? 0), 2);
             $payable = round($previousBalance + $currentExpenses, 2);

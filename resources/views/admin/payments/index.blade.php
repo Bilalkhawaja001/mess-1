@@ -7,17 +7,22 @@
 <div class="card shadow-sm mb-3">
     <div class="card-header">Create Manual Payment Attempt (No Live Charging)</div>
     <div class="card-body">
-        <form method="POST" action="{{ route('admin.payments.store') }}" class="row g-2">
+        @php
+            $manualPaymentTimestamp = now()->format('YmdHis');
+            $manualPaymentRandom = str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+            $manualPaymentIdempotencyKey = 'MANPAY-' . $manualPaymentTimestamp . '-' . $manualPaymentRandom;
+        @endphp
+        <form method="POST" action="{{ route('admin.payments.store') }}" class="row g-2 js-auto-bill-lookup" data-lookup-url="{{ route('admin.payments.member-bill-lookup') }}">
             @csrf
-            <div class="col-md-2">
-                <select name="member_id" class="form-select" required>
-                    <option value="">Member</option>
-                    @foreach($members as $m)
-                        <option value="{{ $m->id }}">{{ $m->member_code }} - {{ $m->name }}</option>
-                    @endforeach
-                </select>
+            <div class="col-md-2 position-relative">
+                <input name="member_lookup" class="form-control js-member-lookup-input" placeholder="Employee / Member ID" autocomplete="off" required>
+                <input type="hidden" name="member_id" class="js-resolved-member-id" required>
+                <div id="js-member-suggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1050; display: none;"></div>
             </div>
-            <div class="col-md-2"><input name="bill_id" type="number" min="1" class="form-control" placeholder="Bill ID" required></div>
+            <div class="col-md-2">
+                <input name="bill_id" type="number" min="1" class="form-control js-bill-id-input" placeholder="Bill ID" required readonly>
+                <small id="js-member-bill-status" class="text-muted d-block mt-1">Enter Member Code, numeric Member ID, or name</small>
+            </div>
             <div class="col-md-2">
                 <select name="payment_method_id" class="form-select" required>
                     <option value="">Method</option>
@@ -26,11 +31,134 @@
                     @endforeach
                 </select>
             </div>
+            <div class="col-md-2"><input type="date" name="payment_date" class="form-control" value="{{ now()->toDateString() }}"></div>
             <div class="col-md-2"><input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount" required></div>
             <div class="col-md-2"><input name="reference_no" class="form-control" placeholder="Manual/Bank Ref"></div>
-            <div class="col-md-2"><input name="idempotency_key" class="form-control" placeholder="Idempotency Key"></div>
+            <div class="col-md-2"><input name="idempotency_key" class="form-control" value="{{ $manualPaymentIdempotencyKey }}" readonly></div>
             <div class="col-md-12"><button class="btn btn-primary">Create Attempt</button></div>
         </form>
+        <script>
+            (function () {
+                const form = document.querySelector('.js-auto-bill-lookup');
+                if (!form) {
+                    return;
+                }
+
+                const lookupUrl = form.dataset.lookupUrl;
+                const memberInput = form.querySelector('.js-member-lookup-input');
+                const memberIdInput = form.querySelector('.js-resolved-member-id');
+                const billIdInput = form.querySelector('.js-bill-id-input');
+                const statusNode = document.getElementById('js-member-bill-status');
+                const suggestionsNode = document.getElementById('js-member-suggestions');
+                let debounceTimer = null;
+                let activeRequest = 0;
+
+                const setStatus = (message, className = 'text-muted') => {
+                    statusNode.textContent = message;
+                    statusNode.className = className + ' d-block mt-1';
+                };
+
+                const clearSuggestions = () => {
+                    suggestionsNode.innerHTML = '';
+                    suggestionsNode.style.display = 'none';
+                };
+
+                const resetLookup = (message = 'Enter Member Code, numeric Member ID, or name') => {
+                    memberIdInput.value = '';
+                    billIdInput.value = '';
+                    clearSuggestions();
+                    setStatus(message, 'text-muted');
+                };
+
+                const selectMatch = (match) => {
+                    memberInput.value = match.member_code + ' - ' + match.member_name;
+                    memberIdInput.value = match.member_id || '';
+                    billIdInput.value = match.bill_id || '';
+                    clearSuggestions();
+                    setStatus('Bill found: #' + match.bill_id, 'text-success');
+                };
+
+                const renderSuggestions = (matches) => {
+                    suggestionsNode.innerHTML = '';
+                    matches.forEach((match) => {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'list-group-item list-group-item-action';
+                        button.textContent = match.member_code + ' - ' + match.member_name;
+                        button.addEventListener('click', function () {
+                            selectMatch(match);
+                        });
+                        suggestionsNode.appendChild(button);
+                    });
+                    suggestionsNode.style.display = 'block';
+                };
+
+                const runLookup = async () => {
+                    const value = memberInput.value.trim();
+                    if (value === '') {
+                        resetLookup();
+                        return;
+                    }
+
+                    const requestId = ++activeRequest;
+                    setStatus('Looking up member...', 'text-secondary');
+
+                    try {
+                        const response = await fetch(lookupUrl + '?member_id=' + encodeURIComponent(value), {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            credentials: 'same-origin'
+                        });
+
+                        const data = await response.json();
+                        if (requestId !== activeRequest) {
+                            return;
+                        }
+
+                        if (!response.ok || !data.ok || !Array.isArray(data.matches) || data.matches.length === 0) {
+                            memberIdInput.value = '';
+                            billIdInput.value = '';
+                            clearSuggestions();
+                            setStatus(data.message || 'No member found', 'text-danger');
+                            return;
+                        }
+
+                        if (data.matches.length === 1) {
+                            selectMatch(data.matches[0]);
+                            return;
+                        }
+
+                        memberIdInput.value = '';
+                        billIdInput.value = '';
+                        renderSuggestions(data.matches);
+                        setStatus('Multiple matches found. Select one member.', 'text-warning');
+                    } catch (error) {
+                        if (requestId !== activeRequest) {
+                            return;
+                        }
+                        memberIdInput.value = '';
+                        billIdInput.value = '';
+                        clearSuggestions();
+                        setStatus('Lookup failed. Try again.', 'text-danger');
+                    }
+                };
+
+                memberInput.addEventListener('input', function () {
+                    memberIdInput.value = '';
+                    billIdInput.value = '';
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(runLookup, 350);
+                });
+
+                document.addEventListener('click', function (event) {
+                    if (!form.contains(event.target)) {
+                        clearSuggestions();
+                    }
+                });
+            })();
+        </script>
     </div>
 </div>
 
@@ -62,7 +190,10 @@
                     <td>{{ $p->payment_ref ?? $p->reference_no ?? '-' }}</td>
                     <td>{{ number_format((float)$p->amount,2) }}</td>
                     <td>{{ $p->method }}</td>
-                    <td><span class="badge bg-secondary">{{ $p->status }}</span></td>
+                    <td>
+                        @php($displayStatus = $p->status === \App\Models\Payment::STATUS_RECONCILIATION_PENDING ? \App\Models\Payment::STATUS_APPROVED : $p->status)
+                        <span class="badge bg-secondary">{{ $displayStatus }}</span>
+                    </td>
                     <td>
                         @if(!in_array($p->status, ['SUCCESS','RECONCILED']))
                             <form method="POST" action="{{ route('admin.payments.approve', $p->id) }}">@csrf<button class="btn btn-sm btn-outline-success">Manual Verify Paid</button></form>

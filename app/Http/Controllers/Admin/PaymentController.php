@@ -14,6 +14,7 @@ use App\Services\PaymentEditService;
 use App\Services\Payments\PaymentAttemptService;
 use App\Services\Payments\PaymentReconciliationService;
 use App\Services\Payments\PaymentTransactionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -77,6 +78,77 @@ class PaymentController extends Controller
         ], (int) Auth::id());
 
         return redirect()->route('admin.payments.index')->with('success', 'Payment attempt + transaction created (pending verification).');
+    }
+
+    public function memberBillLookup(Request $request): JsonResponse
+    {
+        $rawMember = trim((string) $request->query('member_id', ''));
+        if ($rawMember === '') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Member ID is required',
+            ], 422);
+        }
+
+        $members = Member::query()
+            ->where(function ($query) use ($rawMember) {
+                $query->where('member_code', $rawMember)
+                    ->orWhere('name', 'like', '%' . $rawMember . '%');
+
+                if (ctype_digit($rawMember)) {
+                    $query->orWhere('id', (int) $rawMember);
+                }
+            })
+            ->orderByRaw('CASE WHEN member_code = ? THEN 0 ELSE 1 END', [$rawMember])
+            ->orderBy('member_code')
+            ->limit(10)
+            ->get();
+
+        if ($members->isEmpty()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No member found',
+            ]);
+        }
+
+        $matches = $members->map(function (Member $member) {
+            $bill = Billing::query()
+                ->where('member_id', $member->id)
+                ->whereDoesntHave('payments', function ($query) {
+                    $query->whereIn('status', [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED]);
+                })
+                ->orderByDesc('month_cycle')
+                ->orderByDesc('id')
+                ->first();
+
+            if (! $bill) {
+                $bill = Billing::query()
+                    ->where('member_id', $member->id)
+                    ->orderByDesc('month_cycle')
+                    ->orderByDesc('id')
+                    ->first();
+            }
+
+            return [
+                'member_id' => $member->id,
+                'member_code' => $member->member_code,
+                'member_name' => $member->name,
+                'bill_id' => $bill?->id,
+                'message' => $bill ? 'Bill found' : 'No bill found for this member',
+            ];
+        })->filter(fn (array $row) => ! empty($row['bill_id']))->values();
+
+        if ($matches->isEmpty()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No member found',
+            ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'matches' => $matches,
+        ]);
     }
 
     public function edit(Payment $payment, Request $request, PaymentEditService $service): RedirectResponse

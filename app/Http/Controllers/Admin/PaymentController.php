@@ -138,7 +138,7 @@ class PaymentController extends Controller
                 'bill_id' => $bill?->id,
                 'message' => $bill ? 'Bill found' : 'No bill found for this member',
             ];
-        })->filter(fn (array $row) => ! empty($row['bill_id']))->values();
+        })->values();
 
         if ($matches->isEmpty()) {
             return response()->json([

@@ -71,11 +71,16 @@
                 };
 
                 const selectMatch = (match) => {
-                    memberInput.value = match.member_code + ' - ' + match.member_name + ' - ' + (match.department || '');
+                    memberInput.value = match.member_code + ' - ' + match.member_name + (match.department ? ' - ' + match.department : '');
                     memberIdInput.value = match.member_id || '';
                     billIdInput.value = match.bill_id || '';
                     clearSuggestions();
-                    setStatus('Bill found: #' + match.bill_id, 'text-success');
+
+                    if (match.bill_id) {
+                        setStatus('Bill found: #' + match.bill_id, 'text-success');
+                    } else {
+                        setStatus('No bill found for this member', 'text-danger');
+                    }
                 };
 
                 const renderSuggestions = (matches) => {

@@ -150,6 +150,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     });
     Route::middleware('permission:payments.manual_record_admin')->group(function () {
+        Route::get('/payments/member-bill-lookup', [PaymentController::class, 'memberBillLookup'])->name('payments.member-bill-lookup');
         Route::post('/payments', [PaymentController::class, 'store'])->name('payments.store');
     });
     Route::middleware('permission:payments.override_status_admin')->group(function () {

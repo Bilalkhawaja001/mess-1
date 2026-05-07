@@ -190,7 +190,16 @@
             @foreach($rows as $p)
                 <tr>
                     <td>{{ $p->id }}</td>
-                    <td>{{ $p->member->member_code ?? '-' }}</td>
+                    <td>
+                        @php($member = $p->member)
+                        @if($member)
+                            {{ $member->member_code }}
+                            @if(!empty($member->name)) - {{ $member->name }} @endif
+                            @if(!empty($member->department_name)) - {{ $member->department_name }} @endif
+                        @else
+                            -
+                        @endif
+                    </td>
                     <td>{{ $p->bill_id ?? '-' }}</td>
                     <td>{{ $p->payment_ref ?? $p->reference_no ?? '-' }}</td>
                     <td>{{ number_format((float)$p->amount,2) }}</td>

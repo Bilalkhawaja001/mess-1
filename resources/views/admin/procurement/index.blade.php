@@ -353,13 +353,53 @@
             })->values()->all(),
         ];
     })->values()->all();
+@php
+    $vendorCount = $vendors->count();
+    $poCount = $purchaseOrders->count();
+    $grnCount = $grns->count();
+    $grnEligibleCount = $grnEligiblePos->count();
 @endphp
 
 <div class="procurement-page-shell">
+    <div class="page-hero page-hero-compact mb-4">
+        <div>
+            <span class="page-hero-kicker">Procurement workspace</span>
+            <h1 class="page-hero-title">Vendors, purchase orders, receiving, and vendor-facing stock flow</h1>
+            <p class="page-hero-text mb-0">This UI refresh keeps existing vendor, PO, GRN, and reporting actions intact while organizing the workspace into a cleaner operational layout.</p>
+        </div>
+        <div class="page-hero-actions">
+            <span class="badge text-bg-light">{{ $vendorCount }} vendors</span>
+            <span class="badge text-bg-light">{{ $poCount }} purchase orders</span>
+        </div>
+    </div>
+
+    <div class="stats-grid stats-grid-4 mb-4">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-label">Vendors</div>
+            <div class="stat-value">{{ $vendorCount }}</div>
+            <div class="stat-help">Vendor master records</div>
+        </div>
+        <div class="stat-card stat-card-success">
+            <div class="stat-label">Purchase Orders</div>
+            <div class="stat-value">{{ $poCount }}</div>
+            <div class="stat-help">Visible PO records</div>
+        </div>
+        <div class="stat-card stat-card-info">
+            <div class="stat-label">GRNs</div>
+            <div class="stat-value">{{ $grnCount }}</div>
+            <div class="stat-help">Receiving documents</div>
+        </div>
+        <div class="stat-card stat-card-warning">
+            <div class="stat-label">Open for GRN</div>
+            <div class="stat-value">{{ $grnEligibleCount }}</div>
+            <div class="stat-help">POs still eligible for receipt</div>
+        </div>
+    </div>
+
     <div class="procurement-toolbar">
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
             <div>
-                <div class="procurement-section-kicker">Procurement workspace</div>
+                <div class="procurement-section-kicker">Workspace navigation</div>
                 <div class="procurement-section-title">Vendors, Purchase Orders &amp; GRNs</div>
                 <p class="procurement-section-sub">Manage vendors separately, raise purchase orders cleanly, and receive stock through a focused GRN workflow.</p>
             </div>

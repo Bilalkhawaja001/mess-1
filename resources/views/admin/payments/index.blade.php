@@ -4,26 +4,83 @@
 @section('page_title', 'Payments')
 
 @section('content')
-<div class="card shadow-sm mb-3">
-    <div class="card-header">Create Manual Payment Attempt (No Live Charging)</div>
+@php
+    $paymentRows = $rows ?? collect();
+    $transactionRows = $txns ?? collect();
+    $reconciliationRows = $reconciliations ?? collect();
+    $manualPaymentTimestamp = now()->format('YmdHis');
+    $manualPaymentRandom = str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+    $manualPaymentIdempotencyKey = 'MANPAY-' . $manualPaymentTimestamp . '-' . $manualPaymentRandom;
+    $paymentTotalAmount = $paymentRows->sum(function ($row) {
+        return (float) ($row->amount ?? 0);
+    });
+    $successLikeStatuses = ['SUCCESS', 'RECONCILED', \App\Models\Payment::STATUS_APPROVED];
+    $successLikeCount = $paymentRows->filter(function ($row) use ($successLikeStatuses) {
+        return in_array($row->status, $successLikeStatuses, true)
+            || $row->status === \App\Models\Payment::STATUS_RECONCILIATION_PENDING;
+    })->count();
+    $pendingTxnCount = $transactionRows->filter(function ($txn) {
+        return !in_array($txn->status, ['SUCCESS', 'FAILED'], true);
+    })->count();
+    $openReconciliationCount = $reconciliationRows->where('status', '!=', 'RECONCILED')->count();
+@endphp
+
+<div class="page-hero page-hero-compact mb-4">
+    <div>
+        <span class="page-hero-kicker">Payments workspace</span>
+        <h1 class="page-hero-title">Review payment attempts, transactions, and reconciliation status</h1>
+        <p class="page-hero-text mb-0">Manual payment creation, verification, and reconciliation stay functionally unchanged, with clearer operational visibility.</p>
+    </div>
+    <div class="page-hero-actions">
+        <span class="badge text-bg-light">{{ $paymentRows->count() }} payment rows</span>
+        <span class="badge text-bg-warning">{{ $openReconciliationCount }} open reconciliations</span>
+    </div>
+</div>
+
+<div class="stats-grid stats-grid-4 mb-4">
+    <div class="stat-card stat-card-primary">
+        <div class="stat-label">Payments</div>
+        <div class="stat-value">{{ $paymentRows->count() }}</div>
+        <div class="stat-help">Visible filtered records</div>
+    </div>
+    <div class="stat-card stat-card-success">
+        <div class="stat-label">Total Amount</div>
+        <div class="stat-value">{{ number_format($paymentTotalAmount, 2) }}</div>
+        <div class="stat-help">Visible payment amount sum</div>
+    </div>
+    <div class="stat-card stat-card-info">
+        <div class="stat-label">Approved / Success</div>
+        <div class="stat-value">{{ $successLikeCount }}</div>
+        <div class="stat-help">Includes reconciliation pending display state</div>
+    </div>
+    <div class="stat-card stat-card-warning">
+        <div class="stat-label">Pending Transactions</div>
+        <div class="stat-value">{{ $pendingTxnCount }}</div>
+        <div class="stat-help">Needs verification attention</div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Create Manual Payment Attempt (No Live Charging)</span>
+        <span class="badge text-bg-light border">Manual intake</span>
+    </div>
     <div class="card-body">
-        @php
-            $manualPaymentTimestamp = now()->format('YmdHis');
-            $manualPaymentRandom = str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-            $manualPaymentIdempotencyKey = 'MANPAY-' . $manualPaymentTimestamp . '-' . $manualPaymentRandom;
-        @endphp
-        <form method="POST" action="{{ route('admin.payments.store') }}" class="row g-2 js-auto-bill-lookup" data-lookup-url="{{ route('admin.payments.member-bill-lookup') }}">
+        <form method="POST" action="{{ route('admin.payments.store') }}" class="row g-3 js-auto-bill-lookup" data-lookup-url="{{ route('admin.payments.member-bill-lookup') }}">
             @csrf
-            <div class="col-md-2 position-relative">
+            <div class="col-xl-2 col-md-4 position-relative">
+                <label class="form-label">Member Lookup</label>
                 <input name="member_lookup" class="form-control js-member-lookup-input" placeholder="Employee / Member ID" autocomplete="off" required>
                 <input type="hidden" name="member_id" class="js-resolved-member-id" required>
                 <div id="js-member-suggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1050; display: none;"></div>
             </div>
-            <div class="col-md-2">
+            <div class="col-xl-2 col-md-4">
+                <label class="form-label">Bill ID</label>
                 <input name="bill_id" type="number" min="1" class="form-control js-bill-id-input" placeholder="Bill ID" required readonly>
                 <small id="js-member-bill-status" class="text-muted d-block mt-1">Enter Member Code, numeric Member ID, or name</small>
             </div>
-            <div class="col-md-2">
+            <div class="col-xl-2 col-md-4">
+                <label class="form-label">Method</label>
                 <select name="payment_method_id" class="form-select" required>
                     <option value="">Method</option>
                     @foreach($methods as $method)
@@ -31,11 +88,25 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2"><input type="date" name="payment_date" class="form-control" value="{{ now()->toDateString() }}"></div>
-            <div class="col-md-2"><input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount" required></div>
-            <div class="col-md-2"><input name="reference_no" class="form-control" placeholder="Manual/Bank Ref"></div>
-            <div class="col-md-2"><input name="idempotency_key" class="form-control" value="{{ $manualPaymentIdempotencyKey }}" readonly></div>
-            <div class="col-md-12"><button class="btn btn-primary">Create Attempt</button></div>
+            <div class="col-xl-2 col-md-4">
+                <label class="form-label">Payment Date</label>
+                <input type="date" name="payment_date" class="form-control" value="{{ now()->toDateString() }}">
+            </div>
+            <div class="col-xl-2 col-md-4">
+                <label class="form-label">Amount</label>
+                <input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount" required>
+            </div>
+            <div class="col-xl-2 col-md-4">
+                <label class="form-label">Reference</label>
+                <input name="reference_no" class="form-control" placeholder="Manual/Bank Ref">
+            </div>
+            <div class="col-xl-4 col-md-6">
+                <label class="form-label">Idempotency Key</label>
+                <input name="idempotency_key" class="form-control" value="{{ $manualPaymentIdempotencyKey }}" readonly>
+            </div>
+            <div class="col-xl-2 col-md-3 d-grid">
+                <button class="btn btn-primary">Create Attempt</button>
+            </div>
         </form>
         <script>
             (function () {
@@ -167,46 +238,62 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-3">
-    <div class="card-header">Search/Filter</div>
+<div class="card shadow-sm mb-4">
     <div class="card-body">
-        <form method="GET" class="row g-2">
-            <div class="col-md-2"><input name="member_id" value="{{ request('member_id') }}" class="form-control" placeholder="Member ID"></div>
-            <div class="col-md-2"><input name="bill_id" value="{{ request('bill_id') }}" class="form-control" placeholder="Bill ID"></div>
-            <div class="col-md-2"><input name="status" value="{{ request('status') }}" class="form-control" placeholder="Status"></div>
-            <div class="col-md-2"><input name="method" value="{{ request('method') }}" class="form-control" placeholder="Method"></div>
-            <div class="col-md-2"><input name="ref" value="{{ request('ref') }}" class="form-control" placeholder="Ref"></div>
-            <div class="col-md-2"><button class="btn btn-outline-primary">Apply</button></div>
-        </form>
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-6">
+                <div class="section-heading mb-0">
+                    <div>
+                        <h5 class="mb-1">Search and Filter</h5>
+                        <div class="text-muted">Narrow visible payment records while keeping existing filters intact.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <form method="GET" class="row g-2 justify-content-lg-end">
+                    <div class="col-md-4"><input name="member_id" value="{{ request('member_id') }}" class="form-control" placeholder="Member ID"></div>
+                    <div class="col-md-4"><input name="bill_id" value="{{ request('bill_id') }}" class="form-control" placeholder="Bill ID"></div>
+                    <div class="col-md-4"><input name="status" value="{{ request('status') }}" class="form-control" placeholder="Status"></div>
+                    <div class="col-md-4"><input name="method" value="{{ request('method') }}" class="form-control" placeholder="Method"></div>
+                    <div class="col-md-4"><input name="ref" value="{{ request('ref') }}" class="form-control" placeholder="Ref"></div>
+                    <div class="col-md-4 d-grid"><button class="btn btn-outline-primary">Apply</button></div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="card shadow-sm mb-3">
-    <div class="card-header">Payments</div>
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Payments</span>
+        <span class="badge text-bg-light border">{{ $paymentRows->count() }} rows</span>
+    </div>
     <div class="card-body table-responsive">
-        <table class="table table-sm align-middle">
+        <table class="table table-sm align-middle table-hover">
             <thead><tr><th>ID</th><th>Member</th><th>Bill</th><th>Ref</th><th>Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-            @foreach($rows as $p)
+            @forelse($paymentRows as $p)
                 <tr>
                     <td>{{ $p->id }}</td>
                     <td>
                         @php($member = $p->member)
                         @if($member)
-                            {{ $member->member_code }}
-                            @if(!empty($member->name)) - {{ $member->name }} @endif
-                            @if(!empty($member->department_name)) - {{ $member->department_name }} @endif
+                            <div class="fw-semibold text-dark">{{ $member->member_code }}</div>
+                            <div class="text-muted small">
+                                @if(!empty($member->name)) {{ $member->name }} @endif
+                                @if(!empty($member->department_name)) · {{ $member->department_name }} @endif
+                            </div>
                         @else
                             -
                         @endif
                     </td>
                     <td>{{ $p->bill_id ?? '-' }}</td>
                     <td>{{ $p->payment_ref ?? $p->reference_no ?? '-' }}</td>
-                    <td>{{ number_format((float)$p->amount,2) }}</td>
+                    <td class="fw-semibold">{{ number_format((float)$p->amount,2) }}</td>
                     <td>{{ $p->method }}</td>
                     <td>
                         @php($displayStatus = $p->status === \App\Models\Payment::STATUS_RECONCILIATION_PENDING ? \App\Models\Payment::STATUS_APPROVED : $p->status)
-                        <span class="badge bg-secondary">{{ $displayStatus }}</span>
+                        <span class="badge {{ in_array($displayStatus, ['APPROVED','SUCCESS','RECONCILED'], true) ? 'bg-success' : 'bg-secondary' }}">{{ $displayStatus }}</span>
                     </td>
                     <td>
                         @if(!in_array($p->status, ['SUCCESS','RECONCILED']))
@@ -214,49 +301,61 @@
                         @endif
                     </td>
                 </tr>
-            @endforeach
+            @empty
+                <tr><td colspan="8" class="text-center text-muted py-4">No payment rows found for the current filter.</td></tr>
+            @endforelse
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card shadow-sm mb-3">
-    <div class="card-header">Transactions</div>
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Transactions</span>
+        <span class="badge text-bg-light border">{{ $transactionRows->count() }} rows</span>
+    </div>
     <div class="card-body table-responsive">
-        <table class="table table-sm">
+        <table class="table table-sm table-hover">
             <thead><tr><th>ID</th><th>Payment</th><th>Internal Ref</th><th>Status</th><th>Amount</th><th>Action</th></tr></thead>
             <tbody>
-            @foreach($txns as $t)
+            @forelse($transactionRows as $t)
                 <tr>
-                    <td>{{ $t->id }}</td><td>{{ $t->payment_id }}</td><td>{{ $t->internal_ref }}</td><td>{{ $t->status }}</td><td>{{ number_format((float)$t->amount,2) }}</td>
+                    <td>{{ $t->id }}</td><td>{{ $t->payment_id }}</td><td>{{ $t->internal_ref }}</td><td><span class="badge text-bg-light border">{{ $t->status }}</span></td><td class="fw-semibold">{{ number_format((float)$t->amount,2) }}</td>
                     <td>
                         @if(!in_array($t->status,['SUCCESS','FAILED']))
                             <form method="POST" action="{{ route('admin.payments.transactions.verify', $t->id) }}">@csrf<button class="btn btn-sm btn-outline-success">Verify Success</button></form>
                         @endif
                     </td>
                 </tr>
-            @endforeach
+            @empty
+                <tr><td colspan="6" class="text-center text-muted py-4">No transactions available.</td></tr>
+            @endforelse
             </tbody>
         </table>
     </div>
 </div>
 
 <div class="card shadow-sm">
-    <div class="card-header">Reconciliation</div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Reconciliation</span>
+        <span class="badge text-bg-light border">{{ $reconciliationRows->count() }} rows</span>
+    </div>
     <div class="card-body table-responsive">
-        <table class="table table-sm">
+        <table class="table table-sm table-hover">
             <thead><tr><th>ID</th><th>Payment</th><th>Status</th><th>Ledger</th><th>Accounting</th><th>Action</th></tr></thead>
             <tbody>
-            @foreach($reconciliations as $r)
+            @forelse($reconciliationRows as $r)
                 <tr>
-                    <td>{{ $r->id }}</td><td>{{ $r->payment_id }}</td><td>{{ $r->status }}</td><td>{{ $r->ledger_sync_status }}</td><td>{{ $r->accounting_sync_status }}</td>
+                    <td>{{ $r->id }}</td><td>{{ $r->payment_id }}</td><td><span class="badge {{ $r->status === 'RECONCILED' ? 'bg-success' : 'bg-warning text-dark' }}">{{ $r->status }}</span></td><td>{{ $r->ledger_sync_status }}</td><td>{{ $r->accounting_sync_status }}</td>
                     <td>
                         @if($r->status !== 'RECONCILED')
                             <form method="POST" action="{{ route('admin.payments.reconciliations.reconcile', $r->id) }}">@csrf<button class="btn btn-sm btn-outline-primary">Mark Reconciled</button></form>
                         @endif
                     </td>
                 </tr>
-            @endforeach
+            @empty
+                <tr><td colspan="6" class="text-center text-muted py-4">No reconciliation rows available.</td></tr>
+            @endforelse
             </tbody>
         </table>
     </div>

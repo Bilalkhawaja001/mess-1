@@ -156,19 +156,60 @@
 @endpush
 
 @section('content')
+@php
+    $inventoryItemCount = $items->count();
+    $inventoryLowStockCount = count($lowStockItems ?? []);
+    $storeStockCount = count($storeStockRows ?? []);
+    $stockLedgerCount = method_exists($stockLedgerRows ?? null, 'count') ? $stockLedgerRows->count() : count($stockLedgerRows ?? []);
+@endphp
 <div class="inventory-page-wrap">
+    <div class="page-hero page-hero-compact mb-4">
+        <div>
+            <span class="page-hero-kicker">Inventory workspace</span>
+            <h1 class="page-hero-title">Items, store stock, vendor returns, and stock movement control</h1>
+            <p class="page-hero-text mb-0">This UI-only pass keeps the existing inventory routes and actions intact while improving visibility for items, store stock, vendor-return handling, and ledger trails.</p>
+        </div>
+        <div class="page-hero-actions">
+            <span class="badge text-bg-light">{{ $inventoryItemCount }} items</span>
+            <span class="badge text-bg-danger">{{ $inventoryLowStockCount }} low stock</span>
+        </div>
+    </div>
+
+    <div class="stats-grid stats-grid-4 mb-4">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-label">Items</div>
+            <div class="stat-value">{{ $inventoryItemCount }}</div>
+            <div class="stat-help">Inventory master records</div>
+        </div>
+        <div class="stat-card stat-card-danger">
+            <div class="stat-label">Low Stock</div>
+            <div class="stat-value">{{ $inventoryLowStockCount }}</div>
+            <div class="stat-help">Needs replenishment attention</div>
+        </div>
+        <div class="stat-card stat-card-success">
+            <div class="stat-label">Store Stock Rows</div>
+            <div class="stat-value">{{ $storeStockCount }}</div>
+            <div class="stat-help">Visible stock balances</div>
+        </div>
+        <div class="stat-card stat-card-info">
+            <div class="stat-label">Ledger Rows</div>
+            <div class="stat-value">{{ $stockLedgerCount }}</div>
+            <div class="stat-help">Visible movement trail rows</div>
+        </div>
+    </div>
+
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
             <div class="inventory-header-title mb-1">Items / Store</div>
             <div class="inventory-header-sub inventory-stat">Item master and live store stock separated without changing route structure.</div>
         </div>
         <div class="d-flex align-items-center gap-2 inventory-header-badges">
-            <span class="badge bg-danger">{{ count($lowStockItems ?? []) }} low stock</span>
-            <span class="badge bg-secondary">{{ $items->count() }} items</span>
+            <span class="badge bg-danger">{{ $inventoryLowStockCount }} low stock</span>
+            <span class="badge bg-secondary">{{ $inventoryItemCount }} items</span>
         </div>
     </div>
 
-    <form method="GET" action="{{ route('admin.inventory.index') }}" class="card shadow-sm mb-3">
+    <form method="GET" action="{{ route('admin.inventory.index') }}" class="card shadow-sm mb-4">
         <div class="card-body">
             <div class="row g-2 align-items-end">
                 <div class="col-lg-7">

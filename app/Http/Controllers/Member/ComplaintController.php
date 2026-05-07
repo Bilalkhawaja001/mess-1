@@ -36,7 +36,10 @@ class ComplaintController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $payload = $request->validate([
-            'type' => ['required', 'in:COMPLAINT,SUGGESTION'],
+            'type' => ['required', 'in:COMPLAINT,SUGGESTION,MAINTENANCE_REQUEST'],
+            'category' => ['required', 'in:FOOD_QUALITY,FOOD_QUANTITY,CLEANLINESS,STAFF_BEHAVIOR,MENU_ISSUE,PAYMENT_BILL_ISSUE,ROOM_HOSTEL_ISSUE,WATER_ISSUE,ELECTRICITY_ISSUE,OTHER'],
+            'priority' => ['required', 'in:LOW,NORMAL,HIGH,URGENT'],
+            'subject' => ['required', 'string', 'max:255'],
             'message' => ['required', 'string'],
         ]);
 
@@ -53,10 +56,11 @@ class ComplaintController extends Controller
             'member_id' => $member->id,
             'submitted_by_name' => $user->name,
             'type' => $payload['type'],
-            'subject' => $payload['type'],
+            'category' => $payload['category'],
+            'subject' => $payload['subject'],
             'description' => $payload['message'],
             'message' => $payload['message'],
-            'priority' => Complaint::PRIORITY_NORMAL,
+            'priority' => $payload['priority'],
             'status' => Complaint::STATUS_PENDING,
         ]);
 

@@ -20,7 +20,7 @@
             <div class="col-md-4">
                 <label class="form-label">Category</label>
                 <select name="category" class="form-select" required>
-                    @php($categories = ['FOOD_QUALITY' => 'Food Quality', 'FOOD_QUANTITY' => 'Food Quantity', 'CLEANLINESS' => 'Cleanliness', 'STAFF_BEHAVIOR' => 'Staff Behavior', 'MENU_ISSUE' => 'Menu Issue', 'PAYMENT_BILL_ISSUE' => 'Payment/Bill Issue', 'ROOM_HOSTEL_ISSUE' => 'Room/Hostel Issue', 'WATER_ISSUE' => 'Water Issue', 'ELECTRICITY_ISSUE' => 'Electricity Issue', 'OTHER' => 'Other'])
+                    @php($categories = ['FOOD_QUALITY' => 'Food Quality', 'FOOD_QUANTITY' => 'Food Quantity', 'CLEANLINESS' => 'Cleanliness', 'STAFF_BEHAVIOR' => 'Staff Behavior', 'MENU_ISSUE' => 'Menu Issue', 'PAYMENT_BILL_ISSUE' => 'Payment/Bill Issue', 'ROOM_HOSTEL_ISSUE' => 'Room/Hostel Issue', 'WATER_ISSUE' => 'Water Issue',  'OTHER' => 'Other'])
                     @foreach($categories as $value => $label)
                         <option value="{{ $value }}" @selected(old('category') === $value)>{{ $label }}</option>
                     @endforeach

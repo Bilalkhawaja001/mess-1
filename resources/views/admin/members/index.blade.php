@@ -5,24 +5,125 @@
 
 @push('styles')
 <style>
-    .members-table { min-width: 1180px; font-size: 12px; }
-    .members-table thead th { white-space: nowrap; }
+    .members-page-card {
+        border-radius: 16px;
+    }
+    .members-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    }
+    .members-toolbar .form-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        font-weight: 800;
+        color: #64748b;
+        margin-bottom: 5px;
+    }
+    .members-toolbar .form-control {
+        min-height: 36px;
+        font-size: 13px;
+    }
+    .members-toolbar-actions {
+        display: flex;
+        gap: 6px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+    .members-table-wrap {
+        border: 1px solid #edf2f7;
+        border-radius: 14px;
+        overflow: auto;
+    }
+    .members-table {
+        min-width: 1120px;
+        font-size: 13px;
+        margin-bottom: 0;
+    }
+    .members-table thead th {
+        white-space: nowrap;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        padding: .58rem .72rem;
+        background: #f8fbff;
+    }
     .members-table tbody td {
-        font-size: 12px;
-        line-height: 1.25;
+        font-size: 13px;
+        line-height: 1.2;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 170px;
+        max-width: 165px;
+        padding: .52rem .72rem;
     }
-    .members-table tbody td:last-child { overflow: visible; text-overflow: clip; max-width: none; }
-    .members-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-    .members-actions .btn { min-width: auto; padding: 0.38rem 0.62rem; font-size: 11px; white-space: nowrap; }
+    .members-table tbody tr {
+        height: 44px;
+    }
+    .members-table tbody td:last-child {
+        overflow: visible;
+        text-overflow: clip;
+        max-width: none;
+    }
+    .members-status-badge {
+        min-width: 70px;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 800;
+        padding: .28rem .48rem;
+        border-radius: 999px;
+    }
+    .members-actions {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .members-actions .btn,
+    .members-toolbar-actions .btn {
+        min-width: auto;
+        padding: 0.32rem 0.56rem;
+        font-size: 11px;
+        line-height: 1.15;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
     .members-edit-form .form-control,
-    .members-edit-form .form-select { font-size: 12px; min-height: 40px; }
-    .mini-stat { border-radius: 18px; padding: 1rem 1.1rem; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #e2e8f0; height: 100%; }
-    .mini-stat .label { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: #64748b; font-weight: 800; }
-    .mini-stat .value { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
+    .members-edit-form .form-select {
+        font-size: 12px;
+        min-height: 36px;
+    }
+    .mini-stat {
+        border-radius: 16px;
+        padding: .82rem .95rem;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        border: 1px solid #e2e8f0;
+        height: 100%;
+    }
+    .mini-stat .label {
+        font-size: .7rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #64748b;
+        font-weight: 800;
+    }
+    .mini-stat .value {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+    .members-edit-shell {
+        background: #fbfdff;
+    }
 </style>
 @endpush
 
@@ -106,12 +207,12 @@
 <div class="card shadow-sm members-page-card">
     <div class="card-header d-flex justify-content-between align-items-center"><span>Members List</span><span class="badge text-bg-light">{{ $rows->count() }} rows</span></div>
     <div class="card-body">
-        <form method="GET" action="{{ route('admin.members.index') }}" class="filters-bar mb-3 row g-2 align-items-end">
-            <div class="col-md-5">
+        <form method="GET" action="{{ route('admin.members.index') }}" class="members-toolbar mb-3">
+            <div class="flex-grow-1" style="min-width: 260px;">
                 <label class="form-label">Search Member</label>
                 <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control" placeholder="Search by member code, name, department, or mobile">
             </div>
-            <div class="col-md-3 d-flex gap-2 align-items-end">
+            <div class="members-toolbar-actions">
                 <button class="btn btn-outline-primary">Search</button>
                 <a href="{{ route('admin.members.index') }}" class="btn btn-outline-secondary">Reset</a>
             </div>
@@ -126,7 +227,7 @@
             <tbody>
                 @foreach($rows as $m)
                     <tr>
-                        <td>{{ $m->member_code }}</td>
+                        <td class="fw-semibold">{{ $m->member_code }}</td>
                         <td>{{ $m->name }}</td>
                         <td>{{ $m->department_name }}</td>
                         <td>{{ $m->mess->name ?? '—' }}</td>
@@ -134,7 +235,7 @@
                         <td>{{ optional($m->join_date)->format('Y-m-d') }}</td>
                         <td>{{ optional($m->leave_date)->format('Y-m-d') }}</td>
                         <td>{{ $m->user->username ?? '-' }}</td>
-                        <td><span class="badge {{ $m->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $m->is_active ? 'Active' : 'Inactive' }}</span></td>
+                        <td><span class="badge members-status-badge {{ $m->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $m->is_active ? 'Active' : 'Inactive' }}</span></td>
                         <td>
                             <div class="members-actions">
                                 <form method="POST" action="{{ route('admin.members.toggle-active', $m->id) }}">@csrf<button class="btn btn-sm btn-outline-warning">Toggle</button></form>
@@ -148,7 +249,7 @@
                             </div>
                         </td>
                     </tr>
-                    <tr class="collapse" id="edit-member-{{ $m->id }}">
+                    <tr class="collapse members-edit-shell" id="edit-member-{{ $m->id }}">
                         <td colspan="10">
                             <form method="POST" action="{{ route('admin.members.update', $m->id) }}" class="row g-2 members-edit-form">
                                 @csrf
@@ -178,7 +279,7 @@
                                 <div class="col-md-1"><input type="checkbox" name="is_active" value="1" @checked($m->is_active)></div>
                                 <div class="col-md-1"><button class="btn btn-sm btn-success">Save</button></div>
                             </form>
-                            <div class="mt-3 pt-2 border-top">
+                            <div class="mt-2 pt-2 border-top">
                                 <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
                                     @csrf
                                     <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }}">

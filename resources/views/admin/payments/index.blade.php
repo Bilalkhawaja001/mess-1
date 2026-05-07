@@ -25,6 +25,33 @@
     $openReconciliationCount = $reconciliationRows->where('status', '!=', 'RECONCILED')->count();
 @endphp
 
+<script>
+    (function () {
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+
+        const resetPaymentsScroll = function () {
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+
+            const pageBody = document.querySelector('.page-body');
+            if (pageBody) {
+                pageBody.scrollTop = 0;
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', resetPaymentsScroll, { once: true });
+        } else {
+            resetPaymentsScroll();
+        }
+
+        window.addEventListener('load', resetPaymentsScroll, { once: true });
+    })();
+</script>
+
 <style>
 .payments-redesign {
     display: flex;

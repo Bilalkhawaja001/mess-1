@@ -426,19 +426,12 @@
 <div class="payments-redesign">
     <section class="payments-hero">
         <div class="payments-hero-copy">
-            <span class="payments-kicker">Payments workspace</span>
-            <h1 class="payments-hero-title">Review payment attempts, transactions, and reconciliation status</h1>
-            <p class="payments-hero-text">Manual payment creation, verification, and reconciliation stay functionally unchanged, with cleaner visibility for finance operations.</p>
-            <div class="payments-hero-pills">
-                <span class="payments-pill payments-pill-primary">{{ $paymentRows->count() }} payment rows</span>
-                <span class="payments-pill payments-pill-warning">{{ $openReconciliationCount }} open reconciliations</span>
-            </div>
+            <h1 class="payments-hero-title">Payments</h1>
         </div>
         <div class="payments-hero-side">
             <div class="payments-highlight-card">
-                <div class="payments-highlight-label">Visible amount</div>
+                <div class="payments-highlight-label">Payments</div>
                 <div class="payments-highlight-value">PKR {{ number_format($paymentTotalAmount, 2) }}</div>
-                <div class="payments-highlight-help">Current filtered payment volume</div>
             </div>
         </div>
     </section>
@@ -473,8 +466,7 @@
     <section class="payments-panel">
         <div class="payments-panel-head">
             <div>
-                <div class="payments-panel-title">Create Manual Payment Attempt (No Live Charging)</div>
-                <div class="payments-panel-subtitle">Use the existing manual intake flow without changing payment behavior.</div>
+                <div class="payments-panel-title">Payments</div>
             </div>
             <span class="payments-chip">Manual intake</span>
         </div>
@@ -655,8 +647,7 @@
         <div class="payments-panel-body">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
                 <div>
-                    <div class="payments-panel-title">Search and Filter</div>
-                    <div class="payments-panel-subtitle">Narrow visible payment records while keeping existing filters intact.</div>
+                    <div class="payments-panel-title">Payments</div>
                 </div>
                 <span class="payments-chip">Filter set</span>
             </div>
@@ -675,7 +666,6 @@
         <div class="payments-panel-head">
             <div>
                 <div class="payments-panel-title">Payments</div>
-                <div class="payments-panel-subtitle">Manual and system payment rows in one review surface.</div>
             </div>
             <span class="payments-chip">{{ $paymentRows->count() }} rows</span>
         </div>
@@ -723,8 +713,7 @@
     <section class="payments-panel payments-table-wrap">
         <div class="payments-panel-head">
             <div>
-                <div class="payments-panel-title">Transactions</div>
-                <div class="payments-panel-subtitle">Verification queue for payment processing outcomes.</div>
+                <div class="payments-panel-title">Payments</div>
             </div>
             <span class="payments-chip">{{ $transactionRows->count() }} rows</span>
         </div>
@@ -752,8 +741,7 @@
     <section class="payments-panel payments-table-wrap">
         <div class="payments-panel-head">
             <div>
-                <div class="payments-panel-title">Reconciliation</div>
-                <div class="payments-panel-subtitle">Track ledger and accounting synchronization state.</div>
+                <div class="payments-panel-title">Payments</div>
             </div>
             <span class="payments-chip">{{ $reconciliationRows->count() }} rows</span>
         </div>

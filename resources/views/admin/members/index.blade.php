@@ -37,9 +37,7 @@
 <div class="hero-panel p-4 mb-4">
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
-            <div class="section-kicker mb-3"><i class="bi bi-people-fill"></i> Members Workspace</div>
-            <h3 class="mb-2 fw-bold">Members Management</h3>
-            <div class="text-muted">Manage member records, imports, links, and active status in one professional workspace.</div>
+            <h3 class="mb-2 fw-bold">Members</h3>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('admin.member-accounts.index') }}" class="btn btn-outline-dark">Manage Member Portal Accounts</a>

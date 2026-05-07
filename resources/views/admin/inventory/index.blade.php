@@ -165,13 +165,7 @@
 <div class="inventory-page-wrap">
     <div class="page-hero page-hero-compact mb-4">
         <div>
-            <span class="page-hero-kicker">Inventory workspace</span>
-            <h1 class="page-hero-title">Items, store stock, vendor returns, and stock movement control</h1>
-            <p class="page-hero-text mb-0">This UI-only pass keeps the existing inventory routes and actions intact while improving visibility for items, store stock, vendor-return handling, and ledger trails.</p>
-        </div>
-        <div class="page-hero-actions">
-            <span class="badge text-bg-light">{{ $inventoryItemCount }} items</span>
-            <span class="badge text-bg-danger">{{ $inventoryLowStockCount }} low stock</span>
+            <h1 class="page-hero-title">Items / Store</h1>
         </div>
     </div>
 
@@ -201,7 +195,6 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
             <div class="inventory-header-title mb-1">Items / Store</div>
-            <div class="inventory-header-sub inventory-stat">Item master and live store stock separated without changing route structure.</div>
         </div>
         <div class="d-flex align-items-center gap-2 inventory-header-badges">
             <span class="badge bg-danger">{{ $inventoryLowStockCount }} low stock</span>

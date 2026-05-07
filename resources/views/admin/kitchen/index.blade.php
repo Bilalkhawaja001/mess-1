@@ -178,9 +178,7 @@
 
 <div class="tab-content" id="kitchenTabsContent">
         <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'issue' ? 'show active' : '' }} kitchen-tab-pane" id="tab-issue" role="tabpanel" aria-labelledby="tab-issue-tab" tabindex="0">
-            <div class="kitchen-tab-kicker">Kitchen Ops</div>
-            <div class="kitchen-tab-title">Post Kitchen Issue</div>
-            <div class="kitchen-tab-subtitle">Create kitchen issue requests here. Stock deduction happens only after approval.</div>
+            <div class="kitchen-tab-title">Kitchen</div>
 
             <div class="row g-3">
                 <div class="col-12 col-xl-8">
@@ -251,9 +249,7 @@
         </div>
 
         <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'ledger' ? 'show active' : '' }} kitchen-tab-pane" id="tab-ledger" role="tabpanel" aria-labelledby="tab-ledger-tab" tabindex="0">
-            <div class="kitchen-tab-kicker">Tracking</div>
-            <div class="kitchen-tab-title">Kitchen Issues, Month Summary, and Ledger</div>
-            <div class="kitchen-tab-subtitle">Issue list keeps remote fields. Month summary and ledger render stock transaction truth for approved kitchen postings only.</div>
+            <div class="kitchen-tab-title">Kitchen</div>
             <div class="row g-3 mb-1">
                 <div class="col-md-4">
                     <div class="kitchen-mini-stat">
@@ -396,9 +392,7 @@
         </div>
 
         <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'consumption-report' ? 'show active' : '' }} kitchen-tab-pane" id="tab-consumption-report" role="tabpanel" aria-labelledby="tab-consumption-report-tab" tabindex="0">
-            <div class="kitchen-tab-kicker">Reporting</div>
-            <div class="kitchen-tab-title">Consumption Report</div>
-            <div class="kitchen-tab-subtitle">Reporting only, derived from approved kitchen stock transactions.</div>
+            <div class="kitchen-tab-title">Kitchen</div>
 
             <div class="card kitchen-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -442,9 +436,7 @@
         </div>
 
         <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'menu' ? 'show active' : '' }} kitchen-tab-pane" id="tab-menu" role="tabpanel" aria-labelledby="tab-menu-tab" tabindex="0">
-            <div class="kitchen-tab-kicker">Recipes</div>
-            <div class="kitchen-tab-title">Menu / Recipes</div>
-            <div class="kitchen-tab-subtitle">Remote menu and recipe flows preserved inside one tabbed workspace.</div>
+            <div class="kitchen-tab-title">Kitchen</div>
 
             <div class="row g-3">
                 <div class="col-12 col-xl-5">
@@ -530,9 +522,7 @@
         </div>
 
         <div class="tab-pane fade {{ ($activeTab ?? 'issue') === 'plans' ? 'show active' : '' }} kitchen-tab-pane" id="tab-plans" role="tabpanel" aria-labelledby="tab-plans-tab" tabindex="0">
-            <div class="kitchen-tab-kicker">Planning</div>
-            <div class="kitchen-tab-title">Meal Plans</div>
-            <div class="kitchen-tab-subtitle">Remote meal plan flows preserved in the 4 tab kitchen page.</div>
+            <div class="kitchen-tab-title">Kitchen</div>
 
             <div class="row g-3">
                 <div class="col-12 col-xl-5">

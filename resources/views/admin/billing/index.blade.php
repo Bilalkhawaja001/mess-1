@@ -17,13 +17,7 @@
 
 <div class="page-hero page-hero-compact mb-4">
     <div>
-        <span class="page-hero-kicker">Billing workspace</span>
-        <h1 class="page-hero-title">Generate, lock, and review monthly billing cycles</h1>
-        <p class="page-hero-text mb-0">Keep the existing monthly billing workflow intact while surfacing cycle status, overrides, and member billing rows in a cleaner SaaS layout.</p>
-    </div>
-    <div class="page-hero-actions">
-        <span class="badge text-bg-light">{{ $billingMonths->count() }} generated months</span>
-        <span class="badge text-bg-warning">{{ $unlockedCount }} unlocked rows</span>
+        <h1 class="page-hero-title">Billing</h1>
     </div>
 </div>
 
@@ -54,8 +48,7 @@
     <div class="card-body">
         <div class="section-heading mb-3">
             <div>
-                <h5 class="mb-1">Generate Monthly Bill</h5>
-                <div class="text-muted">Run the existing month generation and lock flow without changing billing logic.</div>
+                <h5 class="mb-1">Billing</h5>
             </div>
         </div>
 
@@ -76,8 +69,7 @@
     <div class="card-body">
         <div class="section-heading mb-3">
             <div>
-                <h5 class="mb-1">Generated Months</h5>
-                <div class="text-muted">Track available month closures and current lock status.</div>
+                <h5 class="mb-1">Billing</h5>
             </div>
         </div>
         @if($billingMonths->count())
@@ -100,8 +92,7 @@
                 <div class="card-body">
                     <div class="section-heading mb-3">
                         <div>
-                            <h5 class="mb-1">Super Admin Override, Reopen Month</h5>
-                            <div class="text-muted">Preserves the current reopen action and reason flow.</div>
+                            <h5 class="mb-1">Billing</h5>
                         </div>
                     </div>
                     @if($billingMonths->count())
@@ -135,8 +126,7 @@
                 <div class="card-body">
                     <div class="section-heading mb-3">
                         <div>
-                            <h5 class="mb-1 text-danger">Super Admin Override, Hard Reset Month</h5>
-                            <div class="text-muted">Keeps the existing guarded reset flow unchanged.</div>
+                            <h5 class="mb-1 text-danger">Billing</h5>
                         </div>
                     </div>
                     @if($billingMonths->count())
@@ -177,8 +167,7 @@
             <div class="col-lg-6">
                 <div class="section-heading mb-0">
                     <div>
-                        <h5 class="mb-1">Billing Filters</h5>
-                        <div class="text-muted">Filter visible billing rows without changing route behavior.</div>
+                        <h5 class="mb-1">Billing</h5>
                     </div>
                 </div>
             </div>

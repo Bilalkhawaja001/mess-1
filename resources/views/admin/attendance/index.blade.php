@@ -37,13 +37,10 @@
 <div class="hero-panel p-4 mb-4">
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
-            <div class="section-kicker mb-3"><i class="bi bi-calendar-check-fill"></i> Daily Attendance</div>
-            <h3 class="mb-2 fw-bold">Attendance Management</h3>
-            <div class="text-muted">Track breakfast, lunch, and dinner attendance with a cleaner operational workspace.</div>
+            <h3 class="mb-2 fw-bold">Attendance</h3>
         </div>
         <div class="card border-0 shadow-sm" style="min-width: 240px;">
             <div class="card-body py-3">
-                <div class="text-muted small text-uppercase fw-semibold mb-1">Selected Date</div>
                 <div class="fw-semibold">{{ $selectedDate }}</div>
             </div>
         </div>
@@ -70,8 +67,7 @@
 
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span>Attendance Table</span>
-        <small class="text-muted">Flask parity: breakfast/lunch/dinner => present</small>
+        <span>Attendance</span>
     </div>
     <div class="card-body table-responsive">
         <form method="POST" action="{{ route('admin.attendance.store') }}">

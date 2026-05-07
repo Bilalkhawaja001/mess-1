@@ -22,15 +22,7 @@
 <div class="hero-panel p-4 mb-4">
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
-            <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Executive Control Layer</div>
-            <h3 class="mb-2 fw-bold">Mess Billing Executive Dashboard</h3>
-            <div class="text-muted">Premium SaaS-style overview for collections, billing governance, members, and operational flow.</div>
-        </div>
-        <div class="card border-0 shadow-sm" style="min-width: 260px;">
-            <div class="card-body py-3">
-                <div class="text-muted small text-uppercase fw-semibold mb-1">Live focus</div>
-                <div class="fw-semibold">Collections, member lifecycle, and billing governance</div>
-            </div>
+            <h3 class="mb-2 fw-bold">Dashboard</h3>
         </div>
     </div>
 </div>
@@ -38,8 +30,7 @@
 <div class="card p-3 mb-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
         <div>
-            <h5 class="mb-1">Last Month Category Expenses</h5>
-            <div class="text-muted small">Showing {{ $dashboardMonthCycle ? \Carbon\Carbon::createFromFormat('Y-m', $dashboardMonthCycle)->format('F Y') : 'last month' }} cycle totals on the dashboard.</div>
+            <h5 class="mb-1">Dashboard</h5>
         </div>
         @if($dashboardMonthCycle)
             <span class="badge text-bg-light">Cycle {{ $dashboardMonthCycle }}</span>
@@ -105,8 +96,7 @@
 <div class="row g-3">
     <div class="col-xl-8">
         <div class="card p-3 mb-3">
-            <h5 class="mb-1">Billing Overview</h5>
-            <div class="text-muted small mb-3">High-level financial performance summary.</div>
+            <h5 class="mb-1">Dashboard</h5>
             <div class="row g-2">
                 <div class="col-md-4">
                     <div class="p-3 rounded-4 border bg-white summary-card">
@@ -159,8 +149,7 @@
         </div>
 
         <div class="card p-3">
-            <h5 class="mb-2">Attendance Snapshot</h5>
-            <div class="text-muted small">Attendance module status and member operations are available from the sidebar modules.</div>
+            <h5 class="mb-2">Dashboard</h5>
         </div>
     </div>
 
@@ -190,8 +179,7 @@
         </div>
 
         <div class="card p-3">
-            <h5 class="mb-2">Alerts / Notices / System Status</h5>
-            <div class="small text-muted">System healthy. No critical service disruption detected.</div>
+            <h5 class="mb-2">Dashboard</h5>
         </div>
     </div>
 </div>

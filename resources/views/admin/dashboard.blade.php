@@ -3,87 +3,6 @@
 @section('title', 'Admin Dashboard')
 @section('page_title', 'Enterprise Dashboard')
 
-@push('styles')
-<style>
-    .dashboard-hero-inner {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 1.25rem;
-        flex-wrap: wrap;
-    }
-
-    .dashboard-hero-left {
-        max-width: 640px;
-    }
-
-    .dashboard-hero-right {
-        min-width: 220px;
-    }
-
-    .dashboard-metrics-row .card.metric-card {
-        padding: 0.85rem 1rem !important;
-    }
-
-    .dashboard-metrics-row .metric-label {
-        font-size: 0.72rem;
-    }
-
-    .dashboard-metrics-row .metric-caption {
-        font-size: 0.72rem;
-    }
-
-    .dashboard-quick-actions .btn {
-        padding-top: 0.45rem;
-        padding-bottom: 0.45rem;
-    }
-
-    .dashboard-billing-overview .summary-card {
-        padding: 0.85rem 1rem;
-        border-radius: 14px;
-    }
-
-    .dashboard-billing-overview .summary-label {
-        font-size: 0.76rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-    }
-
-    .dashboard-billing-overview .summary-value {
-        font-size: 1rem;
-    }
-
-    .dashboard-category-card {
-        color: #fff;
-        border: 0;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
-    }
-
-    .dashboard-category-card .summary-label,
-    .dashboard-category-card .summary-meta,
-    .dashboard-category-card .summary-range {
-        color: rgba(255, 255, 255, 0.88) !important;
-    }
-
-    .dashboard-category-card.theme-contractors { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-    .dashboard-category-card.theme-executive { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
-    .dashboard-category-card.theme-centralized { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
-    .dashboard-category-card.theme-guest { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
-
-    .dashboard-recent-cycles table tbody td {
-        font-size: 0.82rem;
-    }
-
-    .dashboard-recent-cycles .badge {
-        font-size: 0.72rem;
-    }
-
-    .dashboard-right-col .card {
-        margin-bottom: 0.75rem;
-    }
-</style>
-@endpush
-
 @section('content')
 @php
     $users = $stats['users'] ?? 0;
@@ -101,20 +20,22 @@
 @endphp
 
 <div class="hero-panel p-4 mb-4">
-    <div class="dashboard-hero-inner">
-        <div class="dashboard-hero-left">
-            <div class="section-kicker mb-2"><i class="bi bi-buildings"></i> Executive Control Layer</div>
-            <h4 class="mb-1 fw-bold">Mess Billing Executive View</h4>
-            <div class="text-muted small">Operational + financial snapshot across billing, attendance, and collections in a premium light workspace.</div>
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+            <div class="section-kicker mb-3"><i class="bi bi-stars"></i> Executive Control Layer</div>
+            <h3 class="mb-2 fw-bold">Mess Billing Executive Dashboard</h3>
+            <div class="text-muted">Premium SaaS-style overview for collections, billing governance, members, and operational flow.</div>
         </div>
-        <div class="dashboard-hero-right text-md-end">
-            <div class="small text-muted text-uppercase fw-semibold mb-1">Live focus</div>
-            <div class="fw-semibold small">Collections, member lifecycle, and billing governance</div>
+        <div class="card border-0 shadow-sm" style="min-width: 260px;">
+            <div class="card-body py-3">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Live focus</div>
+                <div class="fw-semibold">Collections, member lifecycle, and billing governance</div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="card p-3 mb-4 dashboard-billing-overview">
+<div class="card p-3 mb-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
         <div>
             <h5 class="mb-1">Last Month Category Expenses</h5>
@@ -127,7 +48,7 @@
     <div class="row g-2">
         @foreach($dashboardCategoryCards as $card)
             <div class="col-lg-3 col-md-6">
-                <div class="p-3 rounded-4 summary-card h-100 dashboard-category-card theme-{{ $card['theme'] ?? 'executive' }}">
+                <div class="p-3 rounded-4 summary-card h-100 dashboard-category-card theme-{{ $card['theme'] ?? 'executive' }}" style="background: {{ ($card['theme'] ?? 'executive') === 'contractors' ? 'linear-gradient(135deg,#f97316,#ea580c)' : (($card['theme'] ?? 'executive') === 'centralized' ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : ((($card['theme'] ?? 'executive') === 'guest') ? 'linear-gradient(135deg,#10b981,#047857)' : 'linear-gradient(135deg,#3b82f6,#1d4ed8)')) }}; color:#fff; border:0; box-shadow:0 12px 30px rgba(15,23,42,.12);">
                     <div class="small summary-label">{{ $card['label'] }}</div>
                     <div class="fw-semibold fs-5 summary-value">{{ number_format((float) ($card['total_expenses'] ?? 0), 2) }}</div>
                     <div class="small mt-1 summary-meta">Total Expenses</div>
@@ -183,7 +104,7 @@
 
 <div class="row g-3">
     <div class="col-xl-8">
-        <div class="card p-3 mb-3 dashboard-billing-overview">
+        <div class="card p-3 mb-3">
             <h5 class="mb-1">Billing Overview</h5>
             <div class="text-muted small mb-3">High-level financial performance summary.</div>
             <div class="row g-2">
@@ -245,19 +166,13 @@
 
     <div class="col-xl-4">
         <div class="card p-3 mb-3">
-            <h5 class="mb-2">Quick Actions</h5>
+            <h5 class="mb-3">Quick Actions</h5>
             <div class="d-grid gap-2">
                 <a class="btn btn-outline-primary" href="{{ route('admin.members.index') }}"><i class="bi bi-person-plus me-1"></i> Add Member</a>
                 <a class="btn btn-outline-primary" href="{{ route('admin.billing.index') }}"><i class="bi bi-receipt me-1"></i> Create Billing Cycle</a>
                 <a class="btn btn-outline-primary" href="{{ route('admin.payments.index') }}"><i class="bi bi-cash-coin me-1"></i> Record Payment</a>
                 <a class="btn btn-outline-secondary" href="{{ route('admin.reports.index') }}"><i class="bi bi-bar-chart me-1"></i> View Reports</a>
-
-                <a class="nav-link {{ request()->routeIs('admin.reports.bills-download*') ? 'active' : '' }}"
-                   href="{{ route('admin.reports.bills-download') }}">
-                    <i class="bi bi-file-earmark-arrow-down"></i>
-                    <span>Bills Download</span>
-                </a>
-
+                <a class="btn btn-outline-secondary" href="{{ route('admin.reports.bills-download') }}"><i class="bi bi-file-earmark-arrow-down me-1"></i> Bills Download</a>
             </div>
         </div>
 

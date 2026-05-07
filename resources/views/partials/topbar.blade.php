@@ -6,21 +6,21 @@
         </button>
         <div>
             <div class="tb-title">@yield('page_title', 'Dashboard')</div>
-            <div class="tb-sub">Enterprise billing command center</div>
+            <div class="tb-sub">Premium operations workspace with unified enterprise UI</div>
         </div>
     </div>
 
-    <div class="d-flex align-items-center gap-2">
-        <div class="tb-search d-none d-md-block">
+    <div class="topbar-tools">
+        <div class="tb-search d-none d-lg-block">
             <i class="bi bi-search"></i>
-            <input type="text" placeholder="Search members, bills, payments...">
+            <input type="text" placeholder="Search modules, records, reports..." readonly>
         </div>
 
         @auth
-            <span class="badge text-bg-light d-none d-md-inline px-3 py-2">{{ auth()->user()->username }}</span>
+            <div class="tb-chip d-none d-md-inline-flex"><i class="bi bi-person-circle"></i><span>{{ auth()->user()->username }}</span></div>
             <form action="{{ route('logout') }}" method="POST" class="m-0">
                 @csrf
-                <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+                <button class="btn btn-sm btn-outline-secondary ui-btn ui-btn-light"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
             </form>
         @endauth
     </div>

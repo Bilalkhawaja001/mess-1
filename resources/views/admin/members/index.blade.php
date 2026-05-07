@@ -5,71 +5,60 @@
 
 @push('styles')
 <style>
-    .members-table {
-        min-width: 1180px;
-        font-size: 12px;
-    }
-
-    .members-table thead th {
-        padding: 0.7rem 0.75rem;
-        font-size: 11px;
-        white-space: nowrap;
-    }
-
+    .members-table { min-width: 1180px; font-size: 12px; }
+    .members-table thead th { white-space: nowrap; }
     .members-table tbody td {
-        padding: 0.55rem 0.75rem;
         font-size: 12px;
-        line-height: 1.2;
+        line-height: 1.25;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 160px;
+        max-width: 170px;
     }
-
-    .members-table tbody td:last-child {
-        overflow: visible;
-        text-overflow: clip;
-        max-width: none;
-    }
-
-    .members-actions {
-        flex-wrap: nowrap;
-        gap: 6px;
-    }
-
-    .members-actions .btn {
-        min-width: auto;
-        padding: 0.3rem 0.55rem;
-        font-size: 11px;
-        border-radius: 10px;
-        white-space: nowrap;
-    }
-
+    .members-table tbody td:last-child { overflow: visible; text-overflow: clip; max-width: none; }
+    .members-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .members-actions .btn { min-width: auto; padding: 0.38rem 0.62rem; font-size: 11px; white-space: nowrap; }
     .members-edit-form .form-control,
-    .members-edit-form .form-select {
-        font-size: 12px;
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
-    }
-
-    @media (max-width: 991.98px) {
-        .members-table-wrap {
-            overflow-x: auto;
-        }
-    }
+    .members-edit-form .form-select { font-size: 12px; min-height: 40px; }
+    .mini-stat { border-radius: 18px; padding: 1rem 1.1rem; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); border: 1px solid #e2e8f0; height: 100%; }
+    .mini-stat .label { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: #64748b; font-weight: 800; }
+    .mini-stat .value { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
 </style>
 @endpush
 
 @section('content')
-<div class="mb-2 d-flex gap-2 flex-wrap">
-    <a href="{{ route('admin.member-accounts.index') }}" class="btn btn-sm btn-outline-dark">Manage Member Portal Accounts</a>
-    <a href="{{ route('admin.members.sample-csv') }}" class="btn btn-sm btn-outline-secondary">Download Sample CSV</a>
+@php
+    $totalMembers = $rows->count();
+    $activeMembers = $rows->where('is_active', true)->count();
+    $inactiveMembers = $rows->where('is_active', false)->count();
+    $linkedUsers = $rows->filter(fn($m) => !empty($m->user_id))->count();
+@endphp
+
+<div class="hero-panel p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+            <div class="section-kicker mb-3"><i class="bi bi-people-fill"></i> Members Workspace</div>
+            <h3 class="mb-2 fw-bold">Members Management</h3>
+            <div class="text-muted">Manage member records, imports, links, and active status in one professional workspace.</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('admin.member-accounts.index') }}" class="btn btn-outline-dark">Manage Member Portal Accounts</a>
+            <a href="{{ route('admin.members.sample-csv') }}" class="btn btn-outline-secondary">Download Sample CSV</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-3"><div class="mini-stat"><div class="label">Loaded Members</div><div class="value">{{ $totalMembers }}</div></div></div>
+    <div class="col-md-6 col-xl-3"><div class="mini-stat"><div class="label">Active</div><div class="value">{{ $activeMembers }}</div></div></div>
+    <div class="col-md-6 col-xl-3"><div class="mini-stat"><div class="label">Inactive</div><div class="value">{{ $inactiveMembers }}</div></div></div>
+    <div class="col-md-6 col-xl-3"><div class="mini-stat"><div class="label">Linked Users</div><div class="value">{{ $linkedUsers }}</div></div></div>
 </div>
 
 <div class="card shadow-sm mb-3">
-    <div class="card-header">Bulk Import Members</div>
+    <div class="card-header d-flex justify-content-between align-items-center"><span>Bulk Import Members</span><span class="badge text-bg-light">CSV Import</span></div>
     <div class="card-body">
-        <form method="POST" action="{{ route('admin.members.import') }}" enctype="multipart/form-data" class="row g-2 align-items-center">
+        <form method="POST" action="{{ route('admin.members.import') }}" enctype="multipart/form-data" class="row g-3 align-items-center">
             @csrf
             <div class="col-md-6"><input type="file" name="file" class="form-control" accept=".csv,.txt" required></div>
             <div class="col-md-3"><button class="btn btn-outline-primary">Import CSV</button></div>
@@ -79,7 +68,7 @@
 </div>
 
 <div class="card shadow-sm mb-3">
-    <div class="card-header">Create Member</div>
+    <div class="card-header d-flex justify-content-between align-items-center"><span>Create Member</span><span class="badge text-bg-light">Manual Entry</span></div>
     <div class="card-body">
         <form method="POST" action="{{ route('admin.members.store') }}" class="row g-3">
             @csrf
@@ -117,14 +106,14 @@
 </div>
 
 <div class="card shadow-sm members-page-card">
-    <div class="card-header">Members List</div>
+    <div class="card-header d-flex justify-content-between align-items-center"><span>Members List</span><span class="badge text-bg-light">{{ $rows->count() }} rows</span></div>
     <div class="card-body">
-        <form method="GET" action="{{ route('admin.members.index') }}" class="row g-2 align-items-end mb-3">
+        <form method="GET" action="{{ route('admin.members.index') }}" class="filters-bar mb-3 row g-2 align-items-end">
             <div class="col-md-5">
                 <label class="form-label">Search Member</label>
                 <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control" placeholder="Search by member code, name, department, or mobile">
             </div>
-            <div class="col-md-3 d-flex gap-2">
+            <div class="col-md-3 d-flex gap-2 align-items-end">
                 <button class="btn btn-outline-primary">Search</button>
                 <a href="{{ route('admin.members.index') }}" class="btn btn-outline-secondary">Reset</a>
             </div>

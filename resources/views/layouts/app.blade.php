@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}?v=saas-ui-v1">
     @stack('styles')
-    <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}?v=balanced-sidebar-v5">
 </head>
 <body>
 <div class="app-shell" id="appShell">
@@ -19,8 +19,10 @@
     <div class="content-wrap">
         @include('partials.topbar')
         <main class="page-body">
-            @include('partials.flash')
-            @yield('content')
+            <div class="page-container">
+                @include('partials.flash')
+                @yield('content')
+            </div>
         </main>
     </div>
 </div>

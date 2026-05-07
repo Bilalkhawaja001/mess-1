@@ -37,13 +37,19 @@
         align-items: end;
         flex-wrap: wrap;
     }
+    .members-table-scroll {
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
     .members-table-wrap {
         border: 1px solid #edf2f7;
         border-radius: 14px;
-        overflow: auto;
+        overflow: hidden;
     }
     .members-table {
-        min-width: 1120px;
+        min-width: 1040px;
+        width: max-content;
         font-size: 13px;
         margin-bottom: 0;
     }
@@ -72,6 +78,27 @@
         text-overflow: clip;
         max-width: none;
     }
+    .members-code-col { min-width: 92px; }
+    .members-name-col { min-width: 150px; }
+    .members-dept-col { min-width: 120px; }
+    .members-mess-col { min-width: 96px; }
+    .members-mobile-col { min-width: 110px; }
+    .members-date-col { min-width: 96px; }
+    .members-user-col { min-width: 96px; }
+    .members-status-col { min-width: 86px; }
+    .members-actions-col {
+        min-width: 176px;
+        width: 176px;
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: #fff;
+        box-shadow: -8px 0 14px rgba(15, 23, 42, 0.04);
+    }
+    .members-table thead .members-actions-col {
+        z-index: 3;
+        background: #f8fbff;
+    }
     .members-status-badge {
         min-width: 70px;
         justify-content: center;
@@ -80,19 +107,25 @@
         padding: .28rem .48rem;
         border-radius: 999px;
     }
-    .members-actions {
+    .members-actions-group {
         display: inline-flex;
         align-items: center;
+        justify-content: flex-end;
         flex-wrap: nowrap;
         gap: 4px;
         white-space: nowrap;
+        min-width: 100%;
     }
-    .members-actions .btn,
+    .members-actions-group form,
+    .members-actions-group button {
+        margin: 0;
+    }
+    .members-actions-group .btn,
     .members-toolbar-actions .btn {
         min-width: auto;
-        padding: 0.32rem 0.56rem;
-        font-size: 11px;
-        line-height: 1.15;
+        padding: 0.28rem 0.5rem;
+        font-size: 10.5px;
+        line-height: 1.1;
         border-radius: 8px;
         white-space: nowrap;
     }
@@ -217,27 +250,28 @@
                 <a href="{{ route('admin.members.index') }}" class="btn btn-outline-secondary">Reset</a>
             </div>
         </form>
+        <div class="members-table-scroll">
         <div class="table-wrap members-table-wrap">
         <table class="table table-sm align-middle members-table">
             <thead>
                 <tr>
-                    <th>Code</th><th>Name</th><th>Department</th><th>Mess</th><th>Mobile</th><th>Join</th><th>Leave</th><th>User</th><th>Status</th><th>Actions</th>
+                    <th class="members-code-col">Code</th><th class="members-name-col">Name</th><th class="members-dept-col">Department</th><th class="members-mess-col">Mess</th><th class="members-mobile-col">Mobile</th><th class="members-date-col">Join</th><th class="members-date-col">Leave</th><th class="members-user-col">User</th><th class="members-status-col">Status</th><th class="members-actions-col text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($rows as $m)
                     <tr>
-                        <td class="fw-semibold">{{ $m->member_code }}</td>
-                        <td>{{ $m->name }}</td>
-                        <td>{{ $m->department_name }}</td>
-                        <td>{{ $m->mess->name ?? '—' }}</td>
-                        <td>{{ $m->mobile_number ?? '-' }}</td>
-                        <td>{{ optional($m->join_date)->format('Y-m-d') }}</td>
-                        <td>{{ optional($m->leave_date)->format('Y-m-d') }}</td>
-                        <td>{{ $m->user->username ?? '-' }}</td>
-                        <td><span class="badge members-status-badge {{ $m->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $m->is_active ? 'Active' : 'Inactive' }}</span></td>
-                        <td>
-                            <div class="members-actions">
+                        <td class="fw-semibold members-code-col">{{ $m->member_code }}</td>
+                        <td class="members-name-col">{{ $m->name }}</td>
+                        <td class="members-dept-col">{{ $m->department_name }}</td>
+                        <td class="members-mess-col">{{ $m->mess->name ?? '—' }}</td>
+                        <td class="members-mobile-col">{{ $m->mobile_number ?? '-' }}</td>
+                        <td class="members-date-col">{{ optional($m->join_date)->format('Y-m-d') }}</td>
+                        <td class="members-date-col">{{ optional($m->leave_date)->format('Y-m-d') }}</td>
+                        <td class="members-user-col">{{ $m->user->username ?? '-' }}</td>
+                        <td class="members-status-col"><span class="badge members-status-badge {{ $m->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $m->is_active ? 'Active' : 'Inactive' }}</span></td>
+                        <td class="members-actions-col text-end">
+                            <div class="members-actions-group">
                                 <form method="POST" action="{{ route('admin.members.toggle-active', $m->id) }}">@csrf<button class="btn btn-sm btn-outline-warning">Toggle</button></form>
                                 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-member-{{ $m->id }}">Edit</button>
                                 <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
@@ -292,6 +326,7 @@
                 @endforeach
             </tbody>
         </table>
+        </div>
         </div>
     </div>
 </div>

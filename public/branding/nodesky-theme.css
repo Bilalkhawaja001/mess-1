@@ -234,6 +234,14 @@ a { text-decoration: none; }
     background: #eff6ff;
     color: #1d4ed8;
     font-weight: 700;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.topbar form.m-0 {
+    flex: 0 0 auto;
 }
 
 .card, .page-panel {
@@ -425,6 +433,106 @@ a { text-decoration: none; }
     font-size: .88rem;
 }
 
+.panel-card {
+    border-radius: 22px;
+    overflow: hidden;
+}
+
+.filters-bar {
+    display: block;
+    padding: 22px;
+    border-radius: 0;
+    background: #fff;
+    border: 0;
+}
+
+.payments-page .page-hero,
+.payments-page .page-hero.page-hero-compact {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    padding: 24px 26px !important;
+    border-radius: 24px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 52%, #eaf2ff 100%) !important;
+    border: 1px solid rgba(226, 232, 240, 0.96) !important;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08) !important;
+}
+
+.payments-page .page-hero-title {
+    font-size: 30px !important;
+    line-height: 1.14 !important;
+    max-width: 720px !important;
+}
+
+.payments-page .page-hero-text {
+    font-size: 15px !important;
+    line-height: 1.65 !important;
+}
+
+.payments-page .stats-grid,
+.payments-page .stats-grid.stats-grid-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+}
+
+.payments-page .stat-card {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    min-height: 168px !important;
+    padding: 22px 22px 20px !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(226, 232, 240, 0.96) !important;
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+}
+
+.payments-page .stat-card.stat-card-primary { background: linear-gradient(135deg, rgba(37,99,235,.14), rgba(14,165,233,.08) 72%, #ffffff 100%) !important; }
+.payments-page .stat-card.stat-card-success { background: linear-gradient(135deg, rgba(16,185,129,.14), rgba(5,150,105,.07) 72%, #ffffff 100%) !important; }
+.payments-page .stat-card.stat-card-info { background: linear-gradient(135deg, rgba(139,92,246,.14), rgba(59,130,246,.06) 72%, #ffffff 100%) !important; }
+.payments-page .stat-card.stat-card-warning { background: linear-gradient(135deg, rgba(245,158,11,.16), rgba(245,158,11,.07) 72%, #ffffff 100%) !important; }
+
+.payments-page .stat-icon {
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(255,255,255,.85);
+    color: #1e3a8a;
+    font-size: 1.1rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.payments-page .stat-label {
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: .08em !important;
+    color: #64748b !important;
+    font-weight: 800 !important;
+    margin-bottom: 10px !important;
+}
+
+.payments-page .stat-value {
+    font-size: 32px !important;
+    line-height: 1.08 !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin-bottom: 8px !important;
+}
+
+.payments-page .stat-help {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+    color: #64748b !important;
+}
+
 .metric-card {
     border: 0;
     color: #fff;
@@ -589,5 +697,48 @@ a { text-decoration: none; }
     }
     .page-hero-title {
         font-size: 1.72rem;
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .payments-page .stats-grid,
+    .payments-page .stats-grid.stats-grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .topbar-tools {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .tb-search {
+        width: 100%;
+        min-width: 0;
+        order: 2;
+    }
+
+    .payments-page .page-hero,
+    .payments-page .page-hero.page-hero-compact {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .payments-page .page-hero-actions {
+        justify-content: flex-start !important;
+        min-width: 0 !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .payments-page .stats-grid,
+    .payments-page .stats-grid.stats-grid-4 {
+        grid-template-columns: 1fr !important;
+    }
+
+    .payments-page .page-hero-title {
+        font-size: 26px !important;
     }
 }

@@ -25,6 +25,7 @@
     $openReconciliationCount = $reconciliationRows->where('status', '!=', 'RECONCILED')->count();
 @endphp
 
+<div class="payments-page">
 <div class="page-hero page-hero-compact mb-4">
     <div>
         <span class="page-hero-kicker">Payments workspace</span>
@@ -39,28 +40,32 @@
 
 <div class="stats-grid stats-grid-4 mb-4">
     <div class="stat-card stat-card-primary">
+        <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
         <div class="stat-label">Payments</div>
         <div class="stat-value">{{ $paymentRows->count() }}</div>
         <div class="stat-help">Visible filtered records</div>
     </div>
     <div class="stat-card stat-card-success">
+        <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
         <div class="stat-label">Total Amount</div>
         <div class="stat-value">{{ number_format($paymentTotalAmount, 2) }}</div>
         <div class="stat-help">Visible payment amount sum</div>
     </div>
     <div class="stat-card stat-card-info">
+        <div class="stat-icon"><i class="bi bi-patch-check"></i></div>
         <div class="stat-label">Approved / Success</div>
         <div class="stat-value">{{ $successLikeCount }}</div>
         <div class="stat-help">Includes reconciliation pending display state</div>
     </div>
     <div class="stat-card stat-card-warning">
+        <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
         <div class="stat-label">Pending Transactions</div>
         <div class="stat-value">{{ $pendingTxnCount }}</div>
         <div class="stat-help">Needs verification attention</div>
     </div>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card panel-card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
             <div class="fw-bold text-dark">Create Manual Payment Attempt (No Live Charging)</div>
@@ -241,8 +246,8 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
+<div class="card panel-card shadow-sm mb-4">
+    <div class="card-body filters-bar">
         <div class="section-heading mb-3">
             <div>
                 <h5 class="mb-1">Search and Filter</h5>
@@ -260,7 +265,7 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card panel-card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span>Payments</span>
         <span class="badge text-bg-light border">{{ $paymentRows->count() }} rows</span>
@@ -308,7 +313,7 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card panel-card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span>Transactions</span>
         <span class="badge text-bg-light border">{{ $transactionRows->count() }} rows</span>
@@ -336,7 +341,7 @@
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card panel-card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span>Reconciliation</span>
         <span class="badge text-bg-light border">{{ $reconciliationRows->count() }} rows</span>
@@ -362,5 +367,6 @@
             </table>
         </div>
     </div>
+</div>
 </div>
 @endsection

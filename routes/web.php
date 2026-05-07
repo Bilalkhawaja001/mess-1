@@ -327,11 +327,13 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
     });
     Route::middleware('permission:complaint.view_own')->group(function () {
         Route::get('/complaints', [MemberComplaintController::class, 'index'])->name('complaints.index');
-        Route::get('/complaints/{complaint}', [MemberComplaintController::class, 'show'])->name('complaints.show');
     });
     Route::middleware('permission:complaint.submit_own')->group(function () {
         Route::get('/complaints/create', [MemberComplaintController::class, 'create'])->name('complaints.create');
         Route::post('/complaints', [MemberComplaintController::class, 'store'])->name('complaints.store');
+    });
+    Route::middleware('permission:complaint.view_own')->group(function () {
+        Route::get('/complaints/{complaint}', [MemberComplaintController::class, 'show'])->name('complaints.show');
     });
     Route::middleware('permission:menu.view')->group(function () {
         Route::get('/menu', [MemberMenuController::class, 'index'])->name('menu.index');

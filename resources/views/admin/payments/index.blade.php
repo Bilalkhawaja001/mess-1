@@ -8,20 +8,10 @@
     $paymentRows = $rows ?? collect();
     $transactionRows = $txns ?? collect();
     $reconciliationRows = $reconciliations ?? collect();
+    $billingMonths = $billingMonths ?? collect();
     $manualPaymentTimestamp = now()->format('YmdHis');
     $manualPaymentRandom = str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
     $manualPaymentIdempotencyKey = 'MANPAY-' . $manualPaymentTimestamp . '-' . $manualPaymentRandom;
-    $paymentTotalAmount = $paymentRows->sum(function ($row) {
-        return (float) ($row->amount ?? 0);
-    });
-    $successLikeStatuses = ['SUCCESS', 'RECONCILED', \App\Models\Payment::STATUS_APPROVED];
-    $successLikeCount = $paymentRows->filter(function ($row) use ($successLikeStatuses) {
-        return in_array($row->status, $successLikeStatuses, true)
-            || $row->status === \App\Models\Payment::STATUS_RECONCILIATION_PENDING;
-    })->count();
-    $pendingTxnCount = $transactionRows->filter(function ($txn) {
-        return !in_array($txn->status, ['SUCCESS', 'FAILED'], true);
-    })->count();
     $openReconciliationCount = $reconciliationRows->where('status', '!=', 'RECONCILED')->count();
 @endphp
 
@@ -430,36 +420,36 @@
         </div>
         <div class="payments-hero-side">
             <div class="payments-highlight-card">
-                <div class="payments-highlight-label">Payments</div>
-                <div class="payments-highlight-value">PKR {{ number_format($paymentTotalAmount, 2) }}</div>
+                <div class="payments-highlight-label">Cycle</div>
+                <div class="payments-highlight-value">{{ $selectedMonthCycle ?: 'All' }}</div>
             </div>
         </div>
     </section>
 
     <section class="payments-kpi-grid">
         <article class="payments-kpi-card">
-            <div class="payments-kpi-icon"><i class="bi bi-wallet2"></i></div>
-            <div class="payments-kpi-label">Payments</div>
-            <div class="payments-kpi-value">{{ $paymentRows->count() }}</div>
-            <div class="payments-kpi-help">Visible filtered records</div>
+            <div class="payments-kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
+            <div class="payments-kpi-label">Posted Bills</div>
+            <div class="payments-kpi-value">{{ number_format((float) $postedBillAmount, 2) }}</div>
+            <div class="payments-kpi-help">{{ $postedBillCount }} bill rows in cycle</div>
         </article>
         <article class="payments-kpi-card kpi-success">
             <div class="payments-kpi-icon"><i class="bi bi-cash-coin"></i></div>
-            <div class="payments-kpi-label">Total Amount</div>
-            <div class="payments-kpi-value">{{ number_format($paymentTotalAmount, 2) }}</div>
-            <div class="payments-kpi-help">Visible payment amount sum</div>
+            <div class="payments-kpi-label">Payment Received</div>
+            <div class="payments-kpi-value">{{ number_format((float) $receivedPaymentAmount, 2) }}</div>
+            <div class="payments-kpi-help">{{ $receivedPaymentCount }} approved / success payments</div>
         </article>
         <article class="payments-kpi-card kpi-info">
-            <div class="payments-kpi-icon"><i class="bi bi-patch-check"></i></div>
-            <div class="payments-kpi-label">Approved / Success</div>
-            <div class="payments-kpi-value">{{ $successLikeCount }}</div>
-            <div class="payments-kpi-help">Includes reconciliation pending display state</div>
+            <div class="payments-kpi-icon"><i class="bi bi-hourglass-bottom"></i></div>
+            <div class="payments-kpi-label">Pending Balance</div>
+            <div class="payments-kpi-value">{{ number_format((float) $pendingBalanceAmount, 2) }}</div>
+            <div class="payments-kpi-help">Posted bills minus received payments</div>
         </article>
         <article class="payments-kpi-card kpi-warning">
-            <div class="payments-kpi-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div class="payments-kpi-icon"><i class="bi bi-patch-exclamation"></i></div>
             <div class="payments-kpi-label">Pending Transactions</div>
-            <div class="payments-kpi-value">{{ $pendingTxnCount }}</div>
-            <div class="payments-kpi-help">Needs verification attention</div>
+            <div class="payments-kpi-value">{{ $pendingTransactionCount }}</div>
+            <div class="payments-kpi-help">{{ number_format((float) $pendingTransactionAmount, 2) }} awaiting verification</div>
         </article>
     </section>
 
@@ -652,11 +642,20 @@
                 <span class="payments-chip">Filter set</span>
             </div>
             <form method="GET" class="row g-3 align-items-end payments-filter-row">
-                <div class="col-xl-2 col-md-4"><input name="member_id" value="{{ request('member_id') }}" class="form-control" placeholder="Member ID"></div>
-                <div class="col-xl-2 col-md-4"><input name="bill_id" value="{{ request('bill_id') }}" class="form-control" placeholder="Bill ID"></div>
-                <div class="col-xl-2 col-md-4"><input name="status" value="{{ request('status') }}" class="form-control" placeholder="Status"></div>
-                <div class="col-xl-2 col-md-4"><input name="method" value="{{ request('method') }}" class="form-control" placeholder="Method"></div>
-                <div class="col-xl-2 col-md-4"><input name="ref" value="{{ request('ref') }}" class="form-control" placeholder="Ref"></div>
+                <div class="col-xl-2 col-md-4">
+                    <label class="form-label">Cycle</label>
+                    <select name="month_cycle" class="form-select">
+                        <option value="">Latest / Current</option>
+                        @foreach($billingMonths as $month)
+                            <option value="{{ $month }}" @selected($selectedMonthCycle === $month)>{{ $month }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-xl-2 col-md-4"><label class="form-label">Member</label><input name="member_id" value="{{ request('member_id') }}" class="form-control" placeholder="Member ID"></div>
+                <div class="col-xl-2 col-md-4"><label class="form-label">Bill</label><input name="bill_id" value="{{ request('bill_id') }}" class="form-control" placeholder="Bill ID"></div>
+                <div class="col-xl-2 col-md-4"><label class="form-label">Status</label><input name="status" value="{{ request('status') }}" class="form-control" placeholder="Status"></div>
+                <div class="col-xl-2 col-md-4"><label class="form-label">Method</label><input name="method" value="{{ request('method') }}" class="form-control" placeholder="Method"></div>
+                <div class="col-xl-2 col-md-4"><label class="form-label">Ref</label><input name="ref" value="{{ request('ref') }}" class="form-control" placeholder="Ref"></div>
                 <div class="col-xl-2 col-md-4 d-grid"><button class="btn btn-outline-primary">Apply</button></div>
             </form>
         </div>

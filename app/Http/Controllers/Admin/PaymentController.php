@@ -51,12 +51,67 @@ class PaymentController extends Controller
             });
         }
 
+        $selectedMonthCycle = (string) $request->input('month_cycle', '');
+        if ($selectedMonthCycle === '') {
+            $selectedMonthCycle = (string) (Billing::query()->max('month_cycle') ?? '');
+        }
+
+        $billingSummaryQuery = Billing::query();
+        if ($selectedMonthCycle !== '') {
+            $billingSummaryQuery->where('month_cycle', $selectedMonthCycle);
+        }
+
+        $postedBillAmount = (float) $billingSummaryQuery->sum('net_payable');
+        $postedBillCount = (clone $billingSummaryQuery)->count();
+
+        $successfulPaymentStatuses = [
+            Payment::STATUS_APPROVED,
+            Payment::STATUS_SUCCESS,
+            Payment::STATUS_RECONCILIATION_PENDING,
+            Payment::STATUS_RECONCILED,
+        ];
+
+        $receivedPaymentsQuery = Payment::query()
+            ->whereIn('status', $successfulPaymentStatuses)
+            ->whereNotNull('bill_id');
+
+        if ($selectedMonthCycle !== '') {
+            $receivedPaymentsQuery->whereHas('bill', function ($query) use ($selectedMonthCycle) {
+                $query->where('month_cycle', $selectedMonthCycle);
+            });
+        }
+
+        $receivedPaymentAmount = (float) $receivedPaymentsQuery->sum('amount');
+        $receivedPaymentCount = (clone $receivedPaymentsQuery)->count();
+
+        $pendingTransactionsQuery = PaymentTransaction::query()
+            ->whereNotIn('status', [Payment::STATUS_SUCCESS, Payment::STATUS_FAILED]);
+
+        if ($selectedMonthCycle !== '') {
+            $pendingTransactionsQuery->whereHas('payment.bill', function ($query) use ($selectedMonthCycle) {
+                $query->where('month_cycle', $selectedMonthCycle);
+            });
+        }
+
+        $pendingTransactionCount = (clone $pendingTransactionsQuery)->count();
+        $pendingTransactionAmount = (float) $pendingTransactionsQuery->sum('amount');
+        $pendingBalanceAmount = max(round($postedBillAmount - $receivedPaymentAmount, 2), 0);
+
         return view('admin.payments.index', [
             'members' => $members,
             'methods' => $methods,
             'rows' => $rows->limit(300)->get(),
             'txns' => PaymentTransaction::query()->latest('id')->limit(200)->get(),
             'reconciliations' => PaymentReconciliation::query()->latest('id')->limit(200)->get(),
+            'selectedMonthCycle' => $selectedMonthCycle,
+            'billingMonths' => Billing::query()->select('month_cycle')->distinct()->orderByDesc('month_cycle')->pluck('month_cycle'),
+            'postedBillAmount' => $postedBillAmount,
+            'postedBillCount' => $postedBillCount,
+            'receivedPaymentAmount' => $receivedPaymentAmount,
+            'receivedPaymentCount' => $receivedPaymentCount,
+            'pendingTransactionAmount' => $pendingTransactionAmount,
+            'pendingTransactionCount' => $pendingTransactionCount,
+            'pendingBalanceAmount' => $pendingBalanceAmount,
         ]);
     }
 

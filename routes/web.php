@@ -34,6 +34,7 @@ use App\Http\Controllers\Member\ComplaintController as MemberComplaintController
 use App\Http\Controllers\Member\DashboardController as MemberDashboardController;
 use App\Http\Controllers\Member\MenuController as MemberMenuController;
 use App\Http\Controllers\Member\PaymentController as MemberPaymentController;
+use App\Http\Controllers\Member\StatementController as MemberStatementController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -319,6 +320,7 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
     Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
     Route::middleware('permission:payments.view_own')->group(function () {
         Route::get('/payments', [MemberPaymentController::class, 'index'])->name('payments.index');
+        Route::get('/statement', [MemberStatementController::class, 'index'])->name('statement.index');
     });
     Route::middleware('permission:payments.initiate_own')->group(function () {
         Route::post('/payments/initiate', [MemberPaymentController::class, 'initiate'])->name('payments.initiate');

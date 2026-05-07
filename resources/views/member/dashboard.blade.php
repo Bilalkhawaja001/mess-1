@@ -7,7 +7,7 @@
 <div class="hero-panel p-4 mb-4">
     <div class="section-kicker mb-3"><i class="bi bi-person-workspace"></i> Member Workspace</div>
     <h4 class="mb-2 fw-bold">Welcome, {{ $user->name ?? $user->username }}</h4>
-    <p class="text-muted mb-0">Member payment module enabled in architecture mode with the same premium NODESKY surface styling.</p>
+    <p class="text-muted mb-0">Your account view is limited to your own mess profile only.</p>
 </div>
 
 @if($memberProfileMissing)
@@ -16,17 +16,28 @@
 </div>
 @endif
 
-<div class="card shadow-sm">
-    <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-        <div>
-            <h5 class="mb-2">Member payments</h5>
-            <p class="text-muted mb-0">Review your payment history and account billing activity.</p>
-        </div>
-        @if($member)
-            <a class="btn btn-primary" href="{{ route('member.payments.index') }}">My Payments</a>
-        @else
-            <span class="btn btn-outline-secondary disabled">My Payments</span>
-        @endif
+@if($member)
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <div class="text-muted small mb-1">Total Outstanding Amount</div>
+        <div class="fs-2 fw-bold">{{ number_format($outstandingAmount, 2) }}</div>
+        <div class="text-muted">{{ $member->member_code }} - {{ $member->name }} @if(!empty($member->department_name)) - {{ $member->department_name }} @endif</div>
+    </div>
+</div>
+@endif
+
+<div class="row g-3">
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">My Statement</h5><p class="text-muted mb-0">View your own ledger only.</p>@if($member)<a class="btn btn-primary mt-auto" href="{{ route('member.statement.index') }}">Open Statement</a>@else<span class="btn btn-outline-secondary disabled mt-auto">Open Statement</span>@endif</div></div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">Menu</h5><p class="text-muted mb-0">Read-only weekly mess menu.</p><a class="btn btn-outline-primary mt-auto" href="{{ route('member.menu.index') }}">View Menu</a></div></div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">Complaint / Suggestion</h5><p class="text-muted mb-0">Submit and track your own requests.</p><a class="btn btn-outline-primary mt-auto" href="{{ route('member.complaints.index') }}">Open Complaints</a></div></div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">My Payments</h5><p class="text-muted mb-0">Existing payment module left untouched.</p>@if($member)<a class="btn btn-outline-primary mt-auto" href="{{ route('member.payments.index') }}">My Payments</a>@else<span class="btn btn-outline-secondary disabled mt-auto">My Payments</span>@endif</div></div>
     </div>
 </div>
 @endsection

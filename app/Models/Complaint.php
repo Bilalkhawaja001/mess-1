@@ -18,6 +18,7 @@ class Complaint extends Model
     public const PRIORITY_HIGH = 'HIGH';
     public const PRIORITY_URGENT = 'URGENT';
 
+    public const STATUS_PENDING = 'PENDING';
     public const STATUS_OPEN = 'OPEN';
     public const STATUS_IN_PROGRESS = 'IN_PROGRESS';
     public const STATUS_RESOLVED = 'RESOLVED';
@@ -25,8 +26,8 @@ class Complaint extends Model
     public const STATUS_REJECTED = 'REJECTED';
 
     protected $fillable = [
-        'complaint_no', 'user_id', 'submitted_by_name', 'submitted_by_contact', 'type', 'category', 'subject',
-        'description', 'priority', 'status', 'assigned_to', 'admin_remarks', 'resolved_at', 'closed_at',
+        'complaint_no', 'user_id', 'member_id', 'submitted_by_name', 'submitted_by_contact', 'type', 'category', 'subject',
+        'description', 'message', 'priority', 'status', 'assigned_to', 'admin_remarks', 'resolved_at', 'closed_at',
     ];
 
     protected $casts = [
@@ -37,6 +38,11 @@ class Complaint extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function member(): BelongsTo
+    {
+        return $this->belongsTo(Member::class);
     }
 
     public function assignee(): BelongsTo

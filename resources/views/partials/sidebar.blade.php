@@ -27,10 +27,11 @@
                     <nav class="nav flex-column gap-1">
                         <a class="nav-link sidebar-link {{ request()->routeIs('member.dashboard') ? 'active' : '' }}" href="{{ route('member.dashboard') }}" title="Member Dashboard"><span class="sidebar-icon-wrap"><i class="bi bi-speedometer2 sidebar-icon"></i></span><span>Member Dashboard</span></a>
                         @if(auth()->user()->hasPermission('payments.view_own') && auth()->user()->hasLinkedMemberProfile())
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.statement.*') ? 'active' : '' }}" href="{{ route('member.statement.index') }}" title="My Statement"><span class="sidebar-icon-wrap"><i class="bi bi-journal-text sidebar-icon"></i></span><span>My Statement</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('member.payments.*') ? 'active' : '' }}" href="{{ route('member.payments.index') }}" title="My Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>My Payments</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('complaint.view_own'))
-                            <a class="nav-link sidebar-link {{ request()->routeIs('member.complaints.*') ? 'active' : '' }}" href="{{ route('member.complaints.index') }}" title="My Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>My Complaints</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.complaints.*') ? 'active' : '' }}" href="{{ route('member.complaints.index') }}" title="My Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>Complaint / Suggestion</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('menu.view'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('member.menu.*') ? 'active' : '' }}" href="{{ route('member.menu.index') }}" title="Menu"><span class="sidebar-icon-wrap"><i class="bi bi-card-list sidebar-icon"></i></span><span>Menu</span></a>

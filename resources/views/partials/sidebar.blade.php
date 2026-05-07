@@ -57,8 +57,7 @@
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.index') }}" title="Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar-check sidebar-icon"></i></span><span>Attendance</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance-monthly.*') ? 'active' : '' }}" href="{{ route('admin.attendance-monthly.index') }}" title="Monthly Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar3 sidebar-icon"></i></span><span>Monthly Attendance</span></a>
                         @endif
-                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.member-profile-change-requests.*') ? 'active' : '' }}" href="{{ route('admin.member-profile-change-requests.index') }}" title="Profile Change Requests"><span class="sidebar-icon-wrap"><i class="bi bi-person-gear sidebar-icon"></i></span><span>Profile Change Requests</span></a>
-                        @endif
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.member-profile-change-requests.*') ? 'active' : '' }}" href="{{ route('admin.member-profile-change-requests.index') }}" title="Profile Change Requests"><span class="sidebar-icon-wrap"><i class="bi bi-person-gear sidebar-icon"></i></span><span>Profile Change Requests</span></a>
                         @if(auth()->user()->hasPermission('guest.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.guests.*') ? 'active' : '' }}" href="{{ route('admin.guests.index') }}" title="Guests"><span class="sidebar-icon-wrap"><i class="bi bi-person-badge sidebar-icon"></i></span><span>Guests</span></a>
                         @endif

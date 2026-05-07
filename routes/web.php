@@ -34,7 +34,9 @@ use App\Http\Controllers\Member\ComplaintController as MemberComplaintController
 use App\Http\Controllers\Member\DashboardController as MemberDashboardController;
 use App\Http\Controllers\Member\MenuController as MemberMenuController;
 use App\Http\Controllers\Member\PaymentController as MemberPaymentController;
+use App\Http\Controllers\Member\ProfileController as MemberProfileController;
 use App\Http\Controllers\Member\StatementController as MemberStatementController;
+use App\Http\Controllers\Admin\MemberProfileChangeRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -233,8 +235,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::middleware('permission:complaint.view_all')->group(function () {
         Route::get('/complaints', [AdminComplaintController::class, 'index'])->name('complaints.index');
         Route::get('/complaints/{complaint}', [AdminComplaintController::class, 'show'])->name('complaints.show');
+        Route::get('/member-profile-change-requests', [MemberProfileChangeRequestController::class, 'index'])->name('member-profile-change-requests.index');
     });
     Route::post('/complaints/{complaint}/status', [AdminComplaintController::class, 'updateStatus'])->middleware('permission:complaint.manage')->name('complaints.status');
+    Route::post('/member-profile-change-requests/{changeRequest}', [MemberProfileChangeRequestController::class, 'update'])->middleware('permission:complaint.manage')->name('member-profile-change-requests.update');
     Route::get('/complaints/export', [AdminComplaintController::class, 'export'])->middleware('permission:complaint.export')->name('complaints.export');
 
     Route::middleware('permission:menu.view')->group(function () {
@@ -321,6 +325,7 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
     Route::middleware('permission:payments.view_own')->group(function () {
         Route::get('/payments', [MemberPaymentController::class, 'index'])->name('payments.index');
         Route::get('/statement', [MemberStatementController::class, 'index'])->name('statement.index');
+        Route::get('/profile', [MemberProfileController::class, 'index'])->name('profile.index');
     });
     Route::middleware('permission:payments.initiate_own')->group(function () {
         Route::post('/payments/initiate', [MemberPaymentController::class, 'initiate'])->name('payments.initiate');
@@ -331,6 +336,7 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
     Route::middleware('permission:complaint.submit_own')->group(function () {
         Route::get('/complaints/create', [MemberComplaintController::class, 'create'])->name('complaints.create');
         Route::post('/complaints', [MemberComplaintController::class, 'store'])->name('complaints.store');
+        Route::post('/profile/change-requests', [MemberProfileController::class, 'storeChangeRequest'])->name('profile.change-requests.store');
     });
     Route::middleware('permission:complaint.view_own')->group(function () {
         Route::get('/complaints/{complaint}', [MemberComplaintController::class, 'show'])->name('complaints.show');

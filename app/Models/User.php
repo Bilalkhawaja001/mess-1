@@ -56,6 +56,11 @@ class User extends Authenticatable
         return $this->hasMany(Complaint::class);
     }
 
+    public function requestedProfileChangeRequests(): HasMany
+    {
+        return $this->hasMany(MemberProfileChangeRequest::class, 'requested_by_user_id');
+    }
+
     public function resolvedMemberProfile(): ?Member
     {
         return $this->linkedMember ?: $this->member;

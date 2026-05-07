@@ -16,28 +16,63 @@
 </div>
 @endif
 
-@if($member)
-<div class="card shadow-sm mb-3">
-    <div class="card-body">
-        <div class="text-muted small mb-1">Total Outstanding Amount</div>
-        <div class="fs-2 fw-bold">{{ number_format($outstandingAmount, 2) }}</div>
-        <div class="text-muted">{{ $member->member_code }} - {{ $member->name }} @if(!empty($member->department_name)) - {{ $member->department_name }} @endif</div>
-    </div>
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Outstanding</div><div class="fs-4 fw-bold">{{ number_format($outstandingAmount, 2) }}</div></div></div></div>
+    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Current Month Bill</div><div class="fs-4 fw-bold">{{ number_format($currentMonthBill, 2) }}</div></div></div></div>
+    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Last Payment</div><div class="fs-6 fw-bold">{{ $lastPayment ? number_format((float) $lastPayment->amount, 2) : '-' }}</div><div class="text-muted small">{{ $lastPayment ? optional($lastPayment->created_at)->format('Y-m-d H:i') : 'No payment yet' }}</div></div></div></div>
+    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Open Complaints</div><div class="fs-4 fw-bold">{{ $openComplaintsCount }}</div></div></div></div>
 </div>
-@endif
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-xl-2"><a class="btn btn-primary w-100" href="{{ route('member.payments.index') }}">Pay</a></div>
+    <div class="col-md-6 col-xl-2"><a class="btn btn-outline-primary w-100" href="{{ route('member.statement.index') }}">My Statement</a></div>
+    <div class="col-md-6 col-xl-2"><a class="btn btn-outline-primary w-100" href="{{ route('member.menu.index') }}">Menu</a></div>
+    <div class="col-md-6 col-xl-3"><a class="btn btn-outline-primary w-100" href="{{ route('member.complaints.index') }}">Complaint / Suggestion</a></div>
+    <div class="col-md-6 col-xl-3"><a class="btn btn-outline-primary w-100" href="{{ route('member.profile.index') }}">My Profile</a></div>
+</div>
 
 <div class="row g-3">
-    <div class="col-md-6 col-xl-3">
-        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">My Statement</h5><p class="text-muted mb-0">View your own ledger only.</p>@if($member)<a class="btn btn-primary mt-auto" href="{{ route('member.statement.index') }}">Open Statement</a>@else<span class="btn btn-outline-secondary disabled mt-auto">Open Statement</span>@endif</div></div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">Recent Ledger Entries</div>
+            <div class="card-body table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Date</th><th>Ref</th><th class="text-end">Balance</th></tr></thead>
+                    <tbody>
+                    @forelse($recentLedgerEntries as $row)
+                        <tr>
+                            <td>{{ optional($row->entry_date)->format('Y-m-d') }}</td>
+                            <td>{{ strtoupper((string) $row->ref_type) }} @if($row->ref_id)#{{ $row->ref_id }}@endif</td>
+                            <td class="text-end">{{ number_format((float) $row->balance_after, 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3" class="text-center text-muted">No ledger entries found.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">Menu</h5><p class="text-muted mb-0">Read-only weekly mess menu.</p><a class="btn btn-outline-primary mt-auto" href="{{ route('member.menu.index') }}">View Menu</a></div></div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">Complaint / Suggestion</h5><p class="text-muted mb-0">Submit and track your own requests.</p><a class="btn btn-outline-primary mt-auto" href="{{ route('member.complaints.index') }}">Open Complaints</a></div></div>
-    </div>
-    <div class="col-md-6 col-xl-3">
-        <div class="card shadow-sm h-100"><div class="card-body d-flex flex-column gap-2"><h5 class="mb-0">My Payments</h5><p class="text-muted mb-0">Existing payment module left untouched.</p>@if($member)<a class="btn btn-outline-primary mt-auto" href="{{ route('member.payments.index') }}">My Payments</a>@else<span class="btn btn-outline-secondary disabled mt-auto">My Payments</span>@endif</div></div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">Recent Complaints / Suggestions</div>
+            <div class="card-body table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                    <tbody>
+                    @forelse($recentComplaints as $row)
+                        <tr>
+                            <td>{{ optional($row->created_at)->format('Y-m-d') }}</td>
+                            <td>{{ $row->subject }}</td>
+                            <td><span class="badge bg-secondary">{{ $row->status }}</span></td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3" class="text-center text-muted">No complaints submitted yet.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 @endsection

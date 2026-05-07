@@ -27,8 +27,9 @@
                     <nav class="nav flex-column gap-1">
                         <a class="nav-link sidebar-link {{ request()->routeIs('member.dashboard') ? 'active' : '' }}" href="{{ route('member.dashboard') }}" title="Member Dashboard"><span class="sidebar-icon-wrap"><i class="bi bi-speedometer2 sidebar-icon"></i></span><span>Member Dashboard</span></a>
                         @if(auth()->user()->hasPermission('payments.view_own') && auth()->user()->hasLinkedMemberProfile())
-                            <a class="nav-link sidebar-link {{ request()->routeIs('member.statement.*') ? 'active' : '' }}" href="{{ route('member.statement.index') }}" title="My Statement"><span class="sidebar-icon-wrap"><i class="bi bi-journal-text sidebar-icon"></i></span><span>My Statement</span></a>
-                            <a class="nav-link sidebar-link {{ request()->routeIs('member.payments.*') ? 'active' : '' }}" href="{{ route('member.payments.index') }}" title="My Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>My Payments</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.payments.*') ? 'active' : '' }}" href="{{ route('member.payments.index') }}" title="Payment"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>Payment</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.statement.*') ? 'active' : '' }}" href="{{ route('member.statement.index') }}" title="Statement"><span class="sidebar-icon-wrap"><i class="bi bi-journal-text sidebar-icon"></i></span><span>Statement</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('member.profile.*') ? 'active' : '' }}" href="{{ route('member.profile.index') }}" title="My Profile"><span class="sidebar-icon-wrap"><i class="bi bi-person-vcard sidebar-icon"></i></span><span>My Profile</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('complaint.view_own'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('member.complaints.*') ? 'active' : '' }}" href="{{ route('member.complaints.index') }}" title="My Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>Complaint / Suggestion</span></a>
@@ -56,8 +57,7 @@
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.index') }}" title="Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar-check sidebar-icon"></i></span><span>Attendance</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance-monthly.*') ? 'active' : '' }}" href="{{ route('admin.attendance-monthly.index') }}" title="Monthly Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar3 sidebar-icon"></i></span><span>Monthly Attendance</span></a>
                         @endif
-                        @if(auth()->user()->hasPermission('complaint.view_all'))
-                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.complaints.*') ? 'active' : '' }}" href="{{ route('admin.complaints.index') }}" title="Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>Complaints</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.member-profile-change-requests.*') ? 'active' : '' }}" href="{{ route('admin.member-profile-change-requests.index') }}" title="Profile Change Requests"><span class="sidebar-icon-wrap"><i class="bi bi-person-gear sidebar-icon"></i></span><span>Profile Change Requests</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('guest.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.guests.*') ? 'active' : '' }}" href="{{ route('admin.guests.index') }}" title="Guests"><span class="sidebar-icon-wrap"><i class="bi bi-person-badge sidebar-icon"></i></span><span>Guests</span></a>

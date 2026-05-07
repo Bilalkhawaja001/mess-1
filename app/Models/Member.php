@@ -98,7 +98,12 @@ class Member extends Model
 
     public function complaints(): HasMany
     {
-        return $this->hasMany(Complaint::class, 'user_id', 'user_id');
+        return $this->hasMany(Complaint::class);
+    }
+
+    public function profileChangeRequests(): HasMany
+    {
+        return $this->hasMany(MemberProfileChangeRequest::class);
     }
 
     public function removalDependencies(): Collection

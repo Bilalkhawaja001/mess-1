@@ -49,6 +49,13 @@
     gap: 1.35rem;
 }
 
+.payments-redesign .payments-compact-label {
+    margin-bottom: .4rem;
+    font-size: .76rem;
+    font-weight: 700;
+    color: #475569;
+}
+
 .payments-redesign .payments-hero {
     position: relative;
     overflow: hidden;
@@ -192,12 +199,12 @@
 .payments-redesign .payments-kpi-card {
     position: relative;
     overflow: hidden;
-    min-height: 188px;
-    padding: 1.2rem 1.2rem 1.1rem;
-    border-radius: 22px;
-    border: 1px solid #e1eaf5;
-    background: #fff;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07);
+    min-height: 168px;
+    padding: 1rem 1.05rem .95rem;
+    border-radius: 20px;
+    border: 1px solid rgba(214, 226, 240, 0.95);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 250, 255, 0.96) 100%);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08), 0 2px 0 rgba(255, 255, 255, 0.75) inset;
 }
 
 .payments-redesign .payments-kpi-card::before {
@@ -206,26 +213,58 @@
     left: 0;
     top: 0;
     width: 100%;
-    height: 5px;
-    background: #2563eb;
+    height: 6px;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
 }
 
-.payments-redesign .payments-kpi-card.kpi-success::before { background: #10b981; }
-.payments-redesign .payments-kpi-card.kpi-info::before { background: #8b5cf6; }
-.payments-redesign .payments-kpi-card.kpi-warning::before { background: #f59e0b; }
+.payments-redesign .payments-kpi-card::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: -22px;
+    width: 110px;
+    height: 110px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 72%);
+    pointer-events: none;
+}
+
+.payments-redesign .payments-kpi-card.kpi-primary {
+    background: linear-gradient(180deg, #ffffff 0%, #edf5ff 100%);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.12), 0 2px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.payments-redesign .payments-kpi-card.kpi-success {
+    background: linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%);
+    box-shadow: 0 14px 28px rgba(16, 185, 129, 0.12), 0 2px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.payments-redesign .payments-kpi-card.kpi-info {
+    background: linear-gradient(180deg, #ffffff 0%, #f4f0ff 100%);
+    box-shadow: 0 14px 28px rgba(139, 92, 246, 0.12), 0 2px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.payments-redesign .payments-kpi-card.kpi-warning {
+    background: linear-gradient(180deg, #ffffff 0%, #fff7e8 100%);
+    box-shadow: 0 14px 28px rgba(245, 158, 11, 0.14), 0 2px 0 rgba(255, 255, 255, 0.85) inset;
+}
+
+.payments-redesign .payments-kpi-card.kpi-success::before { background: linear-gradient(90deg, #10b981, #34d399); }
+.payments-redesign .payments-kpi-card.kpi-info::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.payments-redesign .payments-kpi-card.kpi-warning::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
 
 .payments-redesign .payments-kpi-icon {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 15px;
-    margin-bottom: 1rem;
-    font-size: 1.15rem;
+    border-radius: 14px;
+    margin-bottom: .8rem;
+    font-size: 1.05rem;
     color: #1d4ed8;
     background: linear-gradient(135deg, #eef4ff, #dbeafe);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78), 0 8px 18px rgba(37, 99, 235, .12);
 }
 
 .payments-redesign .payments-kpi-card.kpi-success .payments-kpi-icon {
@@ -253,18 +292,20 @@
 }
 
 .payments-redesign .payments-kpi-value {
-    font-size: clamp(1.85rem, 2vw, 2.2rem);
-    line-height: 1.08;
-    font-weight: 800;
+    font-size: clamp(1.75rem, 1.9vw, 2.05rem);
+    line-height: 1.05;
+    font-weight: 900;
     color: #0f172a;
-    margin-bottom: .45rem;
+    margin-bottom: .35rem;
+    letter-spacing: -.03em;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
     word-break: break-word;
 }
 
 .payments-redesign .payments-kpi-help {
     color: #64748b;
-    font-size: .92rem;
-    line-height: 1.55;
+    font-size: .84rem;
+    line-height: 1.45;
     max-width: 24ch;
 }
 
@@ -319,10 +360,29 @@
 .payments-redesign .payments-filter-row .form-select,
 .payments-redesign .payments-form-grid .form-control,
 .payments-redesign .payments-form-grid .form-select {
-    min-height: 46px;
+    min-height: 42px;
     border-radius: 14px;
     border: 1px solid #dbe3ef;
     box-shadow: none;
+}
+
+.payments-redesign .payments-form-grid .payments-reference-input,
+.payments-redesign .payments-filter-row .payments-reference-input {
+    font-size: 12.5px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.payments-redesign .payments-form-grid .payments-reference-input::placeholder,
+.payments-redesign .payments-filter-row .payments-reference-input::placeholder {
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.payments-redesign .payments-form-grid .payments-reference-col {
+    min-width: 0;
 }
 
 .payments-redesign .payments-filter-row .form-control:focus,
@@ -336,6 +396,27 @@
 .payments-redesign .payments-panel .btn {
     border-radius: 14px;
     font-weight: 700;
+}
+
+.payments-redesign .payments-create-attempt-btn {
+    min-height: 42px;
+    padding: .62rem 1rem;
+    border: 1px solid rgba(29, 78, 216, 0.18);
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
+    color: #fff;
+    font-size: .88rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.payments-redesign .payments-create-attempt-btn:hover,
+.payments-redesign .payments-create-attempt-btn:focus {
+    color: #fff;
+    transform: translateY(-1px);
+    filter: saturate(1.05);
+    box-shadow: 0 16px 28px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .payments-redesign .payments-table-wrap {
@@ -427,7 +508,7 @@
     </section>
 
     <section class="payments-kpi-grid">
-        <article class="payments-kpi-card">
+        <article class="payments-kpi-card kpi-primary">
             <div class="payments-kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
             <div class="payments-kpi-label">Posted Bills</div>
             <div class="payments-kpi-value">{{ number_format((float) $postedBillAmount, 2) }}</div>
@@ -491,16 +572,16 @@
                     <label class="form-label">Amount</label>
                     <input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount" required>
                 </div>
-                <div class="col-xl-2 col-md-4">
-                    <label class="form-label">Reference</label>
-                    <input name="reference_no" class="form-control" placeholder="Manual/Bank Ref">
+                <div class="col-xl-2 col-md-4 payments-reference-col">
+                    <label class="form-label payments-compact-label">Reference No.</label>
+                    <input name="reference_no" class="form-control payments-reference-input" placeholder="Manual-Bank Ref" autocomplete="off">
                 </div>
                 <div class="col-xl-4 col-md-6">
                     <label class="form-label">Idempotency Key</label>
                     <input name="idempotency_key" class="form-control" value="{{ $manualPaymentIdempotencyKey }}" readonly>
                 </div>
                 <div class="col-xl-2 col-md-3 d-grid">
-                    <button class="btn btn-primary">Create Attempt</button>
+                    <button class="btn payments-create-attempt-btn">Create Attempt</button>
                 </div>
             </form>
             <script>
@@ -655,7 +736,7 @@
                 <div class="col-xl-2 col-md-4"><label class="form-label">Bill</label><input name="bill_id" value="{{ request('bill_id') }}" class="form-control" placeholder="Bill ID"></div>
                 <div class="col-xl-2 col-md-4"><label class="form-label">Status</label><input name="status" value="{{ request('status') }}" class="form-control" placeholder="Status"></div>
                 <div class="col-xl-2 col-md-4"><label class="form-label">Method</label><input name="method" value="{{ request('method') }}" class="form-control" placeholder="Method"></div>
-                <div class="col-xl-2 col-md-4"><label class="form-label">Ref</label><input name="ref" value="{{ request('ref') }}" class="form-control" placeholder="Ref"></div>
+                <div class="col-xl-2 col-md-4 payments-reference-col"><label class="form-label payments-compact-label">Ref</label><input name="ref" value="{{ request('ref') }}" class="form-control payments-reference-input" placeholder="Reference"></div>
                 <div class="col-xl-2 col-md-4 d-grid"><button class="btn btn-outline-primary">Apply</button></div>
             </form>
         </div>

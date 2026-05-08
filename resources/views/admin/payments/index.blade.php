@@ -46,13 +46,18 @@
 .payments-redesign {
     display: flex;
     flex-direction: column;
-    gap: 1.1rem;
+    gap: .9rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
-.payments-redesign .payments-compact-label {
-    margin-bottom: .4rem;
-    font-size: .76rem;
+.payments-redesign .payments-compact-label,
+.payments-redesign .form-label {
+    margin-bottom: .28rem;
+    font-size: .72rem;
     font-weight: 700;
+    line-height: 1.2;
     color: #475569;
 }
 
@@ -60,14 +65,14 @@
     position: relative;
     overflow: visible;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
     align-items: center;
-    gap: 1rem;
-    padding: 1.1rem 1.2rem;
-    border-radius: 22px;
+    gap: .8rem;
+    padding: .9rem 1rem;
+    border-radius: 18px;
     border: 1px solid #dbe7f5;
     background: linear-gradient(135deg, #ffffff 0%, #f6faff 58%, #eaf3ff 100%);
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.07);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .payments-redesign .payments-hero::after {
@@ -161,13 +166,13 @@
 
 .payments-redesign .payments-highlight-card {
     width: 100%;
-    max-width: 248px;
+    max-width: 220px;
     align-self: center;
-    padding: .9rem 1rem .85rem;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, .92);
+    padding: .72rem .85rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .94);
     border: 1px solid #dbe7f5;
-    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.08);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.06);
 }
 
 .payments-redesign .payments-highlight-label {
@@ -198,18 +203,18 @@
 .payments-redesign .payments-kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
+    gap: .75rem;
 }
 
 .payments-redesign .payments-kpi-card {
     position: relative;
     overflow: hidden;
-    min-height: 168px;
-    padding: 1rem 1.05rem .95rem;
-    border-radius: 20px;
+    min-height: 146px;
+    padding: .88rem .9rem .82rem;
+    border-radius: 16px;
     border: 1px solid rgba(214, 226, 240, 0.95);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 250, 255, 0.96) 100%);
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08), 0 2px 0 rgba(255, 255, 255, 0.75) inset;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
 }
 
 .payments-redesign .payments-kpi-card::before {
@@ -259,17 +264,17 @@
 .payments-redesign .payments-kpi-card.kpi-warning::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
 
 .payments-redesign .payments-kpi-icon {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
-    margin-bottom: .8rem;
-    font-size: 1.05rem;
+    border-radius: 12px;
+    margin-bottom: .62rem;
+    font-size: .95rem;
     color: #1d4ed8;
     background: linear-gradient(135deg, #eef4ff, #dbeafe);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78), 0 8px 18px rgba(37, 99, 235, .12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78), 0 5px 12px rgba(37, 99, 235, .1);
 }
 
 .payments-redesign .payments-kpi-card.kpi-success .payments-kpi-icon {
@@ -288,20 +293,20 @@
 }
 
 .payments-redesign .payments-kpi-label {
-    font-size: .76rem;
+    font-size: .7rem;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: .08em;
     font-weight: 800;
-    margin-bottom: .65rem;
+    margin-bottom: .45rem;
 }
 
 .payments-redesign .payments-kpi-value {
-    font-size: clamp(1.75rem, 1.9vw, 2.05rem);
-    line-height: 1.05;
+    font-size: clamp(1.45rem, 1.7vw, 1.8rem);
+    line-height: 1.02;
     font-weight: 900;
     color: #0f172a;
-    margin-bottom: .35rem;
+    margin-bottom: .22rem;
     letter-spacing: -.03em;
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
     word-break: break-word;
@@ -309,66 +314,82 @@
 
 .payments-redesign .payments-kpi-help {
     color: #64748b;
-    font-size: .84rem;
-    line-height: 1.45;
+    font-size: .78rem;
+    line-height: 1.35;
     max-width: 24ch;
 }
 
 .payments-redesign .payments-panel {
     border: 1px solid #e2e8f0;
-    border-radius: 24px;
+    border-radius: 16px;
     background: #fff;
-    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
     overflow: hidden;
+    max-width: 100%;
 }
 
 .payments-redesign .payments-panel-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: .75rem;
-    padding: 1.1rem 1.3rem;
+    gap: .6rem;
+    padding: .75rem .9rem;
     border-bottom: 1px solid #edf2f7;
 }
 
 .payments-redesign .payments-panel-title {
-    font-size: 1rem;
+    font-size: .95rem;
     font-weight: 800;
     color: #0f172a;
+    line-height: 1.15;
 }
 
 .payments-redesign .payments-panel-subtitle {
     color: #64748b;
-    font-size: .9rem;
-    margin-top: .2rem;
+    font-size: .82rem;
+    margin-top: .1rem;
 }
 
 .payments-redesign .payments-chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 36px;
-    padding: .45rem .8rem;
+    min-height: 28px;
+    padding: .3rem .62rem;
     border-radius: 999px;
     border: 1px solid #dce6f2;
     background: #f8fbff;
     color: #334155;
-    font-size: .8rem;
+    font-size: .72rem;
     font-weight: 800;
 }
 
 .payments-redesign .payments-panel-body {
-    padding: 1.25rem 1.3rem 1.35rem;
+    padding: .85rem .9rem .95rem;
 }
 
 .payments-redesign .payments-filter-row .form-control,
 .payments-redesign .payments-filter-row .form-select,
 .payments-redesign .payments-form-grid .form-control,
 .payments-redesign .payments-form-grid .form-select {
-    min-height: 42px;
-    border-radius: 14px;
+    min-height: 35px;
+    height: 35px;
+    padding: .38rem .68rem;
+    font-size: 12.5px;
+    border-radius: 10px;
     border: 1px solid #dbe3ef;
     box-shadow: none;
+}
+
+.payments-redesign .payments-form-grid small {
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+.payments-redesign .payments-form-grid .row,
+.payments-redesign .payments-filter-row.row {
+    --bs-gutter-x: .65rem;
+    --bs-gutter-y: .65rem;
 }
 
 .payments-redesign .payments-form-grid .payments-reference-input,
@@ -399,20 +420,24 @@
 }
 
 .payments-redesign .payments-panel .btn {
-    border-radius: 14px;
+    border-radius: 10px;
     font-weight: 700;
+    min-height: 34px;
+    padding: .36rem .7rem;
+    font-size: 12px;
 }
 
 .payments-redesign .payments-create-attempt-btn {
-    min-height: 42px;
-    padding: .62rem 1rem;
+    min-height: 35px;
+    height: 35px;
+    padding: .36rem .78rem;
     border: 1px solid rgba(29, 78, 216, 0.18);
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
     color: #fff;
-    font-size: .88rem;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: .01em;
-    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.24);
     transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
 }
 
@@ -426,31 +451,54 @@
 
 .payments-redesign .payments-table-wrap {
     overflow: hidden;
+    max-width: 100%;
 }
 
 .payments-redesign .payments-table-wrap .table-responsive {
     border-top: 1px solid #edf2f7;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .payments-redesign .payments-table-wrap .table {
     margin-bottom: 0;
+    width: 100%;
+    font-size: 13px;
 }
 
 .payments-redesign .payments-table-wrap .table thead th {
     background: #f8fbff;
     color: #64748b;
     text-transform: uppercase;
-    font-size: .73rem;
+    font-size: 11px;
     letter-spacing: .08em;
     font-weight: 800;
     border-bottom: 1px solid #e5edf7;
-    padding: .95rem 1rem;
+    padding: 8px 10px;
+    white-space: nowrap;
 }
 
 .payments-redesign .payments-table-wrap .table tbody td {
-    padding: .95rem 1rem;
+    padding: 8px 10px;
     vertical-align: middle;
     border-color: #edf2f7;
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.payments-redesign .payments-table-wrap .table tbody td .btn {
+    min-height: 30px;
+    padding: .26rem .58rem;
+    font-size: 11.5px;
+}
+
+.payments-redesign .payments-table-wrap .table td:nth-child(4),
+.payments-redesign .payments-table-wrap .table th:nth-child(4),
+.payments-redesign .payments-table-wrap .table td:nth-child(5),
+.payments-redesign .payments-table-wrap .table th:nth-child(5),
+.payments-redesign .payments-table-wrap .table td:nth-child(7),
+.payments-redesign .payments-table-wrap .table th:nth-child(7) {
+    white-space: nowrap;
 }
 
 .payments-redesign .payments-table-wrap .table tbody tr:hover {
@@ -556,7 +604,7 @@
             <span class="payments-chip">Manual intake</span>
         </div>
         <div class="payments-panel-body">
-            <form method="POST" action="{{ route('admin.payments.store') }}" class="row g-3 js-auto-bill-lookup payments-form-grid" data-lookup-url="{{ route('admin.payments.member-bill-lookup') }}">
+            <form method="POST" action="{{ route('admin.payments.store') }}" class="row g-2 js-auto-bill-lookup payments-form-grid" data-lookup-url="{{ route('admin.payments.member-bill-lookup') }}">
                 @csrf
                 <div class="col-xl-2 col-md-4 position-relative">
                     <label class="form-label">Member Lookup</label>
@@ -590,11 +638,11 @@
                     <label class="form-label payments-compact-label">Reference No.</label>
                     <input name="reference_no" class="form-control payments-reference-input" placeholder="Manual-Bank Ref" autocomplete="off">
                 </div>
-                <div class="col-xl-4 col-md-6">
-                    <label class="form-label">Idempotency Key</label>
+                <div class="col-xl-3 col-md-6">
+                    <label class="form-label payments-compact-label">Idempotency Key</label>
                     <input name="idempotency_key" class="form-control" value="{{ $manualPaymentIdempotencyKey }}" readonly>
                 </div>
-                <div class="col-xl-2 col-md-3 d-grid">
+                <div class="col-xl-2 col-md-3 d-grid align-self-end">
                     <button class="btn payments-create-attempt-btn">Create Attempt</button>
                 </div>
             </form>

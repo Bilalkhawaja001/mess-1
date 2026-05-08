@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Services\Payments\PaymentReconciliationService;
 
 class JazzCashController extends Controller
 {
@@ -86,6 +87,10 @@ class JazzCashController extends Controller
             $payment->reference_no = $rrn ?: $txnRef;
             $payment->approved_at = $status === Payment::STATUS_SUCCESS ? now() : null;
             $payment->save();
+
+            if ($status === Payment::STATUS_SUCCESS && $txn && ! $payment->reconciliations()->exists()) {
+                app(PaymentReconciliationService::class)->createPending($payment->fresh(), $txn);
+            }
         });
 
         return redirect()->route('member.payments.index')
@@ -180,6 +185,10 @@ class JazzCashController extends Controller
             $payment->reference_no = $rrn ?: $txnRef;
             $payment->approved_at = $status === Payment::STATUS_SUCCESS ? now() : null;
             $payment->save();
+
+            if ($status === Payment::STATUS_SUCCESS && $txn && ! $payment->reconciliations()->exists()) {
+                app(PaymentReconciliationService::class)->createPending($payment->fresh(), $txn);
+            }
         });
 
         return [
@@ -262,6 +271,10 @@ class JazzCashController extends Controller
                     $payment->approved_at = $updatedStatus === Payment::STATUS_SUCCESS ? now() : null;
                     $payment->last_transaction_id = $txn->id;
                     $payment->save();
+
+                    if ($updatedStatus === Payment::STATUS_SUCCESS && ! $payment->reconciliations()->exists()) {
+                        app(PaymentReconciliationService::class)->createPending($payment->fresh(), $txn);
+                    }
                 });
             }
         }

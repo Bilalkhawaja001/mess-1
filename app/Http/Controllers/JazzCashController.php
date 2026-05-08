@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class JazzCashController extends Controller
 {
@@ -188,6 +189,101 @@ class JazzCashController extends Controller
             'status' => $status,
             'http_status' => 200,
         ];
+    }
+
+
+    public function statusInquiry(Payment $payment): \Illuminate\Http\JsonResponse
+    {
+        $txn = PaymentTransaction::query()
+            ->where('payment_id', $payment->id)
+            ->latest('id')
+            ->first();
+
+        if (! $txn || ! $txn->merchant_ref) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No JazzCash transaction reference found for this payment.',
+                'payment_id' => $payment->id,
+            ], 422);
+        }
+
+        $payload = [
+            'pp_TxnRefNo' => $txn->merchant_ref,
+            'pp_MerchantID' => env('JAZZCASH_MERCHANT_ID'),
+            'pp_Password' => env('JAZZCASH_PASSWORD'),
+        ];
+
+        $hashData = $payload;
+        ksort($hashData);
+
+        $salt = env('JAZZCASH_INTEGRITY_SALT');
+        $payload['pp_SecureHash'] = strtoupper(hash_hmac(
+            'sha256',
+            $salt . '&' . implode('&', array_filter($hashData, fn ($v) => $v !== null && $v !== '')),
+            $salt
+        ));
+
+        $url = env('JAZZCASH_STATUS_INQUIRY_URL');
+
+        $response = Http::asJson()
+            ->timeout(30)
+            ->post($url, $payload);
+
+        $responseBody = $response->json() ?? [];
+        $updatedStatus = null;
+
+        if ($response->successful() && (($responseBody['pp_ResponseCode'] ?? null) === '000')) {
+            $paymentStatus = strtolower((string) ($responseBody['pp_Status'] ?? ''));
+            $paymentCode = (string) ($responseBody['pp_PaymentResponseCode'] ?? '');
+
+            if (in_array($paymentStatus, ['paid', 'success', 'successful', 'completed'], true) || $paymentCode === '000') {
+                $updatedStatus = Payment::STATUS_SUCCESS;
+            } elseif ($paymentStatus === 'failed' || ($paymentCode !== '' && $paymentCode !== '000')) {
+                $updatedStatus = Payment::STATUS_FAILED;
+            }
+
+            if ($updatedStatus) {
+                DB::transaction(function () use ($payment, $txn, $updatedStatus, $responseBody) {
+                    $txn->status = $updatedStatus;
+                    $txn->external_ref = $responseBody['pp_RetrievalReferenceNo'] ?? $txn->external_ref;
+                    $txn->failure_reason = $updatedStatus === Payment::STATUS_FAILED
+                        ? ($responseBody['pp_PaymentResponseMessage'] ?? $responseBody['pp_ResponseMessage'] ?? null)
+                        : null;
+                    $txn->raw_response_summary = [
+                        'source' => 'status_inquiry',
+                        'response' => $responseBody,
+                    ];
+                    $txn->completed_at = now();
+                    $txn->verified_at = $updatedStatus === Payment::STATUS_SUCCESS ? now() : null;
+                    $txn->save();
+
+                    $payment->status = $updatedStatus;
+                    $payment->reference_no = $txn->external_ref ?: $payment->reference_no;
+                    $payment->approved_at = $updatedStatus === Payment::STATUS_SUCCESS ? now() : null;
+                    $payment->last_transaction_id = $txn->id;
+                    $payment->save();
+                });
+            }
+        }
+
+        Log::info('JazzCash Status Inquiry Response', [
+            'payment_id' => $payment->id,
+            'transaction_id' => $txn->id,
+            'request' => $payload,
+            'http_status' => $response->status(),
+            'updated_status' => $updatedStatus,
+            'response' => $responseBody ?: $response->body(),
+        ]);
+
+        return response()->json([
+            'ok' => $response->successful(),
+            'payment_id' => $payment->id,
+            'transaction_id' => $txn->id,
+            'http_status' => $response->status(),
+            'updated_status' => $updatedStatus,
+            'request' => $payload,
+            'response' => $responseBody ?: $response->body(),
+        ], $response->successful() ? 200 : 502);
     }
 
 }

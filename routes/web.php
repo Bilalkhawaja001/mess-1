@@ -348,4 +348,5 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
 
 Route::match(['get','post'], '/jazzcash/return', [\App\Http\Controllers\JazzCashController::class, 'return'])->name('jazzcash.return');
 Route::post('/jazzcash/ipn', [\App\Http\Controllers\JazzCashController::class, 'ipn'])->name('jazzcash.ipn');
+Route::post('/jazzcash/payments/{payment}/status-inquiry', [\App\Http\Controllers\JazzCashController::class, 'statusInquiry'])->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN'])->name('jazzcash.status-inquiry');
 

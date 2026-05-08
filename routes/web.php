@@ -345,3 +345,56 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
         Route::get('/menu', [MemberMenuController::class, 'index'])->name('menu.index');
     });
 });
+
+Route::match(['get','post'], '/jazzcash/return', function (\Illuminate\Http\Request $request) {
+    \Illuminate\Support\Facades\Log::info('JazzCash Return Received', $request->all());
+
+    $paymentId = (int) $request->input('ppmpf_1');
+    $responseCode = (string) $request->input('pp_ResponseCode');
+    $responseMessage = (string) $request->input('pp_ResponseMessage');
+    $rrn = $request->input('pp_RetreivalReferenceNo');
+    $txnRef = $request->input('pp_TxnRefNo');
+
+    $payment = \App\Models\Payment::query()->find($paymentId);
+
+    if (! $payment) {
+        return response()->json([
+            'ok' => false,
+            'message' => 'Payment not found',
+            'data' => $request->all(),
+        ], 404);
+    }
+
+    $status = $responseCode === '000'
+        ? \App\Models\Payment::STATUS_SUCCESS
+        : \App\Models\Payment::STATUS_FAILED;
+
+    \Illuminate\Support\Facades\DB::transaction(function () use ($payment, $status, $request, $responseMessage, $rrn, $txnRef) {
+        $txn = \App\Models\PaymentTransaction::query()
+            ->where('payment_id', $payment->id)
+            ->latest('id')
+            ->first();
+
+        if ($txn) {
+            $txn->status = $status;
+            $txn->external_ref = $rrn;
+            $txn->merchant_ref = $txnRef;
+            $txn->failure_reason = $status === \App\Models\Payment::STATUS_FAILED ? $responseMessage : null;
+            $txn->raw_response_summary = $request->all();
+            $txn->completed_at = now();
+            $txn->verified_at = $status === \App\Models\Payment::STATUS_SUCCESS ? now() : null;
+            $txn->save();
+
+            $payment->last_transaction_id = $txn->id;
+        }
+
+        $payment->status = $status;
+        $payment->reference_no = $rrn ?: $txnRef;
+        $payment->approved_at = $status === \App\Models\Payment::STATUS_SUCCESS ? now() : null;
+        $payment->save();
+    });
+
+    return redirect()->route('member.payments.index')
+        ->with($status === \App\Models\Payment::STATUS_SUCCESS ? 'success' : 'warning', $responseMessage ?: 'JazzCash response received.');
+})->name('jazzcash.return');
+

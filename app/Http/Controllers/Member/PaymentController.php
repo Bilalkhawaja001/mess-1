@@ -42,7 +42,7 @@ class PaymentController extends Controller
         return view('member.payments.index', compact('member', 'bills', 'payments', 'methods'));
     }
 
-    public function initiate(Request $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService): RedirectResponse
+    public function initiate(Request $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService): View|RedirectResponse
     {
         $payload = $request->validate([
             'bill_id' => ['required', 'integer', 'exists:billings,id'],
@@ -77,6 +77,60 @@ class PaymentController extends Controller
             'raw_request_summary' => ['source' => 'member.portal'],
             'raw_response_summary' => ['note' => 'Attempt created, awaiting verification/callback.'],
         ], (int) Auth::id());
+
+        $method = PaymentMethod::query()->find((int) $payload['payment_method_id']);
+
+        if ($method && strtoupper((string) $method->code) === 'JAZZCASH') {
+
+            $now = now();
+            $txnDateTime = $now->format('YmdHis');
+            $txnExpiryDateTime = $now->copy()->addDay()->format('YmdHis');
+            $txnRefNo = 'T' . $txnDateTime . $payment->id;
+
+            $jazzcashPayload = [
+                'pp_Version' => '2.0',
+                'pp_TxnType' => '',
+                'pp_IsRegisteredCustomer' => 'No',
+                'pp_TokenizedCardNumber' => '',
+                'pp_CustomerID' => (string) $member->id,
+                'pp_CustomerEmail' => '',
+                'pp_CustomerMobile' => '',
+                'pp_MerchantID' => env('JAZZCASH_MERCHANT_ID'),
+                'pp_Language' => 'EN',
+                'pp_SubMerchantID' => '',
+                'pp_Password' => env('JAZZCASH_PASSWORD'),
+                'pp_TxnRefNo' => $txnRefNo,
+                'pp_Amount' => (string) ((int) round(((float) $payload['amount']) * 100)),
+                'pp_DiscountedAmount' => '',
+                'pp_DiscountBank' => '',
+                'pp_TxnCurrency' => 'PKR',
+                'pp_TxnDateTime' => $txnDateTime,
+                'pp_TxnExpiryDateTime' => $txnExpiryDateTime,
+                'pp_BillReference' => 'BILL' . $bill->id,
+                'pp_Description' => 'Mess Bill Payment',
+                'pp_ReturnURL' => env('JAZZCASH_RETURN_URL'),
+                'ppmpf_1' => (string) $payment->id,
+                'ppmpf_2' => (string) $bill->id,
+                'ppmpf_3' => (string) $member->id,
+                'ppmpf_4' => '',
+                'ppmpf_5' => '',
+            ];
+
+            $salt = env('JAZZCASH_INTEGRITY_SALT');
+            $hashValues = [];
+            foreach ($jazzcashPayload as $value) {
+                if ($value !== null && $value !== '') {
+                    $hashValues[] = $value;
+                }
+            }
+
+            $jazzcashPayload['pp_SecureHash'] = hash_hmac('sha256', $salt . '&' . implode('&', $hashValues), $salt);
+
+            return view('member.payments.jazzcash-redirect', [
+                'postUrl' => 'https://sandbox.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/',
+                'payload' => $jazzcashPayload,
+            ]);
+        }
 
         return back()->with('success', 'Payment attempt initiated successfully. Pending verification.');
     }

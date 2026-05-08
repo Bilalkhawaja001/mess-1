@@ -10,6 +10,11 @@
         font-size: 12px;
     }
 
+    .members-table-wrap {
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
     .members-table thead th {
         padding: 0.7rem 0.75rem;
         font-size: 11px;
@@ -24,25 +29,56 @@
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 160px;
+        vertical-align: middle;
     }
 
-    .members-table tbody td:last-child {
+    .members-status-col {
+        width: 110px;
+        min-width: 110px;
+    }
+
+    .members-actions-col {
+        width: 88px;
+        min-width: 88px;
+    }
+
+    .members-table tbody td.members-status-cell,
+    .members-table tbody td.members-actions-cell {
         overflow: visible;
         text-overflow: clip;
         max-width: none;
     }
 
-    .members-actions {
-        flex-wrap: nowrap;
-        gap: 6px;
+    .members-actions-dropdown {
+        position: relative;
     }
 
-    .members-actions .btn {
+    .members-actions-dropdown .btn {
         min-width: auto;
         padding: 0.3rem 0.55rem;
         font-size: 11px;
         border-radius: 10px;
         white-space: nowrap;
+    }
+
+    .members-actions-dropdown .dropdown-menu {
+        min-width: 11rem;
+        font-size: 12px;
+        z-index: 1080;
+    }
+
+    .members-actions-dropdown .dropdown-item,
+    .members-actions-dropdown .dropdown-item-text {
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .members-actions-dropdown .dropdown-item.text-danger {
+        color: var(--bs-danger) !important;
+    }
+
+    .members-actions-dropdown .dropdown-item.text-warning {
+        color: var(--bs-warning-text-emphasis, #997404) !important;
     }
 
     .members-edit-form .form-control,
@@ -133,7 +169,7 @@
         <table class="table table-sm align-middle members-table">
             <thead>
                 <tr>
-                    <th>Code</th><th>Name</th><th>Department</th><th>Mess</th><th>Mobile</th><th>Join</th><th>Leave</th><th>User</th><th>Status</th><th>Actions</th>
+                    <th>Code</th><th>Name</th><th>Department</th><th>Mess</th><th>Mobile</th><th>Join</th><th>Leave</th><th>User</th><th class="members-status-col">Status</th><th class="members-actions-col text-end">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -147,17 +183,32 @@
                         <td>{{ optional($m->join_date)->format('Y-m-d') }}</td>
                         <td>{{ optional($m->leave_date)->format('Y-m-d') }}</td>
                         <td>{{ $m->user->username ?? '-' }}</td>
-                        <td><span class="badge {{ $m->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $m->is_active ? 'Active' : 'Inactive' }}</span></td>
-                        <td>
-                            <div class="members-actions">
-                                <form method="POST" action="{{ route('admin.members.toggle-active', $m->id) }}">@csrf<button class="btn btn-sm btn-outline-warning">Toggle</button></form>
-                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-member-{{ $m->id }}">Edit</button>
-                                <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
-                                    @csrf
-                                    <button class="btn btn-sm {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'btn-outline-danger' : 'btn-outline-secondary' }}">
-                                        {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Delete' : 'Remove' }}
-                                    </button>
-                                </form>
+                        <td class="members-status-cell"><span class="badge {{ $m->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $m->is_active ? 'Active' : 'Inactive' }}</span></td>
+                        <td class="members-actions-cell text-end">
+                            <div class="dropdown members-actions-dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
+                                    Actions
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <li>
+                                        <form method="POST" action="{{ route('admin.members.toggle-active', $m->id) }}">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item text-warning">Toggle</button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="dropdown-item" data-bs-toggle="collapse" data-bs-target="#edit-member-{{ $m->id }}" aria-expanded="false" aria-controls="edit-member-{{ $m->id }}">Edit</button>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ route('admin.members.remove', $m->id) }}" onsubmit="return confirm(@js($removalMeta[$m->id]['message'] ?? 'Are you sure?'))">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'text-danger' : '' }}">
+                                                {{ ($removalMeta[$m->id]['can_delete'] ?? false) ? 'Delete' : 'Remove' }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
                             </div>
                         </td>
                     </tr>

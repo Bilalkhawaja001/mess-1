@@ -349,6 +349,33 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
 Route::match(['get','post'], '/jazzcash/return', function (\Illuminate\Http\Request $request) {
     \Illuminate\Support\Facades\Log::info('JazzCash Return Received', $request->all());
 
+    $receivedHash = strtoupper((string) $request->input('pp_SecureHash', ''));
+    $hashData = $request->except('pp_SecureHash');
+    ksort($hashData);
+
+    $hashValues = [];
+    foreach ($hashData as $value) {
+        if ($value !== null && $value !== '') {
+            $hashValues[] = $value;
+        }
+    }
+
+    $salt = env('JAZZCASH_INTEGRITY_SALT');
+    $calculatedHash = strtoupper(hash_hmac('sha256', $salt . '&' . implode('&', $hashValues), $salt));
+
+    if (! hash_equals($calculatedHash, $receivedHash)) {
+        \Illuminate\Support\Facades\Log::warning('JazzCash SecureHash mismatch', [
+            'received' => $receivedHash,
+            'calculated' => $calculatedHash,
+            'payload' => $request->all(),
+        ]);
+
+        return response()->json([
+            'ok' => false,
+            'message' => 'Invalid JazzCash secure hash.',
+        ], 400);
+    }
+
     $paymentId = (int) $request->input('ppmpf_1');
     $responseCode = (string) $request->input('pp_ResponseCode');
     $responseMessage = (string) $request->input('pp_ResponseMessage');

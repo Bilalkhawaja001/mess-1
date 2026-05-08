@@ -46,7 +46,7 @@
 .payments-redesign {
     display: flex;
     flex-direction: column;
-    gap: 1.35rem;
+    gap: 1.1rem;
 }
 
 .payments-redesign .payments-compact-label {
@@ -58,26 +58,27 @@
 
 .payments-redesign .payments-hero {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(240px, .7fr);
-    gap: 1.25rem;
-    padding: 1.5rem 1.6rem;
-    border-radius: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.2rem;
+    border-radius: 22px;
     border: 1px solid #dbe7f5;
     background: linear-gradient(135deg, #ffffff 0%, #f6faff 58%, #eaf3ff 100%);
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.07);
 }
 
 .payments-redesign .payments-hero::after {
     content: '';
     position: absolute;
-    right: -48px;
-    bottom: -64px;
-    width: 180px;
-    height: 180px;
+    right: -22px;
+    bottom: -38px;
+    width: 140px;
+    height: 140px;
     border-radius: 999px;
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.14) 0%, rgba(37, 99, 235, 0) 72%);
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, rgba(37, 99, 235, 0) 72%);
     pointer-events: none;
 }
 
@@ -104,8 +105,8 @@
 
 .payments-redesign .payments-hero-title {
     margin: 0;
-    font-size: clamp(1.8rem, 2.2vw, 2.45rem);
-    line-height: 1.12;
+    font-size: clamp(1.55rem, 2vw, 2rem);
+    line-height: 1.08;
     letter-spacing: -.03em;
     font-weight: 800;
     color: #0f172a;
@@ -153,35 +154,39 @@
 
 .payments-redesign .payments-hero-side {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     justify-content: flex-end;
+    min-width: 0;
 }
 
 .payments-redesign .payments-highlight-card {
     width: 100%;
-    max-width: 280px;
+    max-width: 248px;
     align-self: center;
-    padding: 1.1rem 1.1rem 1rem;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, .86);
+    padding: .9rem 1rem .85rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .92);
     border: 1px solid #dbe7f5;
-    box-shadow: 0 16px 32px rgba(37, 99, 235, 0.08);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.08);
 }
 
 .payments-redesign .payments-highlight-label {
     color: #64748b;
-    font-size: .76rem;
+    font-size: .72rem;
     font-weight: 800;
     letter-spacing: .08em;
     text-transform: uppercase;
-    margin-bottom: .55rem;
+    margin-bottom: .4rem;
 }
 
 .payments-redesign .payments-highlight-value {
     color: #0f172a;
-    font-size: 1.55rem;
-    line-height: 1.12;
+    font-size: 1.28rem;
+    line-height: 1.08;
     font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .payments-redesign .payments-highlight-help {
@@ -484,7 +489,16 @@
     }
 
     .payments-redesign .payments-hero {
-        padding: 1.2rem;
+        padding: 1rem;
+        grid-template-columns: 1fr;
+    }
+
+    .payments-redesign .payments-hero-side {
+        justify-content: flex-start;
+    }
+
+    .payments-redesign .payments-highlight-card {
+        max-width: 100%;
     }
 
     .payments-redesign .payments-panel-head {

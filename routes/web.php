@@ -347,4 +347,5 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
 });
 
 Route::match(['get','post'], '/jazzcash/return', [\App\Http\Controllers\JazzCashController::class, 'return'])->name('jazzcash.return');
+Route::post('/jazzcash/ipn', [\App\Http\Controllers\JazzCashController::class, 'ipn'])->name('jazzcash.ipn');
 

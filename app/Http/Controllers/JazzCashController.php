@@ -90,4 +90,104 @@ class JazzCashController extends Controller
         return redirect()->route('member.payments.index')
             ->with($status === Payment::STATUS_SUCCESS ? 'success' : 'warning', $responseMessage ?: 'JazzCash response received.');
     }
+
+    public function ipn(Request $request): \Illuminate\Http\JsonResponse
+    {
+        Log::info('JazzCash IPN Received', $request->all());
+
+        $result = $this->processJazzCashResponse($request);
+
+        return response()->json([
+            'ok' => $result['ok'],
+            'message' => $result['message'],
+            'payment_id' => $result['payment_id'] ?? null,
+            'status' => $result['status'] ?? null,
+        ], $result['http_status']);
+    }
+
+    private function processJazzCashResponse(Request $request): array
+    {
+        $receivedHash = strtoupper((string) $request->input('pp_SecureHash', ''));
+        $hashData = $request->except('pp_SecureHash');
+        ksort($hashData);
+
+        $hashValues = [];
+        foreach ($hashData as $value) {
+            if ($value !== null && $value !== '') {
+                $hashValues[] = $value;
+            }
+        }
+
+        $salt = env('JAZZCASH_INTEGRITY_SALT');
+        $calculatedHash = strtoupper(hash_hmac('sha256', $salt . '&' . implode('&', $hashValues), $salt));
+
+        if (! hash_equals($calculatedHash, $receivedHash)) {
+            Log::warning('JazzCash SecureHash mismatch', [
+                'received' => $receivedHash,
+                'calculated' => $calculatedHash,
+                'payload' => $request->all(),
+            ]);
+
+            return [
+                'ok' => false,
+                'message' => 'Invalid JazzCash secure hash.',
+                'http_status' => 400,
+            ];
+        }
+
+        $paymentId = (int) $request->input('ppmpf_1');
+        $responseCode = (string) $request->input('pp_ResponseCode');
+        $responseMessage = (string) $request->input('pp_ResponseMessage');
+        $rrn = $request->input('pp_RetreivalReferenceNo');
+        $txnRef = $request->input('pp_TxnRefNo');
+
+        $payment = Payment::query()->find($paymentId);
+
+        if (! $payment) {
+            return [
+                'ok' => false,
+                'message' => 'Payment not found.',
+                'payment_id' => $paymentId,
+                'http_status' => 404,
+            ];
+        }
+
+        $status = $responseCode === '000'
+            ? Payment::STATUS_SUCCESS
+            : Payment::STATUS_FAILED;
+
+        DB::transaction(function () use ($payment, $status, $request, $responseMessage, $rrn, $txnRef) {
+            $txn = PaymentTransaction::query()
+                ->where('payment_id', $payment->id)
+                ->latest('id')
+                ->first();
+
+            if ($txn) {
+                $txn->status = $status;
+                $txn->external_ref = $rrn;
+                $txn->merchant_ref = $txnRef;
+                $txn->failure_reason = $status === Payment::STATUS_FAILED ? $responseMessage : null;
+                $txn->raw_response_summary = $request->all();
+                $txn->completed_at = now();
+                $txn->verified_at = $status === Payment::STATUS_SUCCESS ? now() : null;
+                $txn->save();
+
+                $payment->last_transaction_id = $txn->id;
+            }
+
+            $payment->status = $status;
+            $payment->reference_no = $rrn ?: $txnRef;
+            $payment->approved_at = $status === Payment::STATUS_SUCCESS ? now() : null;
+            $payment->save();
+        });
+
+        return [
+            'ok' => true,
+            'message' => $responseMessage ?: 'JazzCash response processed.',
+            'payment_id' => $payment->id,
+            'status' => $status,
+            'http_status' => 200,
+        ];
+    }
+
 }

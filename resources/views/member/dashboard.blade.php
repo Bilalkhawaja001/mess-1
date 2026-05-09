@@ -4,75 +4,126 @@
 @section('page_title', 'Member Dashboard')
 
 @section('content')
-<div class="hero-panel p-4 mb-4">
-    <div class="section-kicker mb-3"><i class="bi bi-person-workspace"></i> Member Workspace</div>
-    <h4 class="mb-2 fw-bold">Welcome, {{ $user->name ?? $user->username }}</h4>
-    <p class="text-muted mb-0">Your account view is limited to your own mess profile only.</p>
-</div>
+@php
+    $displayName = $user->name ?? $user->username;
+    $dueDate = now()->addDays(5);
+    $dueDays = max(1, now()->diffInDays($dueDate, false));
+@endphp
 
-@if($memberProfileMissing)
-<div class="alert alert-warning shadow-sm" role="alert">
-    Your member profile is not linked yet. Please contact admin.
-</div>
-@endif
+<div class="member-dashboard-screen member-dashboard-shell">
+    @if($memberProfileMissing)
+        <div class="alert alert-warning shadow-sm member-alert-card" role="alert">
+            Your member profile is not linked yet. Please contact admin.
+        </div>
+    @endif
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Outstanding</div><div class="fs-4 fw-bold">{{ number_format($outstandingAmount, 2) }}</div></div></div></div>
-    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Current Month Bill</div><div class="fs-4 fw-bold">{{ number_format($currentMonthBill, 2) }}</div></div></div></div>
-    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Last Payment</div><div class="fs-6 fw-bold">{{ $lastPayment ? number_format((float) $lastPayment->amount, 2) : '-' }}</div><div class="text-muted small">{{ $lastPayment ? optional($lastPayment->created_at)->format('Y-m-d H:i') : 'No payment yet' }}</div></div></div></div>
-    <div class="col-md-6 col-xl-3"><div class="card shadow-sm h-100"><div class="card-body"><div class="text-muted small">Open Complaints</div><div class="fs-4 fw-bold">{{ $openComplaintsCount }}</div></div></div></div>
-</div>
+    <section class="member-dashboard-card member-dashboard-balance mb-4">
+        <div class="member-dashboard-balance__mesh"></div>
+        <div class="member-dashboard-balance__glow"></div>
+        <div class="member-dashboard-balance__content">
+            <div class="member-dashboard-balance__top">
+                <div>
+                    <div class="member-dashboard-kicker">Member Dashboard</div>
+                    <h2 class="member-dashboard-title">Welcome back, {{ $displayName }}</h2>
+                </div>
+                <div class="member-dashboard-balance__orb"><i class="bi bi-wallet2"></i></div>
+            </div>
 
-<div class="row g-3 mb-3">
-    <div class="col-md-6 col-xl-2"><a class="btn btn-primary w-100" href="{{ route('member.payments.index') }}">Pay</a></div>
-    <div class="col-md-6 col-xl-2"><a class="btn btn-outline-primary w-100" href="{{ route('member.statement.index') }}">My Statement</a></div>
-    <div class="col-md-6 col-xl-2"><a class="btn btn-outline-primary w-100" href="{{ route('member.menu.index') }}">Menu</a></div>
-    <div class="col-md-6 col-xl-3"><a class="btn btn-outline-primary w-100" href="{{ route('member.complaints.index') }}">Complaint / Suggestion</a></div>
-    <div class="col-md-6 col-xl-3"><a class="btn btn-outline-primary w-100" href="{{ route('member.profile.index') }}">My Profile</a></div>
-</div>
+            <div class="member-dashboard-balance__label">Outstanding Balance</div>
+            <div class="member-dashboard-balance__amount">PKR {{ number_format($outstandingAmount, 2) }}</div>
 
-<div class="row g-3">
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header">Recent Ledger Entries</div>
-            <div class="card-body table-responsive">
-                <table class="table table-sm align-middle mb-0 member-mobile-table">
-                    <thead><tr><th>Date</th><th>Ref</th><th class="text-end">Balance</th></tr></thead>
-                    <tbody>
-                    @forelse($recentLedgerEntries as $row)
-                        <tr>
-                            <td data-label="Date">{{ optional($row->entry_date)->format('Y-m-d') }}</td>
-                            <td data-label="Ref" class="member-mobile-ref">{{ strtoupper((string) $row->ref_type) }} @if($row->ref_id)#{{ $row->ref_id }}@endif</td>
-                            <td data-label="Balance" class="text-end member-mobile-amount">{{ number_format((float) $row->balance_after, 2) }}</td>
-                        </tr>
-                    @empty
-                        <tr><td data-label="Status" colspan="3" class="text-center text-muted member-mobile-wrap">No ledger entries found.</td></tr>
-                    @endforelse
-                    </tbody>
-                </table>
+            <div class="member-dashboard-balance__footer">
+                <div class="member-dashboard-balance__meta">
+                    <span>Due Date</span>
+                    <strong>{{ $dueDate->format('d M Y') }}</strong>
+                </div>
+                <div class="member-dashboard-balance__badge">Due in {{ $dueDays }} days</div>
             </div>
         </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header">Recent Complaints / Suggestions</div>
-            <div class="card-body table-responsive">
-                <table class="table table-sm align-middle mb-0 member-mobile-table">
-                    <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
-                    <tbody>
-                    @forelse($recentComplaints as $row)
-                        <tr>
-                            <td data-label="Date">{{ optional($row->created_at)->format('Y-m-d') }}</td>
-                            <td data-label="Subject" class="member-mobile-wrap">{{ $row->subject }}</td>
-                            <td data-label="Status" class="member-mobile-status"><span class="badge bg-secondary">{{ $row->status }}</span></td>
-                        </tr>
-                    @empty
-                        <tr><td data-label="Status" colspan="3" class="text-center text-muted member-mobile-wrap">No complaints submitted yet.</td></tr>
-                    @endforelse
-                    </tbody>
-                </table>
+    </section>
+
+    <section class="member-dashboard-panel mb-4">
+        <div class="member-dashboard-panel__head">
+            <div>
+                <div class="member-dashboard-section-label">Quick Actions</div>
+                <div class="member-dashboard-section-subtitle">Fast access to your most-used member actions</div>
             </div>
         </div>
-    </div>
+        <div class="member-dashboard-actions">
+            <a class="member-dashboard-action" href="{{ route('member.statement.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-journal-text"></i></span>
+                <span class="member-dashboard-action__label">Statement</span>
+            </a>
+            <a class="member-dashboard-action" href="{{ route('member.payments.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-credit-card-2-front"></i></span>
+                <span class="member-dashboard-action__label">Payment</span>
+            </a>
+            <a class="member-dashboard-action" href="{{ route('member.complaints.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-headset"></i></span>
+                <span class="member-dashboard-action__label">Complaint</span>
+            </a>
+            <a class="member-dashboard-action" href="{{ route('member.profile.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-person"></i></span>
+                <span class="member-dashboard-action__label">Profile</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="member-dashboard-panel mb-4">
+        <div class="member-dashboard-panel__head">
+            <div>
+                <div class="member-dashboard-section-label">Recent Ledger Entries</div>
+                <div class="member-dashboard-section-subtitle">Latest member billing activity</div>
+            </div>
+            <a href="{{ route('member.statement.index') }}" class="member-dashboard-link">View all</a>
+        </div>
+
+        <div class="member-dashboard-ledger-list">
+            @forelse($recentLedgerEntries as $row)
+                @php
+                    $isCredit = (float) $row->balance_after >= 0;
+                    $ledgerRef = strtoupper((string) $row->ref_type) . ($row->ref_id ? ' · REF #' . $row->ref_id : '');
+                @endphp
+                <article class="member-dashboard-ledger-card">
+                    <div class="member-dashboard-ledger-card__icon {{ $isCredit ? 'is-credit' : 'is-debit' }}">
+                        <i class="bi {{ $isCredit ? 'bi-arrow-down-left' : 'bi-arrow-up-right' }}"></i>
+                    </div>
+                    <div class="member-dashboard-ledger-card__body">
+                        <div class="member-dashboard-ledger-card__title">{{ $ledgerRef }}</div>
+                        <div class="member-dashboard-ledger-card__meta">{{ optional($row->entry_date)->format('d M Y') ?: '-' }}</div>
+                    </div>
+                    <div class="member-dashboard-ledger-card__amount {{ $isCredit ? 'is-credit' : 'is-debit' }}">
+                        PKR {{ number_format((float) $row->balance_after, 2) }}
+                    </div>
+                </article>
+            @empty
+                <div class="member-dashboard-empty">No ledger entries found.</div>
+            @endforelse
+        </div>
+    </section>
+
+    <section class="member-dashboard-panel">
+        <div class="member-dashboard-panel__head">
+            <div>
+                <div class="member-dashboard-section-label">Recent Complaints</div>
+                <div class="member-dashboard-section-subtitle">Track your submitted requests</div>
+            </div>
+            <a href="{{ route('member.complaints.index') }}" class="member-dashboard-link">Open</a>
+        </div>
+
+        <div class="member-dashboard-complaints">
+            @forelse($recentComplaints as $row)
+                <article class="member-dashboard-complaint-card">
+                    <div class="member-dashboard-complaint-card__body">
+                        <div class="member-dashboard-ledger-card__title">{{ $row->subject }}</div>
+                        <div class="member-dashboard-ledger-card__meta">{{ optional($row->created_at)->format('d M Y') ?: '-' }}</div>
+                    </div>
+                    <span class="member-dashboard-status">{{ $row->status }}</span>
+                </article>
+            @empty
+                <div class="member-dashboard-empty">No complaints submitted yet.</div>
+            @endforelse
+        </div>
+    </section>
 </div>
 @endsection

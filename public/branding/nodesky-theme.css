@@ -640,6 +640,303 @@ small,
     }
 }
 
+.member-dashboard-shell {
+    display: grid;
+    gap: 18px;
+}
+
+.member-dashboard-card,
+.member-dashboard-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    border: 1px solid rgba(86, 169, 255, .16);
+    background: linear-gradient(180deg, rgba(5, 16, 38, .94) 0%, rgba(5, 20, 48, .90) 100%);
+    box-shadow: 0 18px 48px rgba(2, 10, 30, .30), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.member-dashboard-panel {
+    padding: 18px;
+}
+
+.member-dashboard-balance {
+    min-height: 240px;
+    padding: 22px;
+    background:
+        radial-gradient(circle at 18% 20%, rgba(34, 211, 238, .18), transparent 18%),
+        radial-gradient(circle at 82% 16%, rgba(99, 102, 241, .24), transparent 28%),
+        linear-gradient(135deg, #061733 0%, #08224c 45%, #09183d 100%);
+}
+
+.member-dashboard-balance__mesh {
+    position: absolute;
+    inset: auto -8% 10% auto;
+    width: 200px;
+    height: 110px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(103, 232, 249, .14), rgba(59, 130, 246, 0));
+    filter: blur(8px);
+}
+
+.member-dashboard-balance__glow {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 24px;
+    height: 58px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(34, 211, 238, .85) 0%, rgba(34, 211, 238, .20) 35%, rgba(34, 211, 238, 0) 72%);
+    filter: blur(12px);
+}
+
+.member-dashboard-balance__content {
+    position: relative;
+    z-index: 1;
+}
+
+.member-dashboard-balance__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 26px;
+}
+
+.member-dashboard-kicker {
+    color: rgba(191, 219, 254, .74);
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-weight: 700;
+}
+
+.member-dashboard-title {
+    margin: 8px 0 0;
+    color: #f8fbff;
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+    font-weight: 800;
+}
+
+.member-dashboard-balance__orb {
+    width: 52px;
+    height: 52px;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #c4f1ff;
+    font-size: 1.15rem;
+    background: linear-gradient(135deg, rgba(14, 165, 233, .18), rgba(59, 130, 246, .24));
+    border: 1px solid rgba(103, 232, 249, .22);
+    box-shadow: 0 0 24px rgba(34, 211, 238, .12);
+}
+
+.member-dashboard-balance__label {
+    color: rgba(191, 219, 254, .78);
+    font-size: .76rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-weight: 700;
+}
+
+.member-dashboard-balance__amount {
+    margin-top: 12px;
+    color: #7dd3fc;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    line-height: 1.05;
+    font-weight: 800;
+    text-shadow: 0 0 22px rgba(34, 211, 238, .22);
+}
+
+.member-dashboard-balance__footer {
+    margin-top: 26px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.member-dashboard-balance__meta {
+    display: grid;
+    gap: 6px;
+}
+
+.member-dashboard-balance__meta span {
+    color: rgba(191, 219, 254, .62);
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.member-dashboard-balance__meta strong {
+    color: #fff;
+    font-size: .98rem;
+}
+
+.member-dashboard-balance__badge {
+    padding: 9px 13px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, .18);
+    border: 1px solid rgba(245, 158, 11, .24);
+    color: #fde68a;
+    font-size: .74rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.member-dashboard-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.member-dashboard-section-label {
+    color: #f8fbff;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.member-dashboard-section-subtitle {
+    margin-top: 4px;
+    color: rgba(191, 219, 254, .68);
+    font-size: .78rem;
+}
+
+.member-dashboard-link {
+    color: #67e8f9;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.member-dashboard-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.member-dashboard-action {
+    min-height: 108px;
+    padding: 16px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(86, 169, 255, .14);
+    background: linear-gradient(180deg, rgba(7, 24, 57, .92) 0%, rgba(5, 17, 41, .86) 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #dbeafe;
+    text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.member-dashboard-action__icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #67e8f9;
+    font-size: 1.05rem;
+    background: rgba(13, 148, 255, .12);
+    border: 1px solid rgba(56, 189, 248, .16);
+    box-shadow: 0 0 18px rgba(34, 211, 238, .10);
+}
+
+.member-dashboard-action__label {
+    font-size: .79rem;
+    font-weight: 700;
+}
+
+.member-dashboard-ledger-list,
+.member-dashboard-complaints {
+    display: grid;
+    gap: 12px;
+}
+
+.member-dashboard-ledger-card,
+.member-dashboard-complaint-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(5, 17, 41, .72);
+    border: 1px solid rgba(82, 154, 255, .12);
+}
+
+.member-dashboard-ledger-card__icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #93c5fd;
+    background: rgba(59, 130, 246, .14);
+    border: 1px solid rgba(96, 165, 250, .18);
+}
+
+.member-dashboard-ledger-card__icon.is-credit {
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, .12);
+}
+
+.member-dashboard-ledger-card__body,
+.member-dashboard-complaint-card__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.member-dashboard-ledger-card__title {
+    color: #f8fbff;
+    font-size: .88rem;
+    font-weight: 700;
+}
+
+.member-dashboard-ledger-card__meta {
+    margin-top: 4px;
+    color: rgba(191, 219, 254, .58);
+    font-size: .72rem;
+    overflow-wrap: anywhere;
+}
+
+.member-dashboard-ledger-card__amount {
+    text-align: right;
+    font-size: .88rem;
+    font-weight: 800;
+}
+
+.member-dashboard-ledger-card__amount.is-credit { color: #4ade80; }
+.member-dashboard-ledger-card__amount.is-debit { color: #f87171; }
+
+.member-dashboard-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: rgba(34, 211, 238, .14);
+    border: 1px solid rgba(34, 211, 238, .20);
+    color: #67e8f9;
+    font-size: .73rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.member-dashboard-empty {
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(4, 15, 37, .70);
+    border: 1px dashed rgba(103, 232, 249, .18);
+    color: rgba(191, 219, 254, .72);
+    text-align: center;
+}
+
 @media (max-width: 991.98px) {
     .sidebar {
         position: fixed;
@@ -679,6 +976,53 @@ small,
         min-width: 0;
     }
 }
+
+@media (max-width: 767.98px) {
+    .member-dashboard-shell {
+        gap: 16px;
+    }
+
+    .member-dashboard-balance,
+    .member-dashboard-panel {
+        border-radius: 22px;
+    }
+
+    .member-dashboard-balance {
+        padding: 18px;
+        min-height: 220px;
+    }
+
+    .member-dashboard-title {
+        font-size: 1.05rem;
+    }
+
+    .member-dashboard-balance__amount {
+        font-size: 2.1rem;
+    }
+
+    .member-dashboard-balance__footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .member-dashboard-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .member-dashboard-action {
+        min-height: 96px;
+        padding: 14px 8px;
+    }
+
+    .member-dashboard-ledger-card,
+    .member-dashboard-complaint-card {
+        align-items: flex-start;
+    }
+
+    .member-dashboard-ledger-card__amount {
+        min-width: 92px;
+        font-size: .82rem;
+    }
 
 @media (max-width: 767.98px) {
     .topbar {

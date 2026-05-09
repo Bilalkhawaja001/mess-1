@@ -17,14 +17,14 @@
         </div>
     @endif
 
-    <section class="member-dashboard-card member-dashboard-balance mb-4">
+    <section class="member-dashboard-card member-dashboard-balance mb-3">
         <div class="member-dashboard-balance__mesh"></div>
         <div class="member-dashboard-balance__glow"></div>
         <div class="member-dashboard-balance__content">
             <div class="member-dashboard-balance__top">
                 <div>
                     <div class="member-dashboard-kicker">Member Dashboard</div>
-                    <h2 class="member-dashboard-title">Welcome back, {{ $displayName }}</h2>
+                    <h2 class="member-dashboard-title">{{ $displayName }}</h2>
                 </div>
                 <div class="member-dashboard-balance__orb"><i class="bi bi-wallet2"></i></div>
             </div>
@@ -37,16 +37,15 @@
                     <span>Due Date</span>
                     <strong>{{ $dueDate->format('d M Y') }}</strong>
                 </div>
-                <div class="member-dashboard-balance__badge">Due in {{ $dueDays }} days</div>
+                <div class="member-dashboard-balance__badge">{{ $dueDays }} days left</div>
             </div>
         </div>
     </section>
 
-    <section class="member-dashboard-panel mb-4">
-        <div class="member-dashboard-panel__head">
+    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">
+        <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>
                 <div class="member-dashboard-section-label">Quick Actions</div>
-                <div class="member-dashboard-section-subtitle">Fast access to your most-used member actions</div>
             </div>
         </div>
         <div class="member-dashboard-actions">
@@ -69,11 +68,10 @@
         </div>
     </section>
 
-    <section class="member-dashboard-panel mb-4">
-        <div class="member-dashboard-panel__head">
+    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">
+        <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>
-                <div class="member-dashboard-section-label">Recent Ledger Entries</div>
-                <div class="member-dashboard-section-subtitle">Latest member billing activity</div>
+                <div class="member-dashboard-section-label">Recent Ledger</div>
             </div>
             <a href="{{ route('member.statement.index') }}" class="member-dashboard-link">View all</a>
         </div>
@@ -102,11 +100,10 @@
         </div>
     </section>
 
-    <section class="member-dashboard-panel">
-        <div class="member-dashboard-panel__head">
+    <section class="member-dashboard-panel member-dashboard-panel--compact">
+        <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>
                 <div class="member-dashboard-section-label">Recent Complaints</div>
-                <div class="member-dashboard-section-subtitle">Track your submitted requests</div>
             </div>
             <a href="{{ route('member.complaints.index') }}" class="member-dashboard-link">Open</a>
         </div>

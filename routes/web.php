@@ -32,6 +32,7 @@ use App\Http\Controllers\Auth\MemberRegistrationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Member\ComplaintController as MemberComplaintController;
 use App\Http\Controllers\Member\DashboardController as MemberDashboardController;
+use App\Http\Controllers\Member\DeviceTokenController as MemberDeviceTokenController;
 use App\Http\Controllers\Member\MenuController as MemberMenuController;
 use App\Http\Controllers\Member\PaymentController as MemberPaymentController;
 use App\Http\Controllers\Member\ProfileController as MemberProfileController;
@@ -321,6 +322,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
 });
 
 Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:MEMBER'])->group(function () {
+    Route::post('/device-token', [MemberDeviceTokenController::class, 'store'])->name('device-token.store');
+    Route::delete('/device-token', [MemberDeviceTokenController::class, 'destroy'])->name('device-token.destroy');
     Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
     Route::middleware('permission:payments.view_own')->group(function () {
         Route::get('/payments', [MemberPaymentController::class, 'index'])->name('payments.index');

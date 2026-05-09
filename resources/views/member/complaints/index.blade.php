@@ -4,56 +4,30 @@
 @section('page_title', 'My Complaints / Suggestions')
 
 @section('content')
-<div class="member-module-screen">
-    <div class="d-flex justify-content-end mb-3">
-        <a class="btn btn-primary member-primary-btn" href="{{ route('member.complaints.create') }}">Submit New</a>
-    </div>
-
-    <section class="member-holo-card member-panel-card">
-        <div class="member-panel-card__header">
-            <div>
-                <div class="member-section-title mb-1">Complaints & Suggestions</div>
-                <div class="member-section-subtitle">Track all submitted complaints in compact mobile cards</div>
-            </div>
-        </div>
-        <div class="member-ledger-cards">
+<div class="d-flex justify-content-end mb-3">
+    <a class="btn btn-primary btn-sm" href="{{ route('member.complaints.create') }}">Submit New</a>
+</div>
+<div class="card shadow-sm">
+    <div class="card-body table-responsive">
+        <table class="table table-sm member-mobile-table">
+            <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Subject</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+            <tbody>
             @forelse($rows as $row)
-                <article class="member-holo-card member-data-card">
-                    <div class="member-data-card__row">
-                        <span class="member-data-card__label">Date</span>
-                        <span class="member-data-card__value">{{ optional($row->created_at)->format('Y-m-d H:i') }}</span>
-                    </div>
-                    <div class="member-data-card__row">
-                        <span class="member-data-card__label">Type</span>
-                        <span class="member-data-card__value">{{ str_replace('_', ' ', $row->type) }}</span>
-                    </div>
-                    <div class="member-data-card__row">
-                        <span class="member-data-card__label">Category</span>
-                        <span class="member-data-card__value">{{ str_replace('_', ' ', $row->category ?? '-') }}</span>
-                    </div>
-                    <div class="member-data-card__row align-items-start">
-                        <span class="member-data-card__label">Subject</span>
-                        <span class="member-data-card__value member-data-card__value--wrap">{{ $row->subject }}</span>
-                    </div>
-                    <div class="member-data-card__grid">
-                        <div>
-                            <div class="member-data-card__label">Priority</div>
-                            <div class="member-data-card__value">{{ $row->priority }}</div>
-                        </div>
-                        <div>
-                            <div class="member-data-card__label">Status</div>
-                            <div class="member-status-pill">{{ $row->status }}</div>
-                        </div>
-                    </div>
-                    <a class="btn btn-outline-primary w-100 mt-3" href="{{ route('member.complaints.show', $row) }}">View</a>
-                </article>
+                <tr>
+                    <td data-label="Date">{{ optional($row->created_at)->format('Y-m-d H:i') }}</td>
+                    <td data-label="Type" class="member-mobile-wrap">{{ str_replace('_', ' ', $row->type) }}</td>
+                    <td data-label="Category" class="member-mobile-wrap">{{ str_replace('_', ' ', $row->category ?? '-') }}</td>
+                    <td data-label="Subject" class="member-mobile-wrap">{{ $row->subject }}</td>
+                    <td data-label="Priority" class="member-mobile-wrap">{{ $row->priority }}</td>
+                    <td data-label="Status" class="member-mobile-status">{{ $row->status }}</td>
+                    <td data-label="Action" class="member-mobile-action"><a class="btn btn-sm btn-outline-primary" href="{{ route('member.complaints.show', $row) }}">View</a></td>
+                </tr>
             @empty
-                <div class="member-empty-card">No complaints or suggestions submitted yet.</div>
+                <tr><td data-label="Status" colspan="7" class="text-center text-muted member-mobile-wrap">No complaints or suggestions submitted yet.</td></tr>
             @endforelse
-        </div>
-        <div class="pt-3">
-            {{ $rows->links() }}
-        </div>
-    </section>
+            </tbody>
+        </table>
+        {{ $rows->links() }}
+    </div>
 </div>
 @endsection

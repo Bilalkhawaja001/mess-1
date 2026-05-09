@@ -36,17 +36,17 @@
         <div class="card shadow-sm h-100">
             <div class="card-header">Recent Ledger Entries</div>
             <div class="card-body table-responsive">
-                <table class="table table-sm align-middle mb-0">
+                <table class="table table-sm align-middle mb-0 member-mobile-table">
                     <thead><tr><th>Date</th><th>Ref</th><th class="text-end">Balance</th></tr></thead>
                     <tbody>
                     @forelse($recentLedgerEntries as $row)
                         <tr>
-                            <td>{{ optional($row->entry_date)->format('Y-m-d') }}</td>
-                            <td>{{ strtoupper((string) $row->ref_type) }} @if($row->ref_id)#{{ $row->ref_id }}@endif</td>
-                            <td class="text-end">{{ number_format((float) $row->balance_after, 2) }}</td>
+                            <td data-label="Date">{{ optional($row->entry_date)->format('Y-m-d') }}</td>
+                            <td data-label="Ref" class="member-mobile-ref">{{ strtoupper((string) $row->ref_type) }} @if($row->ref_id)#{{ $row->ref_id }}@endif</td>
+                            <td data-label="Balance" class="text-end member-mobile-amount">{{ number_format((float) $row->balance_after, 2) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted">No ledger entries found.</td></tr>
+                        <tr><td data-label="Status" colspan="3" class="text-center text-muted member-mobile-wrap">No ledger entries found.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -57,17 +57,17 @@
         <div class="card shadow-sm h-100">
             <div class="card-header">Recent Complaints / Suggestions</div>
             <div class="card-body table-responsive">
-                <table class="table table-sm align-middle mb-0">
+                <table class="table table-sm align-middle mb-0 member-mobile-table">
                     <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
                     <tbody>
                     @forelse($recentComplaints as $row)
                         <tr>
-                            <td>{{ optional($row->created_at)->format('Y-m-d') }}</td>
-                            <td>{{ $row->subject }}</td>
-                            <td><span class="badge bg-secondary">{{ $row->status }}</span></td>
+                            <td data-label="Date">{{ optional($row->created_at)->format('Y-m-d') }}</td>
+                            <td data-label="Subject" class="member-mobile-wrap">{{ $row->subject }}</td>
+                            <td data-label="Status" class="member-mobile-status"><span class="badge bg-secondary">{{ $row->status }}</span></td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted">No complaints submitted yet.</td></tr>
+                        <tr><td data-label="Status" colspan="3" class="text-center text-muted member-mobile-wrap">No complaints submitted yet.</td></tr>
                     @endforelse
                     </tbody>
                 </table>

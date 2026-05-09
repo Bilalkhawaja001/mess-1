@@ -49,20 +49,20 @@
 <div class="card shadow-sm">
     <div class="card-header">Recent Change Requests</div>
     <div class="card-body table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm align-middle mb-0 member-mobile-table">
             <thead><tr><th>Date</th><th>Field</th><th>Old Value</th><th>New Value</th><th>Status</th><th>Admin Remarks</th></tr></thead>
             <tbody>
             @forelse($changeRequests as $row)
                 <tr>
-                    <td>{{ optional($row->created_at)->format('Y-m-d H:i') }}</td>
-                    <td>{{ strtoupper($row->field_name) }}</td>
-                    <td>{{ $row->old_value ?: '-' }}</td>
-                    <td>{{ $row->new_value }}</td>
-                    <td><span class="badge {{ $row->status === 'APPROVED' ? 'bg-success' : ($row->status === 'REJECTED' ? 'bg-danger' : 'bg-warning text-dark') }}">{{ $row->status }}</span></td>
-                    <td>{{ $row->admin_remarks ?: '-' }}</td>
+                    <td data-label="Date">{{ optional($row->created_at)->format('Y-m-d H:i') }}</td>
+                    <td data-label="Field">{{ strtoupper($row->field_name) }}</td>
+                    <td data-label="Old Value" class="member-mobile-wrap">{{ $row->old_value ?: '-' }}</td>
+                    <td data-label="New Value" class="member-mobile-wrap">{{ $row->new_value }}</td>
+                    <td data-label="Status" class="member-mobile-status"><span class="badge {{ $row->status === 'APPROVED' ? 'bg-success' : ($row->status === 'REJECTED' ? 'bg-danger' : 'bg-warning text-dark') }}">{{ $row->status }}</span></td>
+                    <td data-label="Admin Remarks" class="member-mobile-wrap">{{ $row->admin_remarks ?: '-' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="text-center text-muted">No change requests found.</td></tr>
+                <tr><td data-label="Status" colspan="6" class="text-center text-muted member-mobile-wrap">No change requests found.</td></tr>
             @endforelse
             </tbody>
         </table>

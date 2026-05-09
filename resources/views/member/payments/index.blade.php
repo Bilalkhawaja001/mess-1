@@ -35,18 +35,18 @@
 <div class="card shadow-sm">
     <div class="card-header">Payment History</div>
     <div class="card-body table-responsive">
-        <table class="table table-sm">
+        <table class="table table-sm member-mobile-table">
             <thead><tr><th>ID</th><th>Bill</th><th>Ref</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th></tr></thead>
             <tbody>
             @foreach($payments as $p)
                 <tr>
-                    <td>{{ $p->id }}</td>
-                    <td>#{{ $p->bill_id ?? '-' }}</td>
-                    <td>{{ $p->payment_ref ?? $p->reference_no ?? '-' }}</td>
-                    <td>{{ number_format((float)$p->amount,2) }}</td>
-                    <td>{{ $p->method }}</td>
-                    <td>{{ $p->status }}</td>
-                    <td>{{ optional($p->created_at)->format('Y-m-d H:i') }}</td>
+                    <td data-label="ID">{{ $p->id }}</td>
+                    <td data-label="Bill">#{{ $p->bill_id ?? '-' }}</td>
+                    <td data-label="Ref" class="member-mobile-ref">{{ $p->payment_ref ?? $p->reference_no ?? '-' }}</td>
+                    <td data-label="Amount" class="text-end member-mobile-amount">{{ number_format((float)$p->amount,2) }}</td>
+                    <td data-label="Method" class="member-mobile-wrap">{{ $p->method }}</td>
+                    <td data-label="Status" class="member-mobile-status">{{ $p->status }}</td>
+                    <td data-label="Date">{{ optional($p->created_at)->format('Y-m-d H:i') }}</td>
                 </tr>
             @endforeach
             </tbody>

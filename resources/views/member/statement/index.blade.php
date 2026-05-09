@@ -17,7 +17,7 @@
 <div class="card shadow-sm">
     <div class="card-header">Ledger Statement</div>
     <div class="card-body table-responsive">
-        <table class="table table-sm align-middle">
+        <table class="table table-sm align-middle member-mobile-table">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -30,15 +30,15 @@
             <tbody>
             @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row->date }}</td>
-                    <td>{{ $row->description }}</td>
-                    <td class="text-end">{{ number_format($row->debit, 2) }}</td>
-                    <td class="text-end">{{ number_format($row->credit, 2) }}</td>
-                    <td class="text-end">{{ number_format($row->running_balance, 2) }}</td>
+                    <td data-label="Date">{{ $row->date }}</td>
+                    <td data-label="Description" class="member-mobile-wrap">{{ $row->description }}</td>
+                    <td data-label="Debit" class="text-end member-mobile-amount">{{ number_format($row->debit, 2) }}</td>
+                    <td data-label="Credit" class="text-end member-mobile-amount">{{ number_format($row->credit, 2) }}</td>
+                    <td data-label="Running Balance" class="text-end member-mobile-amount">{{ number_format($row->running_balance, 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="text-center text-muted">No statement entries found.</td>
+                    <td data-label="Status" colspan="5" class="text-center text-muted member-mobile-wrap">No statement entries found.</td>
                 </tr>
             @endforelse
             </tbody>

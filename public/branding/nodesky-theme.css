@@ -711,4 +711,102 @@ small,
     .page-hero-title {
         font-size: 26px;
     }
+
+    .card-body.table-responsive {
+        overflow-x: visible;
+    }
+
+    .member-mobile-table {
+        border: 0;
+        margin-bottom: 0;
+        table-layout: fixed;
+    }
+
+    .member-mobile-table thead {
+        display: none;
+    }
+
+    .member-mobile-table,
+    .member-mobile-table tbody,
+    .member-mobile-table tr,
+    .member-mobile-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .member-mobile-table tbody {
+        gap: 12px;
+    }
+
+    .member-mobile-table tr {
+        margin-bottom: 12px;
+        padding: 12px;
+        border: 1px solid #e5edf7;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+    }
+
+    .member-mobile-table tr:last-child {
+        margin-bottom: 0;
+    }
+
+    .member-mobile-table td {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 0;
+        border: 0;
+        text-align: right !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .member-mobile-table td + td {
+        border-top: 1px solid #eef2f7;
+    }
+
+    .member-mobile-table td::before {
+        content: attr(data-label);
+        flex: 0 0 42%;
+        max-width: 42%;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #64748b;
+        line-height: 1.4;
+    }
+
+    .member-mobile-table td.text-end,
+    .member-mobile-table td.member-mobile-amount {
+        text-align: right !important;
+    }
+
+    .member-mobile-table td.member-mobile-amount {
+        font-variant-numeric: tabular-nums;
+    }
+
+    .member-mobile-table td.member-mobile-status,
+    .member-mobile-table td.member-mobile-ref,
+    .member-mobile-table td.member-mobile-wrap {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .member-mobile-table td.member-mobile-action {
+        justify-content: flex-start;
+        text-align: left !important;
+    }
+
+    .member-mobile-table td.member-mobile-action::before {
+        margin-top: 0.35rem;
+    }
+
+    .member-mobile-table td.member-mobile-action .btn {
+        width: 100%;
+    }
 }

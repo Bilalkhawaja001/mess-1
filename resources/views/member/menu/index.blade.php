@@ -34,7 +34,7 @@
 
 <div class="card shadow-sm">
     <div class="card-body table-responsive">
-        <table class="table table-sm align-middle">
+        <table class="table table-sm align-middle member-mobile-table">
             <thead>
                 <tr>
                     <th>Day</th>
@@ -48,12 +48,12 @@
             <tbody>
                 @foreach($weekRows as $row)
                 <tr>
-                    <td>{{ $row['day'] }}</td>
-                    <td>{{ $row['date'] }}</td>
-                    <td style="white-space: pre-line">{{ $row['BREAKFAST'] }}</td>
-                    <td style="white-space: pre-line">{{ $row['LUNCH'] }}</td>
-                    <td style="white-space: pre-line">{{ $row['DINNER'] }}</td>
-                    <td style="white-space: pre-line">{{ $row['TEA_OTHER'] }}</td>
+                    <td data-label="Day">{{ $row['day'] }}</td>
+                    <td data-label="Date">{{ $row['date'] }}</td>
+                    <td data-label="Breakfast" class="member-mobile-wrap" style="white-space: pre-line">{{ $row['BREAKFAST'] }}</td>
+                    <td data-label="Lunch" class="member-mobile-wrap" style="white-space: pre-line">{{ $row['LUNCH'] }}</td>
+                    <td data-label="Dinner" class="member-mobile-wrap" style="white-space: pre-line">{{ $row['DINNER'] }}</td>
+                    <td data-label="Tea/Other" class="member-mobile-wrap" style="white-space: pre-line">{{ $row['TEA_OTHER'] }}</td>
                 </tr>
                 @endforeach
             </tbody>

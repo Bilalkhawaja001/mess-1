@@ -4,53 +4,95 @@
 @section('page_title', 'My Payments')
 
 @section('content')
-<div class="card shadow-sm mb-3">
-    <div class="card-header">Initiate Payment Attempt (No Live Charging)</div>
-    <div class="card-body">
-        <form method="POST" action="{{ route('member.payments.initiate') }}" class="row g-2">
-            @csrf
-            <div class="col-md-3">
-                <select name="bill_id" class="form-select" required>
-                    <option value="">Select Bill</option>
-                    @foreach($bills as $bill)
-                        <option value="{{ $bill->id }}">{{ $bill->month_cycle }} - Bill #{{ $bill->id }} - {{ number_format((float)$bill->net_payable,2) }}</option>
-                    @endforeach
-                </select>
+<div class="member-module-screen">
+    <section class="member-holo-card member-panel-card mb-4">
+        <div class="member-panel-card__header">
+            <div>
+                <div class="member-section-title mb-1">Initiate Payment</div>
+                <div class="member-section-subtitle">Create a payment attempt without changing existing backend flow</div>
             </div>
-            <div class="col-md-3">
-                <select name="payment_method_id" class="form-select" required>
-                    <option value="">Method</option>
-                    @foreach($methods as $method)
-                        <option value="{{ $method->id }}">{{ $method->code }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-2"><input type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="Amount" required></div>
-            <div class="col-md-2"><input name="reference_no" class="form-control" placeholder="Manual/Bank Ref"></div>
-            <div class="col-md-2"><button class="btn btn-primary">Initiate</button></div>
-        </form>
-    </div>
-</div>
+        </div>
+        <div class="card-body pt-0">
+            <form method="POST" action="{{ route('member.payments.initiate') }}" class="row g-3">
+                @csrf
+                <div class="col-12">
+                    <label class="form-label member-form-label">Bill</label>
+                    <select name="bill_id" class="form-select" required>
+                        <option value="">Select Bill</option>
+                        @foreach($bills as $bill)
+                            <option value="{{ $bill->id }}">{{ $bill->month_cycle }} - Bill #{{ $bill->id }} - {{ number_format((float)$bill->net_payable,2) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label member-form-label">Method</label>
+                    <select name="payment_method_id" class="form-select" required>
+                        <option value="">Method</option>
+                        @foreach($methods as $method)
+                            <option value="{{ $method->id }}">{{ $method->code }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label member-form-label">Amount</label>
+                    <input type="number" step="0.01" min="0.01" name="amount" class="form-control" placeholder="Amount" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label member-form-label">Manual / Bank Ref</label>
+                    <input name="reference_no" class="form-control" placeholder="Manual/Bank Ref">
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary member-primary-btn w-100">Initiate</button>
+                </div>
+            </form>
+        </div>
+    </section>
 
-<div class="card shadow-sm">
-    <div class="card-header">Payment History</div>
-    <div class="card-body table-responsive">
-        <table class="table table-sm member-mobile-table">
-            <thead><tr><th>ID</th><th>Bill</th><th>Ref</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th></tr></thead>
-            <tbody>
-            @foreach($payments as $p)
-                <tr>
-                    <td data-label="ID">{{ $p->id }}</td>
-                    <td data-label="Bill">#{{ $p->bill_id ?? '-' }}</td>
-                    <td data-label="Ref" class="member-mobile-ref">{{ $p->payment_ref ?? $p->reference_no ?? '-' }}</td>
-                    <td data-label="Amount" class="text-end member-mobile-amount">{{ number_format((float)$p->amount,2) }}</td>
-                    <td data-label="Method" class="member-mobile-wrap">{{ $p->method }}</td>
-                    <td data-label="Status" class="member-mobile-status">{{ $p->status }}</td>
-                    <td data-label="Date">{{ optional($p->created_at)->format('Y-m-d H:i') }}</td>
-                </tr>
-            @endforeach
-            </tbody>
-        </table>
-    </div>
+    <section class="member-holo-card member-panel-card">
+        <div class="member-panel-card__header">
+            <div>
+                <div class="member-section-title mb-1">Payment History</div>
+                <div class="member-section-subtitle">Review previous member payment activity</div>
+            </div>
+        </div>
+        <div class="member-ledger-cards">
+            @forelse($payments as $p)
+                <article class="member-holo-card member-data-card">
+                    <div class="member-data-card__row">
+                        <span class="member-data-card__label">Payment ID</span>
+                        <span class="member-data-card__value">{{ $p->id }}</span>
+                    </div>
+                    <div class="member-data-card__row">
+                        <span class="member-data-card__label">Bill</span>
+                        <span class="member-data-card__value">#{{ $p->bill_id ?? '-' }}</span>
+                    </div>
+                    <div class="member-data-card__row align-items-start">
+                        <span class="member-data-card__label">Reference</span>
+                        <span class="member-data-card__value member-data-card__value--wrap">{{ $p->payment_ref ?? $p->reference_no ?? '-' }}</span>
+                    </div>
+                    <div class="member-data-card__grid">
+                        <div>
+                            <div class="member-data-card__label">Amount</div>
+                            <div class="member-amount">PKR {{ number_format((float)$p->amount,2) }}</div>
+                        </div>
+                        <div>
+                            <div class="member-data-card__label">Method</div>
+                            <div class="member-data-card__value">{{ $p->method }}</div>
+                        </div>
+                    </div>
+                    <div class="member-data-card__row">
+                        <span class="member-data-card__label">Status</span>
+                        <span class="member-status-pill">{{ $p->status }}</span>
+                    </div>
+                    <div class="member-data-card__row">
+                        <span class="member-data-card__label">Date</span>
+                        <span class="member-data-card__value">{{ optional($p->created_at)->format('Y-m-d H:i') }}</span>
+                    </div>
+                </article>
+            @empty
+                <div class="member-empty-card">No payment history found.</div>
+            @endforelse
+        </div>
+    </section>
 </div>
 @endsection

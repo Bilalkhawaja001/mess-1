@@ -14,6 +14,13 @@
     @stack('styles')
 </head>
 <body>
+@php
+    $isMemberBottomNavPage = request()->routeIs('member.dashboard')
+        || request()->routeIs('member.statement.*')
+        || request()->routeIs('member.payments.*')
+        || request()->routeIs('member.complaints.*')
+        || request()->routeIs('member.profile.*');
+@endphp
 <div class="member-app-loading" id="memberAppLoading" aria-hidden="true">
     <div class="member-app-loading__panel">
         <div class="member-app-loading__spinner"></div>
@@ -24,7 +31,7 @@
     @include('partials.sidebar')
     <div class="content-wrap">
         @include('partials.topbar')
-        <main class="page-body">
+        <main class="page-body {{ $isMemberBottomNavPage ? 'member-page-body has-bottom-nav' : '' }}">
             <div class="page-container">
                 @include('partials.flash')
                 @yield('content')
@@ -32,6 +39,30 @@
         </main>
     </div>
 </div>
+@if($isMemberBottomNavPage)
+    <nav class="member-bottom-nav" aria-label="Member mobile navigation">
+        <a href="{{ route('member.dashboard') }}" class="member-bottom-nav__item {{ request()->routeIs('member.dashboard') ? 'is-active' : '' }}">
+            <i class="bi bi-grid-1x2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{{ route('member.statement.index') }}" class="member-bottom-nav__item {{ request()->routeIs('member.statement.*') ? 'is-active' : '' }}">
+            <i class="bi bi-journal-text"></i>
+            <span>Statement</span>
+        </a>
+        <a href="{{ route('member.payments.index') }}" class="member-bottom-nav__item {{ request()->routeIs('member.payments.*') ? 'is-active' : '' }}">
+            <i class="bi bi-credit-card-2-front"></i>
+            <span>Payments</span>
+        </a>
+        <a href="{{ route('member.complaints.index') }}" class="member-bottom-nav__item {{ request()->routeIs('member.complaints.*') ? 'is-active' : '' }}">
+            <i class="bi bi-headset"></i>
+            <span>Complaints</span>
+        </a>
+        <a href="{{ route('member.profile.index') }}" class="member-bottom-nav__item {{ request()->routeIs('member.profile.*') ? 'is-active' : '' }}">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+@endif
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 (() => {

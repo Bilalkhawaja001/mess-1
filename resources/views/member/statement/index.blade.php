@@ -4,45 +4,75 @@
 @section('page_title', 'My Statement')
 
 @section('content')
-<div class="card shadow-sm mb-3">
-    <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-        <div>
-            <div class="text-muted small">Current Outstanding</div>
-            <div class="fs-3 fw-bold">{{ number_format($outstandingAmount, 2) }}</div>
-            <div class="text-muted small">{{ $member->member_code }} - {{ $member->name }}</div>
+<div class="member-statement-shell">
+    <section class="member-statement-summary">
+        <div class="member-statement-summary__glow"></div>
+        <div class="member-statement-summary__content">
+            <div class="member-statement-summary__kicker">Current Outstanding</div>
+            <div class="member-statement-amount">PKR {{ number_format($outstandingAmount, 2) }}</div>
+            <div class="member-statement-summary__meta">
+                <span>{{ $member->member_code }}</span>
+                <strong>{{ $member->name }}</strong>
+            </div>
         </div>
-    </div>
-</div>
+    </section>
 
-<div class="card shadow-sm">
-    <div class="card-header">Ledger Statement</div>
-    <div class="card-body table-responsive">
-        <table class="table table-sm align-middle member-mobile-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th class="text-end">Debit</th>
-                    <th class="text-end">Credit</th>
-                    <th class="text-end">Running Balance</th>
-                </tr>
-            </thead>
-            <tbody>
+    <section class="member-statement-panel">
+        <div class="member-statement-panel__head">
+            <div>
+                <h2 class="member-statement-panel__title">Ledger Statement</h2>
+                <p class="member-statement-panel__subtitle">Statement activity with running balance.</p>
+            </div>
+        </div>
+
+        <div class="member-statement-list">
             @forelse($rows as $row)
-                <tr>
-                    <td data-label="Date">{{ $row->date }}</td>
-                    <td data-label="Description" class="member-mobile-wrap">{{ $row->description }}</td>
-                    <td data-label="Debit" class="text-end member-mobile-amount">{{ number_format($row->debit, 2) }}</td>
-                    <td data-label="Credit" class="text-end member-mobile-amount">{{ number_format($row->credit, 2) }}</td>
-                    <td data-label="Running Balance" class="text-end member-mobile-amount">{{ number_format($row->running_balance, 2) }}</td>
-                </tr>
+                @php
+                    $debit = (float) $row->debit;
+                    $credit = (float) $row->credit;
+                    $balance = (float) $row->running_balance;
+                    $entryType = $credit > 0 ? 'credit' : ($debit > 0 ? 'debit' : 'neutral');
+                @endphp
+                <article class="member-statement-card">
+                    <div class="member-statement-card__rail"></div>
+                    <div class="member-statement-card__head">
+                        <div>
+                            <div class="member-statement-card__label">Date</div>
+                            <div class="member-statement-card__value">{{ $row->date }}</div>
+                        </div>
+                        <div class="member-statement-card__badge is-{{ $entryType }}">
+                            {{ $credit > 0 ? 'Credit' : ($debit > 0 ? 'Debit' : 'Entry') }}
+                        </div>
+                    </div>
+
+                    <div class="member-statement-card__block">
+                        <div class="member-statement-card__label">Description</div>
+                        <div class="member-statement-card__description">{{ $row->description }}</div>
+                    </div>
+
+                    <div class="member-statement-card__grid">
+                        <div class="member-statement-card__metric">
+                            <span class="member-statement-card__label">Debit</span>
+                            <strong class="member-statement-amount is-debit">PKR {{ number_format($debit, 2) }}</strong>
+                        </div>
+                        <div class="member-statement-card__metric">
+                            <span class="member-statement-card__label">Credit</span>
+                            <strong class="member-statement-amount is-credit">PKR {{ number_format($credit, 2) }}</strong>
+                        </div>
+                        <div class="member-statement-card__metric member-statement-card__metric--balance">
+                            <span class="member-statement-card__label">Running Balance</span>
+                            <strong class="member-statement-amount is-balance">PKR {{ number_format($balance, 2) }}</strong>
+                        </div>
+                    </div>
+                </article>
             @empty
-                <tr>
-                    <td data-label="Status" colspan="5" class="text-center text-muted member-mobile-wrap">No statement entries found.</td>
-                </tr>
+                <div class="member-statement-empty">
+                    <div class="member-statement-empty__icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <div class="member-statement-empty__title">No statement entries found</div>
+                    <p class="member-statement-empty__text">Your ledger activity will appear here once transactions are posted.</p>
+                </div>
             @endforelse
-            </tbody>
-        </table>
-    </div>
+        </div>
+    </section>
 </div>
 @endsection

@@ -4,7 +4,7 @@
 @section('page_title', 'My Profile')
 
 @section('content')
-<div class="member-profile-shell">
+<div class="member-profile-shell member-compact-stack member-section-gap">
     <section class="member-profile-card">
         <div class="member-profile-card__glow"></div>
         <div class="member-profile-card__content">

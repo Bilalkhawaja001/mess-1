@@ -4,7 +4,7 @@
 @section('page_title', 'My Statement')
 
 @section('content')
-<div class="member-statement-shell">
+<div class="member-statement-shell member-compact-stack member-section-gap">
     <section class="member-statement-summary">
         <div class="member-statement-summary__glow"></div>
         <div class="member-statement-summary__content">

@@ -5,7 +5,7 @@
 
 @section('content')
 @php($todayRow = collect($weekRows)->firstWhere('date', now()->format('Y-m-d')))
-<div class="member-menu-shell">
+<div class="member-menu-shell member-compact-stack member-section-gap">
     <section class="member-menu-today-card">
         <div class="member-menu-today-card__glow"></div>
         <div class="member-menu-today-card__content">

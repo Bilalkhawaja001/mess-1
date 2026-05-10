@@ -10,14 +10,14 @@
     $dueDays = (int) ceil((float) now()->floatDiffInDays($dueDate, false));
 @endphp
 
-<div class="member-dashboard-screen member-dashboard-shell">
+<div class="member-dashboard-screen member-dashboard-shell member-compact-stack member-section-gap">
     @if($memberProfileMissing)
         <div class="alert alert-warning shadow-sm member-alert-card" role="alert">
             Your member profile is not linked yet. Please contact admin.
         </div>
     @endif
 
-    <section class="member-dashboard-card member-dashboard-balance mb-3">
+    <section class="member-dashboard-card member-dashboard-balance member-card-gap">
         <div class="member-dashboard-balance__mesh"></div>
         <div class="member-dashboard-balance__glow"></div>
         <div class="member-dashboard-balance__content">
@@ -52,7 +52,7 @@
         </div>
     </section>
 
-    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3 member-dashboard-today-menu">
+    <section class="member-dashboard-panel member-dashboard-panel--compact member-card-gap member-dashboard-today-menu">
         <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>
                 <div class="member-dashboard-section-label">Today's Menu</div>
@@ -88,7 +88,7 @@
         @endif
     </section>
 
-    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">
+    <section class="member-dashboard-panel member-dashboard-panel--compact member-card-gap">
         <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>
                 <div class="member-dashboard-section-label">Quick Actions</div>
@@ -114,7 +114,7 @@
         </div>
     </section>
 
-    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">
+    <section class="member-dashboard-panel member-dashboard-panel--compact member-card-gap">
         <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>
                 <div class="member-dashboard-section-label">Recent Ledger</div>

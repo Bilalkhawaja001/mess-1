@@ -645,6 +645,18 @@ small,
     }
 }
 
+.member-compact-stack {
+    display: grid;
+}
+
+.member-section-gap {
+    gap: 10px;
+}
+
+.member-card-gap {
+    margin: 0 !important;
+}
+
 .member-dashboard-shell {
     display: grid;
     gap: 10px;
@@ -1244,6 +1256,14 @@ small,
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+}
+
+.member-statement-shell.member-compact-stack,
+.member-payments-shell.member-compact-stack,
+.member-complaints-shell.member-compact-stack,
+.member-profile-shell.member-compact-stack,
+.member-menu-shell.member-compact-stack {
+    gap: 10px;
 }
 
 .member-statement-card__metric {
@@ -1881,7 +1901,7 @@ small,
 }
 
 .member-complaints-pagination {
-    margin-top: 12px;
+    margin-top: 10px;
 }
 
 .member-complaint-form-grid {
@@ -2497,6 +2517,19 @@ small,
 }
 
 @media (max-width: 767.98px) {
+    .member-compact-stack {
+        display: grid;
+    }
+
+    .member-section-gap,
+    .member-statement-shell.member-compact-stack,
+    .member-payments-shell.member-compact-stack,
+    .member-complaints-shell.member-compact-stack,
+    .member-profile-shell.member-compact-stack,
+    .member-menu-shell.member-compact-stack {
+        gap: 8px;
+    }
+
     .member-dashboard-shell {
         gap: 8px;
     }

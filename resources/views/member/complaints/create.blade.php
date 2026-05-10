@@ -4,7 +4,7 @@
 @section('page_title', 'Submit Complaint / Suggestion')
 
 @section('content')
-<div class="member-complaints-shell">
+<div class="member-complaints-shell member-compact-stack member-section-gap">
     <section class="member-complaint-form-card">
         <div class="member-complaint-form-card__glow"></div>
         <div class="member-complaint-form-card__content">

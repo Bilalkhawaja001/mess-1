@@ -4,7 +4,7 @@
 @section('page_title', 'My Payments')
 
 @section('content')
-<div class="member-payments-shell">
+<div class="member-payments-shell member-compact-stack member-section-gap">
     <section class="member-payments-form-card">
         <div class="member-payments-form-card__glow"></div>
         <div class="member-payments-form-card__content">

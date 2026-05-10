@@ -13,7 +13,7 @@
             : (in_array($status, ['OPEN']) ? 'info' : 'pending'));
 @endphp
 
-<div class="member-complaints-shell">
+<div class="member-complaints-shell member-compact-stack member-section-gap">
     <section class="member-complaint-detail-card">
         <div class="member-complaint-detail-card__glow"></div>
         <div class="member-complaint-detail-card__content">

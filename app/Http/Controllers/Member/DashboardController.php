@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Billing;
 use App\Models\Complaint;
 use App\Models\MemberLedger;
+use App\Models\Menu;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -22,6 +23,12 @@ class DashboardController extends Controller
         $openComplaintsCount = 0;
         $recentLedgerEntries = collect();
         $recentComplaints = collect();
+        $todayMenu = [
+            'BREAKFAST' => '-',
+            'LUNCH' => '-',
+            'DINNER' => '-',
+            'TEA_OTHER' => '-',
+        ];
 
         if ($member) {
             $outstandingAmount = (float) (MemberLedger::query()
@@ -57,6 +64,22 @@ class DashboardController extends Controller
                 ->latest('id')
                 ->limit(3)
                 ->get();
+
+            $todayMenuRows = Menu::query()
+                ->where('status', Menu::STATUS_APPROVED)
+                ->whereDate('menu_date', now()->toDateString())
+                ->orderBy('menu_date')
+                ->get();
+
+            foreach ($todayMenuRows as $row) {
+                $bucket = in_array($row->meal_type, ['TEA', 'OTHER'], true) ? 'TEA_OTHER' : $row->meal_type;
+                if (! array_key_exists($bucket, $todayMenu)) {
+                    continue;
+                }
+
+                $value = trim($row->title."\n".$row->items_text);
+                $todayMenu[$bucket] = $todayMenu[$bucket] === '-' ? $value : ($todayMenu[$bucket]."\n\n".$value);
+            }
         }
 
         return view('member.dashboard', [
@@ -69,6 +92,7 @@ class DashboardController extends Controller
             'openComplaintsCount' => $openComplaintsCount,
             'recentLedgerEntries' => $recentLedgerEntries,
             'recentComplaints' => $recentComplaints,
+            'todayMenu' => $todayMenu,
         ]);
     }
 }

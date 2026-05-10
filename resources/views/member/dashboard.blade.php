@@ -72,6 +72,42 @@
         </div>
     </section>
 
+    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3 member-dashboard-today-menu">
+        <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
+            <div>
+                <div class="member-dashboard-section-label">Today's Menu</div>
+            </div>
+            <a href="{{ route('member.menu.index') }}" class="member-dashboard-link">Full menu</a>
+        </div>
+
+        @php
+            $todayMenuAvailable = collect($todayMenu ?? [])->contains(fn ($value) => $value !== '-');
+        @endphp
+
+        @if($todayMenuAvailable)
+            <div class="member-dashboard-today-menu__grid">
+                <article class="member-dashboard-menu-item">
+                    <div class="member-dashboard-menu-item__label">Breakfast</div>
+                    <div class="member-dashboard-menu-item__text" style="white-space: pre-line">{{ $todayMenu['BREAKFAST'] ?? '-' }}</div>
+                </article>
+                <article class="member-dashboard-menu-item">
+                    <div class="member-dashboard-menu-item__label">Lunch</div>
+                    <div class="member-dashboard-menu-item__text" style="white-space: pre-line">{{ $todayMenu['LUNCH'] ?? '-' }}</div>
+                </article>
+                <article class="member-dashboard-menu-item">
+                    <div class="member-dashboard-menu-item__label">Dinner</div>
+                    <div class="member-dashboard-menu-item__text" style="white-space: pre-line">{{ $todayMenu['DINNER'] ?? '-' }}</div>
+                </article>
+                <article class="member-dashboard-menu-item">
+                    <div class="member-dashboard-menu-item__label">Tea / Other</div>
+                    <div class="member-dashboard-menu-item__text" style="white-space: pre-line">{{ $todayMenu['TEA_OTHER'] ?? '-' }}</div>
+                </article>
+            </div>
+        @else
+            <div class="member-dashboard-empty">Today's menu is not available yet.</div>
+        @endif
+    </section>
+
     <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">
         <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>

@@ -953,6 +953,38 @@ small,
     white-space: nowrap;
 }
 
+.member-dashboard-today-menu__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.member-dashboard-menu-item {
+    padding: 10px;
+    border-radius: 14px;
+    background: rgba(5, 17, 41, .72);
+    border: 1px solid rgba(82, 154, 255, .12);
+    display: grid;
+    gap: 6px;
+}
+
+.member-dashboard-menu-item__label {
+    color: rgba(191, 219, 254, .72);
+    font-size: .62rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-weight: 700;
+}
+
+.member-dashboard-menu-item__text {
+    color: #f8fbff;
+    font-size: .72rem;
+    line-height: 1.45;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
 .member-dashboard-empty {
     padding: 12px;
     border-radius: 12px;

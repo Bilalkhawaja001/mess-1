@@ -647,7 +647,7 @@ small,
 
 .member-dashboard-shell {
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .member-dashboard-screen {
@@ -672,7 +672,7 @@ small,
 }
 
 .member-dashboard-panel {
-    padding: 14px;
+    padding: 12px;
 }
 
 .member-dashboard-panel--compact {
@@ -769,11 +769,11 @@ small,
 }
 
 .member-dashboard-balance__footer {
-    margin-top: 16px;
+    margin-top: 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
 }
 
 .member-dashboard-balance__meta {
@@ -837,7 +837,7 @@ small,
 .member-dashboard-actions {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-dashboard-action {
@@ -879,15 +879,15 @@ small,
 .member-dashboard-ledger-list,
 .member-dashboard-complaints {
     display: grid;
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-dashboard-ledger-card,
 .member-dashboard-complaint-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 11px;
+    gap: 9px;
+    padding: 9px 10px;
     border-radius: 14px;
     background: rgba(5, 17, 41, .72);
     border: 1px solid rgba(82, 154, 255, .12);
@@ -1052,7 +1052,7 @@ small,
     max-width: 720px;
     margin: 0 auto;
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .member-statement-summary,
@@ -1136,7 +1136,7 @@ small,
 }
 
 .member-statement-panel {
-    padding: 14px;
+    padding: 12px;
 }
 
 .member-statement-panel__head {
@@ -1158,11 +1158,11 @@ small,
 
 .member-statement-list {
     display: grid;
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-statement-card {
-    padding: 12px;
+    padding: 11px;
     background: linear-gradient(180deg, rgba(7, 24, 57, .94) 0%, rgba(5, 17, 41, .88) 100%);
 }
 
@@ -1306,7 +1306,7 @@ small,
     max-width: 720px;
     margin: 0 auto;
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .member-payments-form-card,
@@ -1322,7 +1322,7 @@ small,
 }
 
 .member-payments-form-card {
-    padding: 16px;
+    padding: 14px;
     background:
         radial-gradient(circle at 16% 18%, rgba(34, 211, 238, .18), transparent 20%),
         radial-gradient(circle at 82% 14%, rgba(99, 102, 241, .22), transparent 28%),
@@ -1375,10 +1375,10 @@ small,
 }
 
 .member-payments-form {
-    margin-top: 14px;
+    margin-top: 12px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 9px;
 }
 
 .member-payments-field {
@@ -1429,7 +1429,7 @@ small,
 }
 
 .member-payments-history {
-    padding: 14px;
+    padding: 12px;
 }
 
 .member-payments-history__head {
@@ -1438,11 +1438,11 @@ small,
 
 .member-payments-list {
     display: grid;
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-payment-card {
-    padding: 12px;
+    padding: 11px;
     background: linear-gradient(180deg, rgba(7, 24, 57, .94) 0%, rgba(5, 17, 41, .88) 100%);
 }
 
@@ -1597,7 +1597,7 @@ small,
     max-width: 720px;
     margin: 0 auto;
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .member-complaints-hero-card,
@@ -1627,7 +1627,7 @@ small,
 .member-complaint-form-card,
 .member-complaint-detail-card,
 .member-complaints-list-wrap {
-    padding: 16px;
+    padding: 14px;
 }
 
 .member-complaints-hero-card__glow,
@@ -1713,11 +1713,11 @@ small,
 
 .member-complaints-list {
     display: grid;
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-complaint-card {
-    padding: 12px;
+    padding: 11px;
     background: linear-gradient(180deg, rgba(7, 24, 57, .94) 0%, rgba(5, 17, 41, .88) 100%);
 }
 
@@ -1885,10 +1885,10 @@ small,
 }
 
 .member-complaint-form-grid {
-    margin-top: 14px;
+    margin-top: 12px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 9px;
 }
 
 .member-complaint-form-field {
@@ -1965,7 +1965,7 @@ small,
     max-width: 720px;
     margin: 0 auto;
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .member-profile-card,
@@ -1983,7 +1983,7 @@ small,
 
 .member-profile-card,
 .member-profile-form-card {
-    padding: 16px;
+    padding: 14px;
     background:
         radial-gradient(circle at 16% 18%, rgba(34, 211, 238, .18), transparent 20%),
         radial-gradient(circle at 82% 14%, rgba(99, 102, 241, .22), transparent 28%),
@@ -1991,7 +1991,7 @@ small,
 }
 
 .member-profile-requests-wrap {
-    padding: 14px;
+    padding: 12px;
 }
 
 .member-profile-card__glow,
@@ -2071,10 +2071,10 @@ small,
 }
 
 .member-profile-form-grid {
-    margin-top: 14px;
+    margin-top: 12px;
     display: grid;
     grid-template-columns: 160px minmax(0, 1fr);
-    gap: 10px;
+    gap: 9px;
 }
 
 .member-profile-form-field {
@@ -2123,13 +2123,13 @@ small,
 }
 
 .member-profile-requests-list {
-    margin-top: 10px;
+    margin-top: 8px;
     display: grid;
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-profile-request-card {
-    padding: 12px;
+    padding: 11px;
     background: linear-gradient(180deg, rgba(7, 24, 57, .94) 0%, rgba(5, 17, 41, .88) 100%);
 }
 
@@ -2255,7 +2255,7 @@ small,
     max-width: 720px;
     margin: 0 auto;
     display: grid;
-    gap: 12px;
+    gap: 10px;
 }
 
 .member-menu-today-card,
@@ -2271,7 +2271,7 @@ small,
 }
 
 .member-menu-today-card {
-    padding: 16px;
+    padding: 14px;
     background:
         radial-gradient(circle at 16% 18%, rgba(34, 211, 238, .18), transparent 20%),
         radial-gradient(circle at 82% 14%, rgba(99, 102, 241, .22), transparent 28%),
@@ -2314,10 +2314,10 @@ small,
 }
 
 .member-menu-today-grid {
-    margin-top: 14px;
+    margin-top: 12px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-menu-meal-card,
@@ -2373,11 +2373,11 @@ small,
 }
 
 .member-menu-week-nav {
-    padding: 10px 12px;
+    padding: 9px 11px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 9px;
 }
 
 .member-menu-week-nav__btn {
@@ -2397,11 +2397,11 @@ small,
 
 .member-menu-week-list {
     display: grid;
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-menu-week-card {
-    padding: 12px;
+    padding: 11px;
     background: linear-gradient(180deg, rgba(7, 24, 57, .94) 0%, rgba(5, 17, 41, .88) 100%);
 }
 
@@ -2429,10 +2429,10 @@ small,
 }
 
 .member-menu-week-card__grid {
-    margin-top: 12px;
+    margin-top: 10px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 7px;
 }
 
 .member-menu-week-card__item--full {

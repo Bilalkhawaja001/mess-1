@@ -28,7 +28,7 @@
                 <div class="member-complaint-form-field">
                     <label class="member-complaint-form-label">Category</label>
                     <select name="category" class="form-select member-complaint-form-input" required>
-                        @php($categories = ['FOOD_QUALITY' => 'Food Quality', 'FOOD_QUANTITY' => 'Food Quantity', 'CLEANLINESS' => 'Cleanliness', 'STAFF_BEHAVIOR' => 'Staff Behavior', 'MENU_ISSUE' => 'Menu Issue', 'PAYMENT_BILL_ISSUE' => 'Payment/Bill Issue', 'ROOM_HOSTEL_ISSUE' => 'Room/Hostel Issue', 'WATER_ISSUE' => 'Water Issue',  'OTHER' => 'Other'])
+                        @php($categories = ['FOOD_QUALITY' => 'Food Quality', 'FOOD_QUANTITY' => 'Food Quantity', 'CLEANLINESS' => 'Cleanliness', 'STAFF_BEHAVIOR' => 'Staff Behavior', 'MENU_ISSUE' => 'Menu Issue', 'PAYMENT_BILL_ISSUE' => 'Payment / Bill Issue', 'WATER_ISSUE' => 'Water Issue',  'OTHER' => 'Other'])
                         @foreach($categories as $value => $label)
                             <option value="{{ $value }}" @selected(old('category') === $value)>{{ $label }}</option>
                         @endforeach

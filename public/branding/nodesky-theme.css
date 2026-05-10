@@ -1848,3 +1848,29 @@ small,
         width: 100%;
     }
 }
+
+/* Payments 4D dropdown readability fix */
+.member-payments-form-card .form-select,
+.member-payments-form-card select {
+    color: #f8fbff !important;
+    background-color: rgba(3, 12, 32, 0.96) !important;
+    border-color: rgba(103, 232, 249, 0.32) !important;
+}
+
+.member-payments-form-card .form-select option,
+.member-payments-form-card select option {
+    color: #f8fbff !important;
+    background-color: #071a38 !important;
+}
+
+.member-payments-form-card .form-select option:checked,
+.member-payments-form-card select option:checked {
+    color: #ffffff !important;
+    background-color: #2563eb !important;
+}
+
+.member-payments-form-card .form-select option:hover,
+.member-payments-form-card select option:hover {
+    color: #ffffff !important;
+    background-color: #0ea5e9 !important;
+}

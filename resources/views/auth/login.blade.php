@@ -6,56 +6,76 @@
 <style>
     .login-header {
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
 
     .login-kicker {
-        font-size: 0.76rem;
+        font-size: 0.68rem;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: #64748b;
+        letter-spacing: 0.14em;
+        color: rgba(191, 219, 254, .74);
         font-weight: 700;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.45rem;
     }
 
     .login-title {
-        font-size: 1.45rem;
-        font-weight: 700;
-        color: #0f172a;
-        margin-bottom: 0.35rem;
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #f8fbff;
+        margin-bottom: 0.3rem;
     }
 
     .login-subtitle {
-        color: #64748b;
-        font-size: 0.95rem;
+        color: rgba(191, 219, 254, .72);
+        font-size: 0.82rem;
         margin-bottom: 0;
     }
 
     .login-form .form-label {
-        font-size: 0.88rem;
-        color: #334155;
-        margin-bottom: 0.45rem;
+        font-size: 0.8rem;
+        color: rgba(191, 219, 254, .86);
+        margin-bottom: 0.4rem;
     }
 
     .login-form .form-control {
-        min-height: 46px;
+        min-height: 42px;
         border-radius: 12px;
     }
 
     .login-form .btn {
-        min-height: 46px;
-        border-radius: 12px;
-        font-weight: 600;
+        min-height: 42px;
+        border-radius: 14px;
+        font-weight: 700;
     }
 
     .login-recovery-link {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-top: 0.95rem;
-        font-size: 0.9rem;
+        margin-top: 0.8rem;
+        font-size: 0.82rem;
         font-weight: 600;
         text-decoration: none;
+        color: #7dd3fc;
+    }
+
+    @media (max-width: 575.98px) {
+        .login-header {
+            margin-bottom: 0.9rem;
+        }
+
+        .login-title {
+            font-size: 1.08rem;
+        }
+
+        .login-subtitle {
+            font-size: 0.78rem;
+        }
+
+        .login-form .form-control,
+        .login-form .btn {
+            min-height: 40px;
+        }
     }
 </style>
 @endpush

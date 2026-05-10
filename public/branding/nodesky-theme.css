@@ -39,7 +39,8 @@ body {
     font-family: 'Inter', system-ui, sans-serif;
     background: linear-gradient(180deg, #f8fbff 0%, var(--ui-bg) 100%);
     color: var(--ui-text);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 a {
@@ -55,7 +56,8 @@ small,
 .app-shell {
     min-height: 100vh;
     display: flex;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
     background: var(--ui-bg);
 }
 
@@ -193,7 +195,8 @@ small,
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
 }
 
 .topbar {
@@ -314,7 +317,9 @@ small,
 
 .page-body {
     flex: 1;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 18px 20px;
 }
 
@@ -956,6 +961,59 @@ small,
     color: rgba(191, 219, 254, .72);
     text-align: center;
     font-size: .72rem;
+}
+
+.member-app-loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(4, 15, 37, .92) 0%, rgba(5, 20, 48, .90) 100%);
+    z-index: 2000;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .24s ease, visibility .24s ease;
+}
+
+.member-app-loading.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.member-app-loading__panel {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-radius: 20px;
+    border: 1px solid rgba(86, 169, 255, .16);
+    background: linear-gradient(180deg, rgba(5, 16, 38, .96) 0%, rgba(5, 20, 48, .92) 100%);
+    box-shadow: 0 18px 48px rgba(2, 10, 30, .30), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.member-app-loading__spinner {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 3px solid rgba(125, 211, 252, .20);
+    border-top-color: #67e8f9;
+    box-shadow: 0 0 22px rgba(34, 211, 238, .22);
+    animation: member-app-spin .8s linear infinite;
+}
+
+.member-app-loading__text {
+    color: #e0f2fe;
+    font-size: .84rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+@keyframes member-app-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .member-statement-shell {

@@ -65,6 +65,10 @@
                 <span class="member-dashboard-action__icon"><i class="bi bi-person"></i></span>
                 <span class="member-dashboard-action__label">Profile</span>
             </a>
+            <a class="member-dashboard-action member-dashboard-action--menu" href="{{ route('member.menu.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-cup-hot"></i></span>
+                <span class="member-dashboard-action__label">Menu</span>
+            </a>
         </div>
     </section>
 

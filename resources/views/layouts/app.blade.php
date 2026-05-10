@@ -14,6 +14,12 @@
     @stack('styles')
 </head>
 <body>
+<div class="member-app-loading" id="memberAppLoading" aria-hidden="true">
+    <div class="member-app-loading__panel">
+        <div class="member-app-loading__spinner"></div>
+        <div class="member-app-loading__text">Loading dashboard...</div>
+    </div>
+</div>
 <div class="app-shell" id="appShell">
     @include('partials.sidebar')
     <div class="content-wrap">
@@ -31,6 +37,27 @@
 (() => {
     const shell = document.getElementById('appShell');
     const toggle = document.getElementById('sidebarToggle');
+    const loadingEl = document.getElementById('memberAppLoading');
+    const hideLoader = () => loadingEl && loadingEl.classList.add('is-hidden');
+
+    window.addEventListener('load', hideLoader, { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(hideLoader, 180);
+        document.querySelectorAll('a[href]').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (link.target === '_blank' || link.hasAttribute('download') || link.getAttribute('href') === '#') {
+                    return;
+                }
+                loadingEl && loadingEl.classList.remove('is-hidden');
+            });
+        });
+        document.querySelectorAll('form').forEach((form) => {
+            form.addEventListener('submit', () => {
+                loadingEl && loadingEl.classList.remove('is-hidden');
+            });
+        });
+    });
+
     if (!shell || !toggle) return;
 
     const storageKey = 'messBilling.sidebarCollapsed';

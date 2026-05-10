@@ -16,7 +16,8 @@
             min-height: 100vh;
             margin: 0;
             font-family: 'Inter', sans-serif;
-            background: #f8fafc;
+            background: #061733;
+            overflow-y: auto;
         }
 
         .auth-shell {
@@ -24,35 +25,45 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 24px;
+            padding: 18px;
             background:
-                radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 38%),
-                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+                radial-gradient(circle at top, rgba(34, 211, 238, 0.12), transparent 30%),
+                radial-gradient(circle at 85% 12%, rgba(99, 102, 241, 0.18), transparent 28%),
+                linear-gradient(180deg, #051226 0%, #071a37 52%, #0a2043 100%);
         }
 
         .auth-panel {
             width: 100%;
-            max-width: 460px;
+            max-width: 400px;
         }
 
         .auth-card {
-            border-radius: 20px;
-            background: #ffffff;
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(5, 16, 38, .96) 0%, rgba(5, 20, 48, .92) 100%);
+            box-shadow: 0 24px 60px rgba(2, 10, 30, 0.28), inset 0 1px 0 rgba(255,255,255,.05);
+            border: 1px solid rgba(86, 169, 255, 0.16);
         }
 
         .auth-card .card-body {
-            padding: 28px;
+            padding: 24px;
         }
 
         @media (max-width: 575.98px) {
             .auth-shell {
-                padding: 16px;
+                padding: 12px;
+                align-items: center;
+            }
+
+            .auth-panel {
+                max-width: 360px;
+            }
+
+            .auth-card {
+                border-radius: 18px;
             }
 
             .auth-card .card-body {
-                padding: 22px;
+                padding: 18px;
             }
         }
     </style>

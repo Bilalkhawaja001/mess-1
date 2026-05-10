@@ -2558,3 +2558,29 @@ small,
     color: #ffffff !important;
     background-color: #0ea5e9 !important;
 }
+
+/* Profile 4D dropdown readability fix */
+.member-profile-form-card .form-select,
+.member-profile-form-card select {
+    color: #f8fbff !important;
+    background-color: rgba(3, 12, 32, 0.96) !important;
+    border-color: rgba(103, 232, 249, 0.32) !important;
+}
+
+.member-profile-form-card .form-select option,
+.member-profile-form-card select option {
+    color: #f8fbff !important;
+    background-color: #071a38 !important;
+}
+
+.member-profile-form-card .form-select option:checked,
+.member-profile-form-card select option:checked {
+    color: #ffffff !important;
+    background-color: #2563eb !important;
+}
+
+.member-profile-form-card .form-select option:hover,
+.member-profile-form-card select option:hover {
+    color: #ffffff !important;
+    background-color: #0ea5e9 !important;
+}

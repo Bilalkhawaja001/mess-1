@@ -7,7 +7,7 @@
 @php
     $displayName = $user->name ?? $user->username;
     $dueDate = now()->addDays(5);
-    $dueDays = max(1, now()->diffInDays($dueDate, false));
+    $dueDays = (int) ceil((float) now()->floatDiffInDays($dueDate, false));
 @endphp
 
 <div class="member-dashboard-screen member-dashboard-shell">
@@ -37,7 +37,17 @@
                     <span>Due Date</span>
                     <strong>{{ $dueDate->format('d M Y') }}</strong>
                 </div>
-                <div class="member-dashboard-balance__badge">{{ $dueDays }} days left</div>
+                <div class="member-dashboard-balance__badge">
+                    @if($dueDays > 1)
+                        {{ $dueDays }} days left
+                    @elseif($dueDays === 1)
+                        1 day left
+                    @elseif($dueDays === 0)
+                        Due today
+                    @else
+                        Overdue
+                    @endif
+                </div>
             </div>
         </div>
     </section>

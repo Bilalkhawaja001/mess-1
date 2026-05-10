@@ -42,36 +42,6 @@
         </div>
     </section>
 
-    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">
-        <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
-            <div>
-                <div class="member-dashboard-section-label">Quick Actions</div>
-            </div>
-        </div>
-        <div class="member-dashboard-actions">
-            <a class="member-dashboard-action" href="{{ route('member.statement.index') }}">
-                <span class="member-dashboard-action__icon"><i class="bi bi-journal-text"></i></span>
-                <span class="member-dashboard-action__label">Statement</span>
-            </a>
-            <a class="member-dashboard-action" href="{{ route('member.payments.index') }}">
-                <span class="member-dashboard-action__icon"><i class="bi bi-credit-card-2-front"></i></span>
-                <span class="member-dashboard-action__label">Payment</span>
-            </a>
-            <a class="member-dashboard-action" href="{{ route('member.complaints.index') }}">
-                <span class="member-dashboard-action__icon"><i class="bi bi-headset"></i></span>
-                <span class="member-dashboard-action__label">Complaint</span>
-            </a>
-            <a class="member-dashboard-action" href="{{ route('member.profile.index') }}">
-                <span class="member-dashboard-action__icon"><i class="bi bi-person"></i></span>
-                <span class="member-dashboard-action__label">Profile</span>
-            </a>
-            <a class="member-dashboard-action member-dashboard-action--menu" href="{{ route('member.menu.index') }}">
-                <span class="member-dashboard-action__icon"><i class="bi bi-cup-hot"></i></span>
-                <span class="member-dashboard-action__label">Menu</span>
-            </a>
-        </div>
-    </section>
-
     <section class="member-dashboard-panel member-dashboard-panel--compact mb-3 member-dashboard-today-menu">
         <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
             <div>
@@ -106,6 +76,36 @@
         @else
             <div class="member-dashboard-empty">Today's menu is not available yet.</div>
         @endif
+    </section>
+
+    <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">
+        <div class="member-dashboard-panel__head member-dashboard-panel__head--compact">
+            <div>
+                <div class="member-dashboard-section-label">Quick Actions</div>
+            </div>
+        </div>
+        <div class="member-dashboard-actions">
+            <a class="member-dashboard-action" href="{{ route('member.statement.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-journal-text"></i></span>
+                <span class="member-dashboard-action__label">Statement</span>
+            </a>
+            <a class="member-dashboard-action" href="{{ route('member.payments.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-credit-card-2-front"></i></span>
+                <span class="member-dashboard-action__label">Payment</span>
+            </a>
+            <a class="member-dashboard-action" href="{{ route('member.complaints.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-headset"></i></span>
+                <span class="member-dashboard-action__label">Complaint</span>
+            </a>
+            <a class="member-dashboard-action" href="{{ route('member.profile.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-person"></i></span>
+                <span class="member-dashboard-action__label">Profile</span>
+            </a>
+            <a class="member-dashboard-action member-dashboard-action--menu" href="{{ route('member.menu.index') }}">
+                <span class="member-dashboard-action__icon"><i class="bi bi-cup-hot"></i></span>
+                <span class="member-dashboard-action__label">Menu</span>
+            </a>
+        </div>
     </section>
 
     <section class="member-dashboard-panel member-dashboard-panel--compact mb-3">

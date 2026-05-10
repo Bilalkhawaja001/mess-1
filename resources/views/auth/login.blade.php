@@ -42,6 +42,31 @@
         border-radius: 12px;
     }
 
+    .login-password-wrap {
+        position: relative;
+    }
+
+    .login-password-wrap .form-control {
+        padding-right: 42px;
+    }
+
+    .login-password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        width: 28px;
+        height: 28px;
+        border: 0;
+        padding: 0;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: rgba(191, 219, 254, .74);
+    }
+
     .login-form .btn {
         min-height: 42px;
         border-radius: 14px;
@@ -97,7 +122,12 @@
     </div>
     <div class="col-12">
         <label class="form-label fw-semibold">Password</label>
-        <input type="password" name="password" class="form-control" required>
+        <div class="login-password-wrap">
+            <input type="password" name="password" id="passwordInput" class="form-control" required>
+            <button type="button" class="login-password-toggle" id="passwordToggle" aria-label="Show password">
+                <i class="bi bi-eye" id="passwordToggleIcon"></i>
+            </button>
+        </div>
     </div>
     <div class="col-12">
         <button class="btn btn-primary w-100" type="submit">Login</button>
@@ -108,3 +138,24 @@
     <a href="{{ route('password-reset.request.form') }}" class="login-recovery-link">Forgot password?</a>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const passwordInput = document.getElementById('passwordInput');
+        const passwordToggle = document.getElementById('passwordToggle');
+        const passwordToggleIcon = document.getElementById('passwordToggleIcon');
+
+        if (!passwordInput || !passwordToggle || !passwordToggleIcon) {
+            return;
+        }
+
+        passwordToggle.addEventListener('click', () => {
+            const showPassword = passwordInput.type === 'password';
+            passwordInput.type = showPassword ? 'text' : 'password';
+            passwordToggle.setAttribute('aria-label', showPassword ? 'Hide password' : 'Show password');
+            passwordToggleIcon.className = showPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    });
+</script>
+@endpush

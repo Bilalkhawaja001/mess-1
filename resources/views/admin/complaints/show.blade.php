@@ -16,7 +16,20 @@
             <div class="col-12"><strong>Subject:</strong> {{ $complaint->subject }}</div>
             <div class="col-12"><strong>Description:</strong><div class="mt-1">{{ $complaint->description }}</div></div>
             <div class="col-12"><strong>Admin Remarks:</strong><div class="mt-1">{{ $complaint->admin_remarks ?: '-' }}</div></div>
-        </div>
+        
+              @if($complaint->attachments->isNotEmpty())
+              <div class="col-12">
+                  <strong>Attachments:</strong>
+                  <div class="d-flex flex-wrap gap-2 mt-2">
+                      @foreach($complaint->attachments as $attachment)
+                          <a href="{{ asset('storage/'.$attachment->path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                              View Image {{ $loop->iteration }}
+                          </a>
+                      @endforeach
+                  </div>
+              </div>
+              @endif
+</div>
     </div>
 </div>
 

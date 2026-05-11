@@ -65,4 +65,22 @@
         </div>
     </section>
 </div>
+
+    @if($complaint->attachments->isNotEmpty())
+        <section class="member-complaint-detail-card mt-3">
+            <div class="member-complaint-detail-card__content">
+                <div class="member-complaint-detail-card__block">
+                    <span class="member-complaint-detail-card__label">Attachments</span>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        @foreach($complaint->attachments as $attachment)
+                            <a href="{{ asset('storage/'.$attachment->path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                View Image {{ $loop->iteration }}
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </section>
+    @endif
+
 @endsection

@@ -14,7 +14,7 @@
                 <p class="member-complaint-form-card__subtitle">Share your issue, suggestion, or maintenance request with the support team.</p>
             </div>
 
-            <form method="POST" action="{{ route('member.complaints.store') }}" class="member-complaint-form-grid">
+            <form method="POST" action="{{ route('member.complaints.store') }}" enctype="multipart/form-data" class="member-complaint-form-grid">
                 @csrf
                 <div class="member-complaint-form-field">
                     <label class="member-complaint-form-label">Type</label>
@@ -49,6 +49,11 @@
                 <div class="member-complaint-form-field member-complaint-form-field--full">
                     <label class="member-complaint-form-label">Message</label>
                     <textarea name="message" class="form-control member-complaint-form-input member-complaint-form-textarea" rows="6" placeholder="Write full detail here" required>{{ old('message') }}</textarea>
+                </div>
+                <div class="member-complaint-form-field member-complaint-form-field--full">
+                    <label class="member-complaint-form-label">Images <span class="text-muted">(optional, max 5)</span></label>
+                    <input type="file" name="attachments[]" class="form-control member-complaint-form-input" accept="image/jpeg,image/png,image/webp" multiple>
+                    <div class="form-text">Allowed: JPG, PNG, WEBP. Max 2MB each.</div>
                 </div>
                 <div class="member-complaint-form-field member-complaint-form-field--full">
                     <button class="btn member-complaint-form-submit">Submit</button>

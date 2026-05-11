@@ -7,6 +7,7 @@ use App\Models\Complaint;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ComplaintController extends Controller
@@ -41,6 +42,8 @@ class ComplaintController extends Controller
             'priority' => ['required', 'in:LOW,NORMAL,HIGH,URGENT'],
             'subject' => ['required', 'string', 'max:255'],
             'message' => ['required', 'string'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         $user = Auth::user();
@@ -50,7 +53,7 @@ class ComplaintController extends Controller
             return redirect()->route('member.dashboard')->with('warning', 'Your member profile is not linked yet. Please contact admin.');
         }
 
-        Complaint::query()->create([
+        $complaint = Complaint::query()->create([
             'complaint_no' => 'CMP-' . now()->format('Ymd') . '-' . str_pad((string) (Complaint::query()->count() + 1), 5, '0', STR_PAD_LEFT),
             'user_id' => $user->id,
             'member_id' => $member->id,
@@ -64,6 +67,19 @@ class ComplaintController extends Controller
             'status' => Complaint::STATUS_PENDING,
         ]);
 
+        foreach ($request->file('attachments', []) as $attachment) {
+            $storedPath = $attachment->store('complaint-attachments', 'public');
+
+            $complaint->attachments()->create([
+                'uploaded_by_user_id' => $user->id,
+                'disk' => 'public',
+                'path' => $storedPath,
+                'original_name' => $attachment->getClientOriginalName(),
+                'mime_type' => $attachment->getClientMimeType(),
+                'size_bytes' => $attachment->getSize(),
+            ]);
+        }
+
         return redirect()->route('member.complaints.index')->with('success', 'Complaint / suggestion submitted successfully.');
     }
 
@@ -76,6 +92,8 @@ class ComplaintController extends Controller
         }
 
         abort_unless((int) $complaint->member_id === (int) $member->id, 403);
+
+        $complaint->load('attachments');
 
         return view('member.complaints.show', compact('complaint'));
     }

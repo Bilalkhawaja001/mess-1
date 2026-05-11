@@ -32,7 +32,7 @@ class ComplaintController extends Controller
 
     public function show(Complaint $complaint): View
     {
-        $complaint->load(['user', 'assignee']);
+        $complaint->load(['user', 'assignee', 'attachments']);
 
         return view('admin.complaints.show', compact('complaint'));
     }

@@ -41,6 +41,8 @@ class MenuController extends Controller
 
         $payload['title'] = trim((string) ($payload['title'] ?? ''));
 
+        $payload['title'] = trim((string) ($payload['title'] ?? ''));
+
         Menu::query()->create($payload + [
             'status' => Menu::STATUS_DRAFT,
             'created_by' => Auth::id(),
@@ -59,6 +61,8 @@ class MenuController extends Controller
             'items_text' => ['required', 'string'],
             'remarks' => ['nullable', 'string'],
         ]);
+
+        $payload['title'] = trim((string) ($payload['title'] ?? ''));
 
         $payload['title'] = trim((string) ($payload['title'] ?? ''));
 

@@ -117,23 +117,71 @@ class PaymentController extends Controller
 
     public function store(StorePaymentRequest $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService): RedirectResponse
     {
-        [$payment, $attempt] = $attemptService->createAttempt(
-            (int) $request->input('member_id'),
-            (int) $request->input('bill_id'),
-            (int) $request->input('payment_method_id'),
-            (float) $request->input('amount'),
-            (int) Auth::id(),
-        );
+        $memberId = (int) $request->input('member_id');
+        $billId = (int) $request->input('bill_id');
+        $methodId = (int) $request->input('payment_method_id');
+        $amount = round((float) $request->input('amount'), 2);
+        $userId = (int) Auth::id();
 
-        $transactionService->recordFromAttempt($payment, $attempt, [
-            'status' => Payment::STATUS_INITIATED,
-            'merchant_ref' => $request->input('reference_no') ?: null,
-            'raw_request_summary' => ['source' => 'admin.manual_record'],
-            'raw_response_summary' => ['note' => 'No live charging. Pending verify.'],
-            'idempotency_key' => $request->input('idempotency_key') ?: null,
-        ], (int) Auth::id());
+        $payment = DB::transaction(function () use ($request, $memberId, $billId, $methodId, $amount, $userId) {
+            $bill = Billing::query()
+                ->whereKey($billId)
+                ->where('member_id', $memberId)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return redirect()->route('admin.payments.index')->with('success', 'Payment attempt + transaction created (pending verification).');
+            $method = PaymentMethod::query()
+                ->whereKey($methodId)
+                ->where('is_active', true)
+                ->firstOrFail();
+
+            $payment = Payment::query()->create([
+                'member_id' => $memberId,
+                'bill_id' => $bill->id,
+                'payment_method_id' => $method->id,
+                'payment_ref' => 'MANPAY-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
+                'payment_date' => $request->input('payment_date') ?: now()->toDateString(),
+                'amount' => $amount,
+                'currency' => 'PKR',
+                'method' => $method->code,
+                'reference_no' => $request->input('reference_no') ?: null,
+                'notes' => $request->input('notes') ?: null,
+                'status' => Payment::STATUS_APPROVED,
+                'posted_by_user_id' => $userId,
+                'approved_by_user_id' => $userId,
+                'approved_at' => now(),
+            ]);
+
+            $exists = MemberLedger::query()
+                ->where('member_id', $memberId)
+                ->where('ref_type', 'PAYMENT')
+                ->where('ref_id', $payment->id)
+                ->exists();
+
+            if (! $exists) {
+                $lastBal = (float) (MemberLedger::query()
+                    ->where('member_id', $memberId)
+                    ->orderByDesc('entry_date')
+                    ->orderByDesc('id')
+                    ->value('balance_after') ?? 0);
+
+                MemberLedger::query()->create([
+                    'member_id' => $memberId,
+                    'entry_date' => $payment->payment_date,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'ref_type' => 'PAYMENT',
+                    'ref_id' => $payment->id,
+                    'balance_after' => round($lastBal - $amount, 2),
+                    'reason_code' => 'PAYMENT_APPROVAL',
+                    'posted_by_user_id' => $userId,
+                ]);
+            }
+
+            return $payment;
+        });
+
+        return redirect()->route('admin.payments.index')->with('success', 'Manual payment posted to ledger. Payment ID: '.$payment->id);
     }
 
     public function memberBillLookup(Request $request): JsonResponse

@@ -67,20 +67,24 @@ class BillPublishController extends Controller
     {
         $payload = $request->validate([
             'month_cycle' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+            'bill_ids' => ['required', 'array', 'min:1'],
+            'bill_ids.*' => ['integer', 'exists:billings,id'],
         ]);
 
         $monthCycle = (string) $payload['month_cycle'];
+        $billIds = collect($payload['bill_ids'])->map(fn ($id) => (int) $id)->unique()->values();
 
         $bills = Billing::query()
             ->with('member')
             ->where('month_cycle', $monthCycle)
+            ->whereIn('id', $billIds)
             ->orderBy('member_id')
             ->get();
 
         if ($bills->isEmpty()) {
             return redirect()
                 ->route('admin.bill-publish.index', ['month_cycle' => $monthCycle])
-                ->with('warning', 'No bills found for selected month.');
+                ->with('warning', 'No selected bills found for selected month.');
         }
 
         $run = BillPublishRun::query()->create([
@@ -164,6 +168,6 @@ class BillPublishController extends Controller
 
         return redirect()
             ->route('admin.bill-publish.index', ['month_cycle' => $monthCycle])
-            ->with('success', "Bill published. Success: {$success}, Failed: {$failed}");
+            ->with('success', "Selected bills published. Members: {$bills->count()}, Success: {$success}, Failed: {$failed}");
     }
 }

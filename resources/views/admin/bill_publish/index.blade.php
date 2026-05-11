@@ -7,7 +7,7 @@
 <div class="page-hero page-hero-compact mb-4">
     <div>
         <h1 class="page-hero-title">Bill Publish</h1>
-        <div class="text-muted small">Manually publish verified bills and notify each member with their own bill amount.</div>
+        <div class="text-muted small">Manually publish verified bills and notify selected members with their own bill amount.</div>
     </div>
 </div>
 
@@ -57,48 +57,58 @@
 </div>
 
 <div class="card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span>Selected Month Bills</span>
-        @if($monthCycle && $summary['bill_count'] > 0)
-            <form method="POST" action="{{ route('admin.bill-publish.store') }}">
-                @csrf
-                <input type="hidden" name="month_cycle" value="{{ $monthCycle }}">
-                <button class="btn btn-success" type="submit" onclick="return confirm('Publish bills and send amount notification to members for {{ $monthCycle }}?')">
-                    Publish & Notify Members
-                </button>
-            </form>
-        @endif
-    </div>
-    <div class="card-body table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th>Member Code</th>
-                    <th>Name</th>
-                    <th>Month</th>
-                    <th class="text-end">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($bills->take(100) as $bill)
-                    <tr>
-                        <td>{{ $bill->member?->member_code ?? '-' }}</td>
-                        <td>{{ $bill->member?->name ?? '-' }}</td>
-                        <td>{{ $bill->month_cycle }}</td>
-                        <td class="text-end fw-semibold">{{ number_format((float) $bill->net_payable, 2) }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">No bills found.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <form method="POST" action="{{ route('admin.bill-publish.store') }}" id="bill-publish-form">
+        @csrf
+        <input type="hidden" name="month_cycle" value="{{ $monthCycle }}">
 
-        @if($bills->count() > 100)
-            <div class="text-muted small">Showing first 100 bills only. Notifications will be sent to all {{ $bills->count() }} bills.</div>
-        @endif
-    </div>
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <span class="fw-semibold">Selected Month Bills</span>
+                <span class="text-muted small ms-2">
+                    Selected: <span id="selected-bills-count">{{ $bills->count() }}</span> / {{ $bills->count() }}
+                </span>
+            </div>
+
+            @if($monthCycle && $summary['bill_count'] > 0)
+                <button class="btn btn-success" type="submit" onclick="return confirm('Publish selected bills and send amount notification to selected members for {{ $monthCycle }}?')">
+                    Publish Selected & Notify
+                </button>
+            @endif
+        </div>
+
+        <div class="card-body table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">
+                            <input type="checkbox" class="form-check-input" id="select-all-bills" checked>
+                        </th>
+                        <th>Member Code</th>
+                        <th>Name</th>
+                        <th>Month</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($bills as $bill)
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input bill-row-check" name="bill_ids[]" value="{{ $bill->id }}" checked>
+                            </td>
+                            <td>{{ $bill->member?->member_code ?? '-' }}</td>
+                            <td>{{ $bill->member?->name ?? '-' }}</td>
+                            <td>{{ $bill->month_cycle }}</td>
+                            <td class="text-end fw-semibold">{{ number_format((float) $bill->net_payable, 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No bills found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </form>
 </div>
 
 <div class="card shadow-sm">
@@ -138,4 +148,48 @@
         </table>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(() => {
+    const selectAll = document.getElementById('select-all-bills');
+    const checks = Array.from(document.querySelectorAll('.bill-row-check'));
+    const selectedCount = document.getElementById('selected-bills-count');
+    const form = document.getElementById('bill-publish-form');
+
+    const sync = () => {
+        const selected = checks.filter((check) => check.checked).length;
+
+        if (selectedCount) {
+            selectedCount.textContent = selected;
+        }
+
+        if (selectAll) {
+            selectAll.checked = checks.length > 0 && selected === checks.length;
+            selectAll.indeterminate = selected > 0 && selected < checks.length;
+        }
+    };
+
+    selectAll?.addEventListener('change', () => {
+        checks.forEach((check) => {
+            check.checked = selectAll.checked;
+        });
+        sync();
+    });
+
+    checks.forEach((check) => check.addEventListener('change', sync));
+
+    form?.addEventListener('submit', (event) => {
+        const selected = checks.filter((check) => check.checked).length;
+
+        if (selected === 0) {
+            event.preventDefault();
+            alert('Select at least one member bill before publishing.');
+        }
+    });
+
+    sync();
+})();
+</script>
+@endpush
 @endsection

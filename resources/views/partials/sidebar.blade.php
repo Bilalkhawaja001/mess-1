@@ -4,7 +4,7 @@
     $opsOpen = request()->routeIs('admin.members.*') || request()->routeIs('admin.attendance.*') || request()->routeIs('admin.attendance-monthly.*') || request()->routeIs('admin.complaints.*') || request()->routeIs('admin.guests.*') || request()->routeIs('admin.extras.*') || request()->routeIs('admin.hubs.operations');
     $invOpen = request()->routeIs('admin.inventory.*') || request()->routeIs('admin.procurement.*') || request()->routeIs('admin.hubs.inventory');
     $mealsOpen = request()->routeIs('admin.kitchen.*') || request()->routeIs('admin.menu.*') || request()->routeIs('admin.hubs.meals');
-    $financeOpen = request()->routeIs('admin.billing.*') || request()->routeIs('admin.mess-costing.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.ledger.*') || request()->routeIs('admin.rates.*') || request()->routeIs('admin.accounting.*');
+    $financeOpen = request()->routeIs('admin.billing.*') || request()->routeIs('admin.mess-costing.*') || request()->routeIs('admin.admin-mess-bill.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.ledger.*') || request()->routeIs('admin.rates.*') || request()->routeIs('admin.accounting.*');
     $reportsOpen = request()->routeIs('admin.summary.*') || request()->routeIs('admin.reports.*') || request()->routeIs('admin.statement.*') || request()->routeIs('admin.month.*') || request()->routeIs('admin.exports.*') || request()->routeIs('admin.hubs.reports');
     $adminOpen = request()->routeIs('admin.users.*') || request()->routeIs('admin.member-accounts.*') || request()->routeIs('admin.audit-log.*') || request()->routeIs('admin.settings.*');
 @endphp
@@ -99,6 +99,7 @@
                     <nav class="nav flex-column gap-1 collapse {{ $financeOpen ? 'show' : '' }}" id="sidebar-finance">
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.billing.*') ? 'active' : '' }}" href="{{ route('admin.billing.index') }}" title="Billing"><span class="sidebar-icon-wrap"><i class="bi bi-receipt sidebar-icon"></i></span><span>Billing</span></a>
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.mess-costing.*') ? 'active' : '' }}" href="{{ route('admin.mess-costing.index') }}" title="Mess Costing"><span class="sidebar-icon-wrap"><i class="bi bi-calculator sidebar-icon"></i></span><span>Mess Costing</span></a>
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.admin-mess-bill.*') ? 'active' : '' }}" href="{{ route('admin.admin-mess-bill.index') }}" title="Admin Mess Bill"><span class="sidebar-icon-wrap"><i class="bi bi-file-earmark-text sidebar-icon"></i></span><span>Admin Mess Bill</span></a>
                         @if(auth()->user()->hasPermission('payments.view_admin'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}" title="Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>Payments</span></a>
                         @endif

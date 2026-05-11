@@ -74,6 +74,9 @@ Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
+    Route::get('/admin-mess-bill', [\App\Http\Controllers\Admin\AdminMessBillController::class, 'index'])
+        ->name('admin-mess-bill.index');
+
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/hubs/operations', [HubController::class, 'operations'])->name('hubs.operations');
     Route::get('/hubs/reports', [HubController::class, 'reports'])->name('hubs.reports');

@@ -33,11 +33,13 @@ class MenuController extends Controller
         $payload = $request->validate([
             'menu_date' => ['required', 'date'],
             'meal_type' => ['required', 'string'],
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'items_text' => ['required', 'string'],
             'remarks' => ['nullable', 'string'],
         ]);
+
+        $payload['title'] = trim((string) ($payload['title'] ?? ''));
 
         Menu::query()->create($payload + [
             'status' => Menu::STATUS_DRAFT,
@@ -52,11 +54,13 @@ class MenuController extends Controller
         $payload = $request->validate([
             'menu_date' => ['required', 'date'],
             'meal_type' => ['required', 'string'],
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'items_text' => ['required', 'string'],
             'remarks' => ['nullable', 'string'],
         ]);
+
+        $payload['title'] = trim((string) ($payload['title'] ?? ''));
 
         $this->saveHistory($menu, 'UPDATE');
         $menu->update($payload);

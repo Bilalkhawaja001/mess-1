@@ -936,7 +936,7 @@
                         </div>
                     </form>
 
-                    <form method="GET" action="{{ route('admin.procurement.reports.export-selected') }}" class="row g-3 mb-3">
+                    <form method="GET" action="{{ route('admin.procurement.reports.export-selected') }}" target="procurement-download-frame" class="row g-3 mb-3">
                         <input type="hidden" name="tab" value="reports">
                         <input type="hidden" name="from_date" value="{{ $reportFromDate }}">
                         <input type="hidden" name="to_date" value="{{ $reportToDate }}">
@@ -1439,6 +1439,20 @@
         }
     })();
 
+        function triggerProcurementDownload(url) {
+            let frame = document.getElementById('procurement-download-frame');
+
+            if (!frame) {
+                frame = document.createElement('iframe');
+                frame.id = 'procurement-download-frame';
+                frame.name = 'procurement-download-frame';
+                frame.style.display = 'none';
+                document.body.appendChild(frame);
+            }
+
+            frame.src = url;
+        }
+
         const grnExportBtn = document.getElementById('grn-export-download-btn');
         const grnExportType = document.getElementById('grn-export-type');
 
@@ -1453,7 +1467,7 @@
                     to_date: "{{ $grnToDate }}"
                 });
 
-                window.location.href = `${baseUrl}?${params.toString()}`;
+                triggerProcurementDownload(`${baseUrl}?${params.toString()}`);
             });
         }
 
@@ -1471,5 +1485,5 @@
             });
         }
 
-</script>
+<iframe id="procurement-download-frame" name="procurement-download-frame" style="display:none;"></iframe>\n</script>
 @endpush

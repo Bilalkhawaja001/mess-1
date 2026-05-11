@@ -72,21 +72,11 @@
     const hideLoader = () => loadingEl && loadingEl.classList.add('is-hidden');
 
     window.addEventListener('load', hideLoader, { once: true });
+    window.addEventListener('pageshow', hideLoader);
     document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(hideLoader, 180);
-        document.querySelectorAll('a[href]').forEach((link) => {
-            link.addEventListener('click', () => {
-                if (link.target === '_blank' || link.hasAttribute('download') || link.getAttribute('href') === '#') {
-                    return;
-                }
-                loadingEl && loadingEl.classList.remove('is-hidden');
-            });
-        });
-        document.querySelectorAll('form').forEach((form) => {
-            form.addEventListener('submit', () => {
-                loadingEl && loadingEl.classList.remove('is-hidden');
-            });
-        });
+        setTimeout(hideLoader, 80);
+        setTimeout(hideLoader, 600);
+        setTimeout(hideLoader, 1500);
     });
 
     if (!shell || !toggle) return;

@@ -353,7 +353,6 @@
             })->values()->all(),
         ];
     })->values()->all();
-@php
     $vendorCount = $vendors->count();
     $poCount = $purchaseOrders->count();
     $grnCount = $grns->count();

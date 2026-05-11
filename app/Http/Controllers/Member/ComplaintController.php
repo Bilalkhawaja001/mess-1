@@ -37,7 +37,7 @@ class ComplaintController extends Controller
     {
         $payload = $request->validate([
             'type' => ['required', 'in:COMPLAINT,SUGGESTION,MAINTENANCE_REQUEST'],
-            'category' => ['required', 'in:FOOD_QUALITY,FOOD_QUANTITY,CLEANLINESS,STAFF_BEHAVIOR,MENU_ISSUE,PAYMENT_BILL_ISSUE,ROOM_HOSTEL_ISSUE,WATER_ISSUE,ELECTRICITY_ISSUE,OTHER'],
+            'category' => ['required', 'in:FOOD_QUALITY,FOOD_QUANTITY,CLEANLINESS,STAFF_BEHAVIOR,MENU_ISSUE,PAYMENT_BILL_ISSUE,WATER_ISSUE,OTHER'],
             'priority' => ['required', 'in:LOW,NORMAL,HIGH,URGENT'],
             'subject' => ['required', 'string', 'max:255'],
             'message' => ['required', 'string'],

@@ -6,7 +6,7 @@
     $mealsOpen = request()->routeIs('admin.kitchen.*') || request()->routeIs('admin.menu.*') || request()->routeIs('admin.hubs.meals');
     $financeOpen = request()->routeIs('admin.billing.*') || request()->routeIs('admin.mess-costing.*') || request()->routeIs('admin.admin-mess-bill.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.ledger.*') || request()->routeIs('admin.rates.*') || request()->routeIs('admin.accounting.*');
     $reportsOpen = request()->routeIs('admin.summary.*') || request()->routeIs('admin.reports.*') || request()->routeIs('admin.statement.*') || request()->routeIs('admin.month.*') || request()->routeIs('admin.exports.*') || request()->routeIs('admin.hubs.reports');
-    $adminOpen = request()->routeIs('admin.users.*') || request()->routeIs('admin.member-accounts.*') || request()->routeIs('admin.audit-log.*') || request()->routeIs('admin.settings.*');
+    $adminOpen = request()->routeIs('admin.users.*') || request()->routeIs('admin.member-accounts.*') || request()->routeIs('admin.audit-log.*') || request()->routeIs('admin.announcements.*') || request()->routeIs('admin.settings.*');
 @endphp
 <aside class="sidebar sidebar-root" id="appSidebar">
     <div class="sidebar-inner">
@@ -147,6 +147,7 @@
                         @if(auth()->user()->hasPermission('audit.view'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.audit-log.*') ? 'active' : '' }}" href="{{ route('admin.audit-log.index') }}" title="Audit Log"><span class="sidebar-icon-wrap"><i class="bi bi-journal-check sidebar-icon"></i></span><span>Audit Log</span></a>
                         @endif
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}" href="{{ route('admin.announcements.index') }}" title="Announcements"><span class="sidebar-icon-wrap"><i class="bi bi-megaphone sidebar-icon"></i></span><span>Announcements</span></a>
                         @if(auth()->user()->hasPermission('settings.dangerous'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}" title="Settings"><span class="sidebar-icon-wrap"><i class="bi bi-sliders sidebar-icon"></i></span><span>Settings</span></a>
                         @endif

@@ -74,6 +74,11 @@ Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
+    Route::get('/announcements', [\App\Http\Controllers\Admin\AnnouncementController::class, 'index'])
+        ->name('announcements.index');
+    Route::post('/announcements', [\App\Http\Controllers\Admin\AnnouncementController::class, 'store'])
+        ->name('announcements.store');
+
     Route::get('/admin-mess-bill', [\App\Http\Controllers\Admin\AdminMessBillController::class, 'index'])
         ->name('admin-mess-bill.index');
 

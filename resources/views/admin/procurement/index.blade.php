@@ -354,7 +354,7 @@
         ];
     })->values()->all();
     $vendorCount = $vendors->count();
-    $poCount = $purchaseOrders->count();
+    $poCount = $pos->count();
     $grnCount = $grns->count();
     $grnEligibleCount = $grnEligiblePos->count();
 @endphp

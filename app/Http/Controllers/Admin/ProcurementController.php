@@ -247,6 +247,7 @@ class ProcurementController extends Controller
     public function exportGrnDetail(Request $request): StreamedResponse
     {
         [$fromDate, $toDate] = $this->resolveGrnDateRange($request, true);
+        $search = trim((string) $request->input('q', ''));
 
         $returnAgg = \Illuminate\Support\Facades\DB::table('vendor_returns')
             ->selectRaw('goods_receipt_line_id, SUM(qty_returned) as returned_qty, SUM(qty_returned * unit_cost) as returned_cost')
@@ -277,6 +278,16 @@ class ProcurementController extends Controller
             ->join('vendors', 'vendors.id', '=', 'purchase_orders.vendor_id')
             ->join('items', 'items.id', '=', 'goods_receipt_lines.item_id')
             ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate])
+            ->when($search !== '', function ($query) use ($search) {
+                $like = '%'.$search.'%';
+
+                $query->where(function ($inner) use ($like) {
+                    $inner->where('items.sku', 'like', $like)
+                        ->orWhere('items.name', 'like', $like)
+                        ->orWhere('items.category', 'like', $like)
+                        ->orWhere('vendors.name', 'like', $like);
+                });
+            })
             ->whereRaw('(goods_receipt_lines.qty_received - COALESCE(vr.returned_qty, 0)) > 0')
             ->orderBy('goods_receipts.received_date')
             ->orderBy('goods_receipts.grn_number')

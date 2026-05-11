@@ -32,6 +32,11 @@ class AdminMessBillController extends Controller
 
         $totalExpenses = round($purchaseTotal - $contractorExpense, 2);
 
+        $guestAmount = $this->approvedGuestAmount($rangeStart->toDateString(), $rangeEnd->toDateString());
+        $balanceAmount = round($totalExpenses - $guestAmount, 2);
+        $companyPaid = round($balanceAmount * 0.50, 2);
+        $totalAmount = round($companyPaid + $guestAmount, 2);
+
         return view('admin.admin_mess_bill.index', [
             'monthCycle' => $monthCycle,
             'rangeStart' => $rangeStart,
@@ -40,6 +45,10 @@ class AdminMessBillController extends Controller
             'totalAttendance' => $totalAttendance,
             'perAttendanceExpense' => $perAttendanceExpense,
             'totalExpenses' => $totalExpenses,
+            'guestAmount' => $guestAmount,
+            'balanceAmount' => $balanceAmount,
+            'companyPaid' => $companyPaid,
+            'totalAmount' => $totalAmount,
         ]);
     }
 
@@ -63,6 +72,15 @@ class AdminMessBillController extends Controller
             ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate])
             ->selectRaw("COALESCE(SUM($netCostSql), 0) as total_cost")
             ->value('total_cost'), 2);
+    }
+
+    private function approvedGuestAmount(string $fromDate, string $toDate): float
+    {
+        return round((float) DB::table('guest_meals')
+            ->whereNotNull('approved_at')
+            ->whereDate('meal_date', '>=', $fromDate)
+            ->whereDate('meal_date', '<=', $toDate)
+            ->sum('amount'), 2);
     }
 
     private function attendanceBuckets(string $monthCycle): array

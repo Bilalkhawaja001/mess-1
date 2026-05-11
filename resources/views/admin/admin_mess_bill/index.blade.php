@@ -13,7 +13,7 @@
     </div>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm mb-4 no-print">
     <div class="card-body">
         <form method="GET" action="{{ route('admin.admin-mess-bill.index') }}" class="row g-3 align-items-end">
             <div class="col-md-4">
@@ -32,32 +32,69 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
+        <div class="text-center mb-4">
+            <h4 class="fw-bold mb-1">ADMIN MESS BILL</h4>
+            <div class="text-muted">{{ $rangeStart->format('d M Y') }} to {{ $rangeEnd->format('d M Y') }}</div>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-bordered align-middle mb-0">
                 <tbody>
                     <tr>
-                        <th style="width:45%;">Purchase Report Total</th>
-                        <td class="text-end">{{ number_format($purchaseTotal, 2) }}</td>
+                        <th style="width: 55%;">Total Expenses</th>
+                        <td class="text-end fw-semibold">{{ number_format($totalExpenses, 2) }}</td>
                     </tr>
                     <tr>
-                        <th>Total Attendance</th>
-                        <td class="text-end">{{ number_format($totalAttendance) }}</td>
+                        <th>Guest Amount</th>
+                        <td class="text-end">{{ number_format($guestAmount, 2) }}</td>
+                    </tr>
+                    <tr class="table-light fw-bold">
+                        <th>Balance Amount</th>
+                        <td class="text-end">{{ number_format($balanceAmount, 2) }}</td>
                     </tr>
                     <tr>
-                        <th>Per Attendance Expense</th>
-                        <td class="text-end">{{ number_format($perAttendanceExpense, 6) }}</td>
+                        <th>50% Amount Paid by Company</th>
+                        <td class="text-end">{{ number_format($companyPaid, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Guest Amount</th>
+                        <td class="text-end">{{ number_format($guestAmount, 2) }}</td>
                     </tr>
                     <tr class="table-dark fw-bold">
-                        <th>Total Expenses</th>
-                        <td class="text-end">{{ number_format($totalExpenses, 2) }}</td>
+                        <th>Total Amount</th>
+                        <td class="text-end">{{ number_format($totalAmount, 2) }}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="text-muted small mt-3">
-            Contractor share is deducted from purchase total in backend and is not shown on bill.
+        <div class="text-muted small mt-3 no-print">
+            Backend: Purchase report total is divided by total attendance. Contractor attendance share is deducted before bill display.
         </div>
     </div>
 </div>
+
+<style>
+@media print {
+    .no-print,
+    .sidebar,
+    .topbar,
+    .page-hero {
+        display: none !important;
+    }
+
+    .content-wrap,
+    .page-body,
+    .page-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .card {
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+}
+</style>
 @endsection

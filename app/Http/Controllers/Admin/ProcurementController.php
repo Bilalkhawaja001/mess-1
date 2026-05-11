@@ -248,25 +248,36 @@ class ProcurementController extends Controller
     {
         [$fromDate, $toDate] = $this->resolveGrnDateRange($request, true);
 
+        $returnAgg = \Illuminate\Support\Facades\DB::table('vendor_returns')
+            ->selectRaw('goods_receipt_line_id, SUM(qty_returned) as returned_qty, SUM(qty_returned * unit_cost) as returned_cost')
+            ->whereNotNull('goods_receipt_line_id')
+            ->groupBy('goods_receipt_line_id');
+
         $rows = GoodsReceiptLine::query()
-            ->select([
-                'goods_receipt_lines.qty_received',
-                'goods_receipt_lines.unit_cost',
-                'goods_receipt_lines.created_at',
-                'goods_receipts.received_date',
-                'goods_receipts.grn_number',
-                'goods_receipts.remarks as grn_remarks',
-                'purchase_orders.po_number',
-                'vendors.name as vendor_name',
-                'items.sku',
-                'items.name as item_name',
-                'items.uom',
-            ])
+            ->selectRaw("
+                goods_receipts.received_date,
+                goods_receipts.grn_number,
+                goods_receipts.remarks as grn_remarks,
+                purchase_orders.po_number,
+                vendors.name as vendor_name,
+                items.sku,
+                items.name as item_name,
+                items.uom,
+                goods_receipt_lines.qty_received as gross_qty,
+                COALESCE(vr.returned_qty, 0) as returned_qty,
+                (goods_receipt_lines.qty_received - COALESCE(vr.returned_qty, 0)) as net_qty,
+                goods_receipt_lines.unit_cost,
+                (goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as gross_amount,
+                COALESCE(vr.returned_cost, 0) as returned_amount,
+                ((goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) - COALESCE(vr.returned_cost, 0)) as net_amount
+            ")
+            ->leftJoinSub($returnAgg, 'vr', fn ($join) => $join->on('vr.goods_receipt_line_id', '=', 'goods_receipt_lines.id'))
             ->join('goods_receipts', 'goods_receipts.id', '=', 'goods_receipt_lines.goods_receipt_id')
             ->join('purchase_orders', 'purchase_orders.id', '=', 'goods_receipts.purchase_order_id')
             ->join('vendors', 'vendors.id', '=', 'purchase_orders.vendor_id')
             ->join('items', 'items.id', '=', 'goods_receipt_lines.item_id')
             ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate])
+            ->whereRaw('(goods_receipt_lines.qty_received - COALESCE(vr.returned_qty, 0)) > 0')
             ->orderBy('goods_receipts.received_date')
             ->orderBy('goods_receipts.grn_number')
             ->orderBy('goods_receipt_lines.id');
@@ -275,12 +286,10 @@ class ProcurementController extends Controller
 
         return response()->streamDownload(function () use ($rows) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Date', 'GRN No', 'PO No', 'Vendor', 'Item Code / SKU', 'Description / Item Name', 'Qty', 'UOM', 'Unit Price', 'Total Amount', 'Remarks']);
+            fputcsv($handle, ['Date', 'GRN No', 'PO No', 'Vendor', 'Item Code / SKU', 'Description / Item Name', 'Gross Qty', 'Returned Qty', 'Net Qty', 'UOM', 'Unit Price', 'Gross Amount', 'Returned Amount', 'Net Amount', 'Remarks']);
 
             $rows->chunk(500, function ($chunk) use ($handle) {
                 foreach ($chunk as $row) {
-                    $qty = (float) $row->qty_received;
-                    $unitPrice = (float) $row->unit_cost;
                     fputcsv($handle, [
                         $row->received_date,
                         $row->grn_number,
@@ -288,10 +297,14 @@ class ProcurementController extends Controller
                         $row->vendor_name,
                         $row->sku,
                         $row->item_name,
-                        number_format($qty, 3, '.', ''),
+                        number_format((float) $row->gross_qty, 3, '.', ''),
+                        number_format((float) $row->returned_qty, 3, '.', ''),
+                        number_format((float) $row->net_qty, 3, '.', ''),
                         $row->uom,
-                        number_format($unitPrice, 2, '.', ''),
-                        number_format($qty * $unitPrice, 2, '.', ''),
+                        number_format((float) $row->unit_cost, 2, '.', ''),
+                        number_format((float) $row->gross_amount, 2, '.', ''),
+                        number_format((float) $row->returned_amount, 2, '.', ''),
+                        number_format((float) $row->net_amount, 2, '.', ''),
                         $row->grn_remarks,
                     ]);
                 }
@@ -305,19 +318,29 @@ class ProcurementController extends Controller
     {
         [$fromDate, $toDate] = $this->resolveGrnDateRange($request, true);
 
+        $returnAgg = \Illuminate\Support\Facades\DB::table('vendor_returns')
+            ->selectRaw('goods_receipt_line_id, SUM(qty_returned) as returned_qty, SUM(qty_returned * unit_cost) as returned_cost')
+            ->whereNotNull('goods_receipt_line_id')
+            ->groupBy('goods_receipt_line_id');
+
+        $netQtySql = '(goods_receipt_lines.qty_received - COALESCE(vr.returned_qty, 0))';
+        $netCostSql = '((goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) - COALESCE(vr.returned_cost, 0))';
+
         $rows = GoodsReceiptLine::query()
-            ->selectRaw('items.id as item_id, items.sku, items.name as item_name, items.uom, SUM(goods_receipt_lines.qty_received) as total_qty_received, SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) as total_amount, CASE WHEN SUM(goods_receipt_lines.qty_received) > 0 THEN SUM(goods_receipt_lines.qty_received * goods_receipt_lines.unit_cost) / SUM(goods_receipt_lines.qty_received) ELSE 0 END as weighted_avg_price')
+            ->selectRaw("items.id as item_id, items.sku, items.name as item_name, items.uom, SUM($netQtySql) as total_qty_received, SUM($netCostSql) as total_amount, CASE WHEN SUM($netQtySql) > 0 THEN SUM($netCostSql) / SUM($netQtySql) ELSE 0 END as weighted_avg_price")
+            ->leftJoinSub($returnAgg, 'vr', fn ($join) => $join->on('vr.goods_receipt_line_id', '=', 'goods_receipt_lines.id'))
             ->join('goods_receipts', 'goods_receipts.id', '=', 'goods_receipt_lines.goods_receipt_id')
             ->join('items', 'items.id', '=', 'goods_receipt_lines.item_id')
             ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate])
             ->groupBy('items.id', 'items.sku', 'items.name', 'items.uom')
+            ->havingRaw("SUM($netQtySql) > 0")
             ->orderBy('items.sku');
 
         $filename = sprintf('grn_item_summary_%s_to_%s.csv', $fromDate, $toDate);
 
         return response()->streamDownload(function () use ($rows) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Item Code / SKU', 'Description / Item Name', 'UOM', 'Total Qty Received', 'Weighted Average Unit Price', 'Total Amount']);
+            fputcsv($handle, ['Item Code / SKU', 'Description / Item Name', 'UOM', 'Net Qty Received', 'Weighted Average Unit Price', 'Net Total Amount']);
 
             $rows->chunk(500, function ($chunk) use ($handle) {
                 foreach ($chunk as $row) {

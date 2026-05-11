@@ -1472,18 +1472,6 @@
         }
 
 
-        const purchaseReportDownloadType = document.getElementById('purchase-report-download-type');
-        const purchaseReportDownloadBtn = document.getElementById('purchase-report-download-btn');
-
-        if (purchaseReportDownloadType && purchaseReportDownloadBtn) {
-            purchaseReportDownloadBtn.addEventListener('click', () => {
-                const url = purchaseReportDownloadType.value === 'detail'
-                    ? purchaseReportDownloadBtn.dataset.detailUrl
-                    : purchaseReportDownloadBtn.dataset.summaryUrl;
-
-                window.location.href = url;
-            });
-        }
-
-<iframe id="procurement-download-frame" name="procurement-download-frame" style="display:none;"></iframe>\n</script>
+</script>
+<iframe id="procurement-download-frame" name="procurement-download-frame" style="display:none;"></iframe>
 @endpush

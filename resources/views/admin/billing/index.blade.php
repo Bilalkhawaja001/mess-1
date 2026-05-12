@@ -141,6 +141,51 @@
     </div>
 </div>
 
+
+<div class="card shadow-sm mb-4 border border-primary">
+    <div class="card-body">
+        <div class="section-heading mb-3">
+            <div>
+                <h5 class="mb-1">Bulk Due Date Update</h5>
+                <div class="text-muted small">Apply due date to selected month bills in one step.</div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.billing.due-date.bulk') }}" class="row g-3 align-items-end">
+            @csrf
+
+            <div class="col-lg-3 col-md-4">
+                <label class="form-label">Month</label>
+                <select name="month_cycle" class="form-select" required>
+                    @foreach($billingMonths as $m)
+                        <option value="{{ $m }}" @selected($monthCycle === $m)>{{ $m }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-lg-3 col-md-4">
+                <label class="form-label">Due Date</label>
+                <input type="date" name="due_date" class="form-control" required>
+            </div>
+
+            <div class="col-lg-3 col-md-4">
+                <label class="form-label">Minimum Amount</label>
+                <input type="number" step="0.01" min="0" name="minimum_amount" class="form-control" value="500">
+            </div>
+
+            <div class="col-lg-3 col-md-12">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="only_above_amount" id="only_above_amount" value="1" checked>
+                    <label class="form-check-label" for="only_above_amount">
+                        Only bills above this amount
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" onclick="return confirm('Apply due date to selected bills?')">Apply Due Date</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @if($isSuperAdmin)
     <div class="row g-4 mb-2">
         <div class="col-xl-6">
@@ -257,13 +302,13 @@
             <thead>
                 <tr>
                     <th>Month</th>
+                    <th>Due Date</th>
                     <th>Member</th>
                     <th>Days</th>
                     <th>Rate</th>
                     <th>Base</th>
                     <th>Extras</th>
                     <th>Net</th>
-                    <th>Due Date</th>
                     <th>Locked</th>
                     <th class="text-end">Action</th>
                 </tr>
@@ -272,6 +317,13 @@
             @forelse($billingRows as $r)
                 <tr>
                     <td><span class="badge text-bg-light border">{{ $r->month_cycle }}</span></td>
+                    <td style="min-width: 180px;">
+                        <form method="POST" action="{{ route('admin.billing.due-date', $r) }}" class="d-flex gap-1 align-items-center">
+                            @csrf
+                            <input type="date" name="due_date" class="form-control form-control-sm" value="{{ optional($r->due_date)->format('Y-m-d') }}">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                        </form>
+                    </td>
                     <td>
                         <div class="fw-semibold text-dark">{{ $r->member->member_code ?? '-' }}</div>
                         <div class="text-muted small">{{ $r->member->name ?? '-' }}</div>
@@ -281,13 +333,6 @@
                     <td>{{ number_format((float) $r->base_amount, 2) }}</td>
                     <td>{{ number_format((float) $r->extras_amount, 2) }}</td>
                     <td class="fw-semibold">{{ number_format((float) $r->net_payable, 2) }}</td>
-                    <td style="min-width: 180px;">
-                        <form method="POST" action="{{ route('admin.billing.due-date', $r) }}" class="d-flex gap-1 align-items-center">
-                            @csrf
-                            <input type="date" name="due_date" class="form-control form-control-sm" value="{{ optional($r->due_date)->format('Y-m-d') }}">
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
-                        </form>
-                    </td>
                     <td><span class="badge {{ $r->is_locked ? 'bg-success' : 'bg-warning text-dark' }}">{{ $r->is_locked ? 'Yes' : 'No' }}</span></td>
                     <td class="text-end">
                         @if($r->billing_status === 'POSTED')

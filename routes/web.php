@@ -170,6 +170,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
     Route::post('/billing/generate', [BillingController::class, 'generate'])->middleware('permission:billing.generate')->name('billing.generate');
     Route::post('/billing/{billing}/correct', [BillingController::class, 'correct'])->middleware('permission:billing.correct')->name('billing.correct');
+    Route::post('/billing/due-date/bulk', [BillingController::class, 'bulkUpdateDueDate'])->middleware('permission:billing.generate')->name('billing.due-date.bulk');
     Route::post('/billing/{billing}/due-date', [BillingController::class, 'updateDueDate'])->middleware('permission:billing.generate')->name('billing.due-date');
     Route::post('/billing/bulk-rate-correction', [BillingController::class, 'bulkRateCorrection'])->middleware('permission:billing.correct')->name('billing.bulk-rate-correction');
     Route::get('/mess-costing', [MessCostingController::class, 'index'])->name('mess-costing.index');

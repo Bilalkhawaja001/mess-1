@@ -179,4 +179,32 @@ class BillingController extends Controller
     }
 
 
+
+    public function bulkUpdateDueDate(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $payload = $request->validate([
+            'month_cycle' => ['required', 'string', 'max:7'],
+            'due_date' => ['required', 'date'],
+            'only_above_amount' => ['nullable', 'boolean'],
+            'minimum_amount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $minimumAmount = (float) ($payload['minimum_amount'] ?? 500);
+        $query = Billing::query()
+            ->where('month_cycle', $payload['month_cycle']);
+
+        if ($request->boolean('only_above_amount')) {
+            $query->where('net_payable', '>', $minimumAmount);
+        }
+
+        $updated = $query->update([
+            'due_date' => $payload['due_date'],
+        ]);
+
+        return redirect()
+            ->route('admin.billing.index', ['month_cycle' => $payload['month_cycle']])
+            ->with('success', 'Bulk due date updated. affected='.$updated);
+    }
+
+
 }

@@ -19,6 +19,7 @@ class Billing extends Model
         'base_amount',
         'extras_amount',
         'net_payable',
+        'due_date',
         'is_locked',
         'generated_by_user_id',
         'reversed_from_billing_id',
@@ -32,6 +33,7 @@ class Billing extends Model
         'base_amount' => 'decimal:2',
         'extras_amount' => 'decimal:2',
         'net_payable' => 'decimal:2',
+        'due_date' => 'date',
     ];
 
     public function member(): BelongsTo

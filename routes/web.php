@@ -1,5 +1,18 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| Forced Password Change
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->group(function () {
+    Route::get('/password/force-change', [\App\Http\Controllers\Auth\ForcedPasswordChangeController::class, 'edit'])
+        ->name('password.force.edit');
+
+    Route::post('/password/force-change', [\App\Http\Controllers\Auth\ForcedPasswordChangeController::class, 'update'])
+        ->name('password.force.update');
+});
+
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\BillingController;
@@ -66,14 +79,14 @@ Route::get('/', function () {
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::get('/ready', fn () => response()->json(['ready' => true]));
 
-Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'])->group(function () {
+Route::middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'])->group(function () {
     Route::get('/api/menus', [KitchenController::class, 'apiMenus'])->name('api.menus');
     Route::get('/api/guest-rate', [GuestController::class, 'guestRate'])->name('api.guest-rate');
     Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.legacy');
     Route::view('/prototype/sidebar', 'prototypes.sidebar')->name('prototype.sidebar');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
     Route::get('/bill-publish', [\App\Http\Controllers\Admin\BillPublishController::class, 'index'])
         ->name('bill-publish.index');
     Route::post('/bill-publish', [\App\Http\Controllers\Admin\BillPublishController::class, 'store'])
@@ -157,6 +170,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
     Route::post('/billing/generate', [BillingController::class, 'generate'])->middleware('permission:billing.generate')->name('billing.generate');
     Route::post('/billing/{billing}/correct', [BillingController::class, 'correct'])->middleware('permission:billing.correct')->name('billing.correct');
+    Route::post('/billing/{billing}/due-date', [BillingController::class, 'updateDueDate'])->middleware('permission:billing.generate')->name('billing.due-date');
+    Route::post('/billing/bulk-rate-correction', [BillingController::class, 'bulkRateCorrection'])->middleware('permission:billing.correct')->name('billing.bulk-rate-correction');
     Route::get('/mess-costing', [MessCostingController::class, 'index'])->name('mess-costing.index');
     Route::post('/mess-costing', [MessCostingController::class, 'store'])->name('mess-costing.store');
     Route::get('/mess-costing/{costing}', [MessCostingController::class, 'show'])->name('mess-costing.show');
@@ -334,7 +349,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
     });
 });
 
-Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:MEMBER'])->group(function () {
+Route::prefix('member')->name('member.')->middleware(['auth', 'force_password_change', 'active', 'role:MEMBER'])->group(function () {
     Route::post('/device-token', [MemberDeviceTokenController::class, 'store'])->name('device-token.store');
     Route::delete('/device-token', [MemberDeviceTokenController::class, 'destroy'])->name('device-token.destroy');
     Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
@@ -364,5 +379,5 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'active', 'role:ME
 
 Route::match(['get','post'], '/jazzcash/return', [\App\Http\Controllers\JazzCashController::class, 'return'])->name('jazzcash.return');
 Route::post('/jazzcash/ipn', [\App\Http\Controllers\JazzCashController::class, 'ipn'])->name('jazzcash.ipn');
-Route::post('/jazzcash/payments/{payment}/status-inquiry', [\App\Http\Controllers\JazzCashController::class, 'statusInquiry'])->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN'])->name('jazzcash.status-inquiry');
+Route::post('/jazzcash/payments/{payment}/status-inquiry', [\App\Http\Controllers\JazzCashController::class, 'statusInquiry'])->middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN'])->name('jazzcash.status-inquiry');
 

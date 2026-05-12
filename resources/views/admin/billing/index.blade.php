@@ -85,6 +85,62 @@
     </div>
 </div>
 
+
+<div class="card shadow-sm mb-4 border border-warning">
+    <div class="card-body">
+        <div class="section-heading mb-3">
+            <div>
+                <h5 class="mb-1">Mess-wise Bulk Rate Correction</h5>
+                <div class="text-muted small">Use this only when a posted bill month was generated with wrong daily rate.</div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.billing.bulk-rate-correction') }}" class="row g-3 align-items-end">
+            @csrf
+
+            <div class="col-lg-2 col-md-4">
+                <label class="form-label">Month</label>
+                <select name="month_cycle" class="form-select" required>
+                    @foreach($billingMonths as $m)
+                        <option value="{{ $m }}" @selected($monthCycle === $m)>{{ $m }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-lg-3 col-md-4">
+                <label class="form-label">Mess</label>
+                <select name="mess_id" class="form-select" required>
+                    <option value="">Select Mess</option>
+                    @foreach(($messes ?? collect()) as $mess)
+                        <option value="{{ $mess->id }}">{{ $mess->name }} @if($mess->code) ({{ $mess->code }}) @endif</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-lg-2 col-md-4">
+                <label class="form-label">Old Rate</label>
+                <input type="number" step="0.01" min="0" name="old_rate" class="form-control" placeholder="339.50" required>
+            </div>
+
+            <div class="col-lg-2 col-md-4">
+                <label class="form-label">New Rate</label>
+                <input type="number" step="0.01" min="0" name="new_rate" class="form-control" placeholder="325.00" required>
+            </div>
+
+            <div class="col-lg-3 col-md-8">
+                <label class="form-label">Reason</label>
+                <input type="text" name="reason" class="form-control" maxlength="1000" placeholder="Rate correction reason" required>
+            </div>
+
+            <div class="col-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-warning" onclick="return confirm('This will correct posted bills and post ledger adjustments for selected mess only. Continue?')">
+                    Post Bulk Correction
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @if($isSuperAdmin)
     <div class="row g-4 mb-2">
         <div class="col-xl-6">
@@ -207,7 +263,9 @@
                     <th>Base</th>
                     <th>Extras</th>
                     <th>Net</th>
+                    <th>Due Date</th>
                     <th>Locked</th>
+                    <th class="text-end">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -223,11 +281,49 @@
                     <td>{{ number_format((float) $r->base_amount, 2) }}</td>
                     <td>{{ number_format((float) $r->extras_amount, 2) }}</td>
                     <td class="fw-semibold">{{ number_format((float) $r->net_payable, 2) }}</td>
+                    <td style="min-width: 180px;">
+                        <form method="POST" action="{{ route('admin.billing.due-date', $r) }}" class="d-flex gap-1 align-items-center">
+                            @csrf
+                            <input type="date" name="due_date" class="form-control form-control-sm" value="{{ optional($r->due_date)->format('Y-m-d') }}">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                        </form>
+                    </td>
                     <td><span class="badge {{ $r->is_locked ? 'bg-success' : 'bg-warning text-dark' }}">{{ $r->is_locked ? 'Yes' : 'No' }}</span></td>
+                    <td class="text-end">
+                        @if($r->billing_status === 'POSTED')
+                            <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#correct-billing-{{ $r->id }}">
+                                Correct Bill
+                            </button>
+                        @else
+                            <span class="text-muted small">Not posted</span>
+                        @endif
+                    </td>
+                </tr>
+                <tr class="collapse" id="correct-billing-{{ $r->id }}">
+                    <td colspan="10">
+                        <form method="POST" action="{{ route('admin.billing.correct', $r) }}" class="row g-2 align-items-end bg-light border rounded p-3">
+                            @csrf
+                            <div class="col-md-3">
+                                <label class="form-label">Current Net</label>
+                                <input type="text" class="form-control" value="{{ number_format((float) $r->net_payable, 2) }}" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">New Net Payable</label>
+                                <input type="number" step="0.01" min="0" name="new_net_payable" class="form-control" value="{{ number_format((float) $r->net_payable, 2, '.', '') }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Reason</label>
+                                <input type="text" name="reason" class="form-control" placeholder="Correction reason" required maxlength="1000">
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <button type="submit" class="btn btn-warning" onclick="return confirm('This will post ledger correction. Continue?')">Post</button>
+                            </div>
+                        </form>
+                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">No billing rows found for the selected filter.</td>
+                    <td colspan="10" class="text-center text-muted py-4">No billing rows found for the selected filter.</td>
                 </tr>
             @endforelse
             </tbody>

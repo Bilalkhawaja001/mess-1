@@ -19,6 +19,7 @@ class DashboardController extends Controller
         $member = $user?->resolvedMemberProfile();
         $outstandingAmount = 0.0;
         $currentMonthBill = 0.0;
+        $lastBill = null;
         $lastPayment = null;
         $openComplaintsCount = 0;
         $recentLedgerEntries = collect();
@@ -52,12 +53,13 @@ class DashboardController extends Controller
                 ->whereNotIn('status', [Complaint::STATUS_CLOSED, Complaint::STATUS_REJECTED, Complaint::STATUS_RESOLVED])
                 ->count();
 
-            $recentLedgerEntries = MemberLedger::query()
+            $lastBill = Billing::query()
                 ->where('member_id', $member->id)
-                ->orderByDesc('entry_date')
+                ->orderByDesc('month_cycle')
                 ->orderByDesc('id')
-                ->limit(3)
-                ->get();
+                ->first();
+
+            $recentLedgerEntries = collect();
 
             $recentComplaints = Complaint::query()
                 ->where('member_id', $member->id)
@@ -88,6 +90,7 @@ class DashboardController extends Controller
             'memberProfileMissing' => $user?->isMemberRole() && ! $member,
             'outstandingAmount' => $outstandingAmount,
             'currentMonthBill' => $currentMonthBill,
+            'lastBill' => $lastBill,
             'lastPayment' => $lastPayment,
             'openComplaintsCount' => $openComplaintsCount,
             'recentLedgerEntries' => $recentLedgerEntries,

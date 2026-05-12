@@ -123,26 +123,52 @@
         </div>
 
         <div class="member-dashboard-ledger-list">
-            @forelse($recentLedgerEntries as $row)
-                @php
-                    $isCredit = (float) $row->balance_after >= 0;
-                    $ledgerRef = strtoupper((string) $row->ref_type) . ($row->ref_id ? ' · REF #' . $row->ref_id : '');
-                @endphp
+            @if($lastBill)
                 <article class="member-dashboard-ledger-card">
-                    <div class="member-dashboard-ledger-card__icon {{ $isCredit ? 'is-credit' : 'is-debit' }}">
-                        <i class="bi {{ $isCredit ? 'bi-arrow-down-left' : 'bi-arrow-up-right' }}"></i>
+                    <div class="member-dashboard-ledger-card__icon is-debit">
+                        <i class="bi bi-receipt"></i>
                     </div>
                     <div class="member-dashboard-ledger-card__body">
-                        <div class="member-dashboard-ledger-card__title">{{ $ledgerRef }}</div>
-                        <div class="member-dashboard-ledger-card__meta">{{ optional($row->entry_date)->format('d M Y') ?: '-' }}</div>
+                        <div class="member-dashboard-ledger-card__title">Last Bill · REF #{{ $lastBill->id }}</div>
+                        <div class="member-dashboard-ledger-card__meta">
+                            {{ $lastBill->month_cycle ?? '-' }}
+                            · Total Days: {{ (int) data_get($lastBill, 'active_days', 0) }}
+                            · Daily Billing Rate: PKR {{ number_format((float) data_get($lastBill, 'rate_per_day', 0), 2) }}
+                        </div>
                     </div>
-                    <div class="member-dashboard-ledger-card__amount {{ $isCredit ? 'is-credit' : 'is-debit' }}">
-                        PKR {{ number_format((float) $row->balance_after, 2) }}
+                    <div class="member-dashboard-ledger-card__amount is-debit">
+                        PKR {{ number_format((float) data_get($lastBill, 'net_payable', 0), 2) }}
                     </div>
                 </article>
-            @empty
-                <div class="member-dashboard-empty">No ledger entries found.</div>
-            @endforelse
+            @endif
+
+            @if($lastPayment)
+                @php
+                    $lastPaymentAmount = (float) (
+                        data_get($lastPayment, 'amount')
+                        ?? data_get($lastPayment, 'paid_amount')
+                        ?? data_get($lastPayment, 'received_amount')
+                        ?? data_get($lastPayment, 'net_amount')
+                        ?? 0
+                    );
+                @endphp
+                <article class="member-dashboard-ledger-card">
+                    <div class="member-dashboard-ledger-card__icon is-credit">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                    <div class="member-dashboard-ledger-card__body">
+                        <div class="member-dashboard-ledger-card__title">Last Payment · REF #{{ $lastPayment->id }}</div>
+                        <div class="member-dashboard-ledger-card__meta">{{ optional($lastPayment->created_at)->format('d M Y') ?: '-' }}</div>
+                    </div>
+                    <div class="member-dashboard-ledger-card__amount is-credit">
+                        PKR {{ number_format($lastPaymentAmount, 2) }}
+                    </div>
+                </article>
+            @endif
+
+            @if(! $lastBill && ! $lastPayment)
+                <div class="member-dashboard-empty">No bill or payment found.</div>
+            @endif
         </div>
     </section>
 

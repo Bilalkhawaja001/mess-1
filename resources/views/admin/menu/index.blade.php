@@ -7,14 +7,45 @@
 <div class="card shadow-sm mb-3">
     <div class="card-body">
         <form method="GET" class="row g-2">
-            <div class="col-md-3"><input type="date" name="from" value="{{ request('from') }}" class="form-control"></div>
-            <div class="col-md-3"><input type="date" name="to" value="{{ request('to') }}" class="form-control"></div>
-            <div class="col-md-3"><select name="meal_type" class="form-select"><option value="">Meal Type</option>@foreach(['BREAKFAST','LUNCH','DINNER','TEA','OTHER'] as $v)<option value="{{ $v }}" @selected(request('meal_type')===$v)>{{ $v }}</option>@endforeach</select></div>
-            <div class="col-md-3"><select name="status" class="form-select"><option value="">Status</option>@foreach(['DRAFT','APPROVED','INACTIVE'] as $v)<option value="{{ $v }}" @selected(request('status')===$v)>{{ $v }}</option>@endforeach</select></div>
+            <div class="col-md-2">
+                <input type="date" name="from" value="{{ request('from') }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <input type="date" name="to" value="{{ request('to') }}" class="form-control">
+            </div>
+
+            <div class="col-md-2">
+                <select name="meal_type" class="form-select">
+                    <option value="">Meal Type</option>
+                    @foreach(['BREAKFAST','LUNCH','DINNER','TEA','OTHER'] as $v)
+                        <option value="{{ $v }}" @selected(request('meal_type') === $v)>{{ $v }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select name="mess_id" class="form-select">
+                    <option value="">Mess</option>
+                    @foreach(($messes ?? collect()) as $mess)
+                        <option value="{{ $mess->id }}" @selected((string) request('mess_id') === (string) $mess->id)>{{ $mess->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">Status</option>
+                    @foreach(['DRAFT','APPROVED','INACTIVE'] as $v)
+                        <option value="{{ $v }}" @selected(request('status') === $v)>{{ $v }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="col-12 d-flex gap-2">
                 <button class="btn btn-primary btn-sm">Filter</button>
                 @if(auth()->user()->hasPermission('menu.export'))
-                <a class="btn btn-outline-success btn-sm" href="{{ route('admin.menu.export', request()->query()) }}">Export CSV</a>
+                    <a class="btn btn-outline-success btn-sm" href="{{ route('admin.menu.export', request()->query()) }}">Export CSV</a>
                 @endif
             </div>
         </form>
@@ -27,13 +58,47 @@
     <div class="card-body">
         <form method="POST" action="{{ route('admin.menu.store') }}" class="row g-2">
             @csrf
-            <div class="col-md-2"><input type="date" name="menu_date" class="form-control" required></div>
-            <div class="col-md-2"><select name="meal_type" class="form-select" required>@foreach(['BREAKFAST','LUNCH','DINNER','TEA','OTHER'] as $v)<option value="{{ $v }}">{{ $v }}</option>@endforeach</select></div>
-            <div class="col-md-3"><input name="title" class="form-control" placeholder="Title (optional)"></div>
-            <div class="col-md-5"><input name="description" class="form-control" placeholder="Description"></div>
-            <div class="col-12"><textarea name="items_text" class="form-control" rows="3" placeholder="Items" required></textarea></div>
-            <div class="col-12"><input name="remarks" class="form-control" placeholder="Remarks"></div>
-            <div class="col-12"><button class="btn btn-primary btn-sm">Create</button></div>
+
+            <div class="col-md-2">
+                <input type="date" name="menu_date" class="form-control" required>
+            </div>
+
+            <div class="col-md-3">
+                <select name="mess_id" class="form-select" required>
+                    <option value="">Select Mess</option>
+                    @foreach(($messes ?? collect()) as $mess)
+                        <option value="{{ $mess->id }}">{{ $mess->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select name="meal_type" class="form-select" required>
+                    @foreach(['BREAKFAST','LUNCH','DINNER','TEA','OTHER'] as $v)
+                        <option value="{{ $v }}">{{ $v }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <input name="title" class="form-control" placeholder="Title">
+            </div>
+
+            <div class="col-md-3">
+                <input name="description" class="form-control" placeholder="Description">
+            </div>
+
+            <div class="col-12">
+                <textarea name="items_text" class="form-control" rows="3" placeholder="Items" required></textarea>
+            </div>
+
+            <div class="col-12">
+                <input name="remarks" class="form-control" placeholder="Remarks">
+            </div>
+
+            <div class="col-12">
+                <button class="btn btn-primary btn-sm">Create</button>
+            </div>
         </form>
     </div>
 </div>
@@ -42,11 +107,23 @@
 <div class="card shadow-sm">
     <div class="card-body table-responsive">
         <table class="table table-sm align-middle">
-            <thead><tr><th>Date</th><th>Meal</th><th>Title</th><th>Items</th><th>Status</th><th>Action</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Mess</th>
+                    <th>Meal</th>
+                    <th>Title</th>
+                    <th>Items</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
             <tbody>
             @foreach($rows as $row)
                 <tr>
                     <td>{{ optional($row->menu_date)->format('Y-m-d') }}</td>
+                    <td>{{ $row->mess?->name ?? '-' }}</td>
                     <td>{{ $row->meal_type }}</td>
                     <td>{{ $row->title }}</td>
                     <td style="white-space: pre-line">{{ $row->items_text }}</td>
@@ -57,17 +134,26 @@
                                 Edit
                             </button>
                         @endif
+
                         @if(auth()->user()->hasPermission('menu.approve') && $row->status !== 'APPROVED')
-                        <form method="POST" action="{{ route('admin.menu.approve', $row) }}">@csrf<button class="btn btn-sm btn-outline-success">Approve</button></form>
+                            <form method="POST" action="{{ route('admin.menu.approve', $row) }}">
+                                @csrf
+                                <button class="btn btn-sm btn-outline-success">Approve</button>
+                            </form>
                         @endif
+
                         @if(auth()->user()->hasPermission('menu.approve') && $row->status !== 'INACTIVE')
-                        <form method="POST" action="{{ route('admin.menu.inactive', $row) }}">@csrf<button class="btn btn-sm btn-outline-danger">Inactive</button></form>
+                            <form method="POST" action="{{ route('admin.menu.inactive', $row) }}">
+                                @csrf
+                                <button class="btn btn-sm btn-outline-danger">Inactive</button>
+                            </form>
                         @endif
                     </td>
                 </tr>
+
                 @if(auth()->user()->hasPermission('menu.manage'))
                     <tr class="collapse bg-light" id="menu-edit-{{ $row->id }}">
-                        <td colspan="6">
+                        <td colspan="7">
                             <form method="POST" action="{{ route('admin.menu.update', $row) }}" class="row g-2 align-items-end">
                                 @csrf
                                 @method('PUT')
@@ -75,6 +161,16 @@
                                 <div class="col-md-2">
                                     <label class="form-label small mb-1">Date</label>
                                     <input type="date" name="menu_date" class="form-control form-control-sm" value="{{ optional($row->menu_date)->format('Y-m-d') }}" required>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small mb-1">Mess</label>
+                                    <select name="mess_id" class="form-select form-select-sm" required>
+                                        <option value="">Select Mess</option>
+                                        @foreach(($messes ?? collect()) as $mess)
+                                            <option value="{{ $mess->id }}" @selected((int) $row->mess_id === (int) $mess->id)>{{ $mess->name }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
                                 <div class="col-md-2">
@@ -86,12 +182,12 @@
                                     </select>
                                 </div>
 
-                                <div class="col-md-3">
-                                    <label class="form-label small mb-1">Title <span class="text-muted">(optional)</span></label>
-                                    <input name="title" class="form-control form-control-sm" value="{{ $row->title }}" placeholder="Title (optional)">
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-1">Title</label>
+                                    <input name="title" class="form-control form-control-sm" value="{{ $row->title }}" placeholder="Title">
                                 </div>
 
-                                <div class="col-md-5">
+                                <div class="col-md-3">
                                     <label class="form-label small mb-1">Description</label>
                                     <input name="description" class="form-control form-control-sm" value="{{ $row->description }}" placeholder="Description">
                                 </div>
@@ -117,6 +213,7 @@
             @endforeach
             </tbody>
         </table>
+
         {{ $rows->links() }}
     </div>
 </div>

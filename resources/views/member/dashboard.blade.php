@@ -6,8 +6,42 @@
 @section('content')
 @php
     $displayName = $user->name ?? $user->username;
-    $dueDate = now()->addDays(5);
-    $dueDays = (int) ceil((float) now()->floatDiffInDays($dueDate, false));
+    $balanceValue = (float) ($outstandingAmount ?? 0);
+
+    if ($balanceValue <= 0) {
+        $smartBalanceMessageTop = '🎉 Excellent!';
+        $smartBalanceMessageBottom = 'No outstanding balance.';
+    } elseif ($balanceValue <= 500) {
+        $smartBalanceMessageTop = '🌟 Great!';
+        $smartBalanceMessageBottom = 'Balance is under control.';
+    } elseif ($balanceValue <= 1000) {
+        $smartBalanceMessageTop = '🙂 Gentle reminder';
+        $smartBalanceMessageBottom = 'Clear your balance soon.';
+    } else {
+        $smartBalanceMessageTop = '⏰ Due reminder';
+        $smartBalanceMessageBottom = 'Please clear before due date.';
+    }
+
+    $dueDate = $lastBill?->due_date;
+    $dueDateText = $dueDate ? optional($dueDate)->format('d M Y') : '-';
+    $dueBadgeText = '-';
+
+    if ($balanceValue <= 0) {
+        $dueDateText = '-';
+        $dueBadgeText = 'No dues';
+    } elseif ($dueDate) {
+        $dueEnd = \Carbon\Carbon::parse($dueDate)->endOfDay();
+        $hoursLeft = now()->diffInHours($dueEnd, false);
+
+        if ($hoursLeft < 0) {
+            $dueBadgeText = '⚠️ Due date passed';
+        } elseif ($hoursLeft <= 72) {
+            $dueBadgeText = max(0, (int) ceil($hoursLeft)).' hours left';
+        } else {
+            $daysLeft = (int) ceil(now()->diffInDays($dueEnd, false));
+            $dueBadgeText = $daysLeft <= 1 ? '1 day left' : $daysLeft.' days left';
+        }
+    }
 @endphp
 
 <div class="member-dashboard-screen member-dashboard-shell member-compact-stack member-section-gap">
@@ -29,24 +63,24 @@
                 <div class="member-dashboard-balance__orb"><i class="bi bi-wallet2"></i></div>
             </div>
 
-            <div class="member-dashboard-balance__label">Outstanding Balance</div>
-            <div class="member-dashboard-balance__amount">PKR {{ number_format($outstandingAmount, 2) }}</div>
+            <div class="member-dashboard-balance__main-row">
+                <div>
+                    <div class="member-dashboard-balance__label">Outstanding Balance</div>
+                    <div class="member-dashboard-balance__amount">PKR {{ number_format($outstandingAmount, 2) }}</div>
+                </div>
+                <div class="member-dashboard-smart-message">
+                    <div class="member-dashboard-smart-message__top">{{ $smartBalanceMessageTop }}</div>
+                    <div class="member-dashboard-smart-message__bottom">{{ $smartBalanceMessageBottom }}</div>
+                </div>
+            </div>
 
             <div class="member-dashboard-balance__footer">
                 <div class="member-dashboard-balance__meta">
                     <span>Due Date</span>
-                    <strong>{{ $dueDate->format('d M Y') }}</strong>
+                    <strong>{{ $dueDateText }}</strong>
                 </div>
                 <div class="member-dashboard-balance__badge">
-                    @if($dueDays > 1)
-                        {{ $dueDays }} days left
-                    @elseif($dueDays === 1)
-                        1 day left
-                    @elseif($dueDays === 0)
-                        Due today
-                    @else
-                        Overdue
-                    @endif
+                    {{ $dueBadgeText }}
                 </div>
             </div>
         </div>

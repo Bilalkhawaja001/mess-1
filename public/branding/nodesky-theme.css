@@ -2978,3 +2978,72 @@ small,
     color: #ffffff !important;
     background-color: #0ea5e9 !important;
 }
+
+/* Member dashboard final balance message position */
+.member-dashboard-balance {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.member-dashboard-balance__content {
+    position: relative !important;
+    z-index: 3 !important;
+}
+
+.member-dashboard-balance__main-row {
+    display: block !important;
+    position: relative !important;
+    padding-right: 150px !important;
+}
+
+.member-dashboard-smart-message {
+    position: absolute !important;
+    right: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 142px !important;
+    max-width: 142px !important;
+    text-align: right !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    line-height: 1.12 !important;
+    z-index: 20 !important;
+}
+
+.member-dashboard-smart-message__top,
+.member-dashboard-smart-message__bottom {
+    color: #ffffff !important;
+    text-shadow: 0 2px 8px rgba(0,0,0,.35) !important;
+}
+
+.member-dashboard-smart-message__top {
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+}
+
+.member-dashboard-smart-message__bottom {
+    margin-top: 3px !important;
+    font-size: 10.5px !important;
+    font-weight: 800 !important;
+    white-space: normal !important;
+}
+
+@media (max-width: 380px) {
+    .member-dashboard-balance__main-row {
+        padding-right: 126px !important;
+    }
+
+    .member-dashboard-smart-message {
+        width: 120px !important;
+        max-width: 120px !important;
+    }
+
+    .member-dashboard-smart-message__top {
+        font-size: 13px !important;
+    }
+
+    .member-dashboard-smart-message__bottom {
+        font-size: 9.5px !important;
+    }
+}

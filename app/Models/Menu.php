@@ -24,6 +24,11 @@ class Menu extends Model
         'approved_at' => 'datetime',
     ];
 
+    public function mess(): BelongsTo
+    {
+        return $this->belongsTo(Mess::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -70,6 +70,7 @@ class DashboardController extends Controller
             $todayMenuRows = Menu::query()
                 ->where('status', Menu::STATUS_APPROVED)
                 ->whereDate('menu_date', now()->toDateString())
+                ->where('mess_id', $member->mess_id)
                 ->orderBy('menu_date')
                 ->get();
 

@@ -660,8 +660,8 @@
 
                                 <div class="col-md-6">
                                     <label class="form-label">Search GRN / Vendor / Item</label>
-                                    <input type="text" id="vendor-return-source-search" class="form-control" placeholder="Type item, GRN no, vendor, code">
-                                </div>
+                                    <div class="input-group"><input type="text" id="vendor-return-source-search" class="form-control" placeholder="Type item, GRN no, vendor, code">
+                                <button class="btn btn-primary vendor-return-source-search-btn" type="button">Search</button></div></div>
 
                                 <div class="col-md-1 d-flex align-items-end">
                                     <button type="button" id="vendor-return-source-clear-filter" class="btn btn-outline-secondary w-100 text-nowrap">Clear</button>
@@ -686,6 +686,16 @@
                                 </div>
 
                                 <div class="col-12 small text-muted" id="vendor-return-source-meta"></div>
+
+                                  <div class="col-12">
+                                      <div class="form-check border rounded p-2 bg-light">
+                                          <input class="form-check-input ms-0 me-2" type="checkbox" name="force_financial_return" value="1" id="force-financial-return">
+                                          <label class="form-check-label" for="force-financial-return">
+                                              Force financial return if store stock is not available
+                                          </label>
+                                          <div class="small text-muted">Use only when vendor return/credit is required but stock is already issued or consumed. Stock balance will not go negative.</div>
+                                      </div>
+                                  </div>
 
                                 <div class="col-md-4">
                                     <label class="form-label">Return Date</label>

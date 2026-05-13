@@ -145,11 +145,12 @@ class InventoryController extends Controller
                             $receivedBaseQty = (float) $txn->quantity;
                             $alreadyReturnedBaseQty = (float) ($returnedQtyBySource[$line->id] ?? 0);
                             $sourcePendingQty = max($receivedBaseQty - $alreadyReturnedBaseQty, 0);
-                            $returnableQty = min($currentBalance, $sourcePendingQty);
-
-                            if ($returnableQty <= 0) {
+                            if ($sourcePendingQty <= 0) {
                                     return null;
                             }
+
+                            $returnableQty = min($currentBalance, $sourcePendingQty);
+                            $displayReturnableQty = $returnableQty > 0 ? $returnableQty : $sourcePendingQty;
 
                             return [
                                     'goods_receipt_id' => $grn->id,
@@ -166,7 +167,9 @@ class InventoryController extends Controller
                                     'source_received_qty' => $receivedBaseQty,
                                     'already_returned_qty' => $alreadyReturnedBaseQty,
                                     'current_balance_qty' => $currentBalance,
-                                    'returnable_qty' => $returnableQty,
+                                    'returnable_qty' => $displayReturnableQty,
+                                    'stock_returnable_qty' => $returnableQty,
+                                    'financial_only' => $returnableQty <= 0,
                                     'units' => $item->units->map(fn ($u) => [
                                         'code' => $u->unit_code,
                                         'factor' => (float) $u->factor_to_base,
@@ -684,7 +687,7 @@ class InventoryController extends Controller
         // Prevent negative stock for OUT transactions.
         if (in_array($data['txn_type'], ['OUT'], true)) {
             $currentBalance = $this->inventoryService->balanceForItem($item->id);
-            if ($baseQuantity > $currentBalance) {
+            if (! $forceFinancialReturn && $baseQuantity > $currentBalance) {
                 return back()
                     ->withErrors(['quantity' => 'Not enough stock to post this transaction. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])
                     ->withInput();
@@ -713,6 +716,7 @@ class InventoryController extends Controller
             'quantity' => 'required|numeric|min:0.001',
             'unit_code' => 'nullable|string|max:20',
             'remarks' => 'nullable|string|max:1000',
+            'force_financial_return' => 'nullable|boolean',
         ]);
 
         $line = GoodsReceiptLine::query()
@@ -726,6 +730,7 @@ class InventoryController extends Controller
             return back()->withErrors(['goods_receipt_line_id' => 'Selected GRN line source is incomplete.'])->withInput();
         }
 
+        $forceFinancialReturn = $request->boolean('force_financial_return');
         $unitCode = trim((string) ($data['unit_code'] ?? ''));
         $transQuantity = (float) $data['quantity'];
         $baseQuantity = $transQuantity;
@@ -761,13 +766,13 @@ class InventoryController extends Controller
             ->sum('qty_returned');
         $sourceReceivedQty = (float) $sourceTxn->quantity;
         $sourcePendingQty = max($sourceReceivedQty - $alreadyReturnedQty, 0);
-        $maxReturnableQty = min($currentBalance, $sourcePendingQty);
+        $maxReturnableQty = $forceFinancialReturn ? $sourcePendingQty : min($currentBalance, $sourcePendingQty);
 
         if ($maxReturnableQty <= 0) {
             return back()->withErrors(['quantity' => 'This source has no returnable store stock left.'])->withInput();
         }
 
-        if ($baseQuantity > $currentBalance) {
+        if (! $forceFinancialReturn && $baseQuantity > $currentBalance) {
             return back()->withErrors(['quantity' => 'Return quantity cannot exceed current store stock. Current balance: '.number_format($currentBalance, 3).' '.$item->uom])->withInput();
         }
 
@@ -776,7 +781,7 @@ class InventoryController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($data, $grn, $line, $item, $vendor, $baseQuantity, $transUnitCode, $transQty, $sourceTxn) {
+            DB::transaction(function () use ($data, $grn, $line, $item, $vendor, $baseQuantity, $transUnitCode, $transQty, $sourceTxn, $forceFinancialReturn) {
                 $lockedSourceTxn = StockTransaction::query()
                     ->whereKey($sourceTxn->id)
                     ->lockForUpdate()
@@ -799,7 +804,7 @@ class InventoryController extends Controller
                     ->sum('qty_returned');
                 $lockedSourcePendingQty = max((float) $lockedSourceTxn->quantity - $lockedAlreadyReturnedQty, 0);
 
-                if ($baseQuantity > $lockedCurrentBalance) {
+                if (! $forceFinancialReturn && $baseQuantity > $lockedCurrentBalance) {
                     throw new \RuntimeException('Return quantity cannot exceed current store stock.');
                 }
 
@@ -818,9 +823,12 @@ class InventoryController extends Controller
                     'trans_unit_code' => $transUnitCode,
                     'trans_quantity' => $transQty,
                     'unit_cost' => (float) $lockedSourceTxn->unit_cost,
+                    'return_mode' => $forceFinancialReturn ? 'FINANCIAL' : 'STOCK',
+                    'affects_stock' => ! $forceFinancialReturn,
                     'remarks' => $data['remarks'] ?? null,
                 ]);
 
+                if (! $forceFinancialReturn) {
                 StockTransaction::query()->create([
                     'item_id' => $item->id,
                     'txn_type' => 'VENDOR_RETURN',
@@ -833,12 +841,15 @@ class InventoryController extends Controller
                     'remarks' => 'Vendor return against '.$grn->grn_number,
                     'txn_at' => $data['return_date'],
                 ]);
+                }
             });
         } catch (\RuntimeException $e) {
             return back()->withErrors(['quantity' => $e->getMessage()])->withInput();
         }
 
-        return back()->with('success', 'Vendor return posted. Stock reduced from store balance.');
+        return back()->with('success', $forceFinancialReturn
+            ? 'Financial vendor return posted. Stock balance was not reduced.'
+            : 'Vendor return posted. Stock reduced from store balance.');
     }
 
     public function importItems(Request $request): RedirectResponse

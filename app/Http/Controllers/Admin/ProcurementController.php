@@ -675,7 +675,7 @@ class ProcurementController extends Controller
             }
         });
 
-        return redirect()->route('admin.procurement.index', ['tab' => 'po'])
+        return redirect()->route('admin.procurement.index', ['tab' => 'po', 'edit_po' => $po->id])
             ->with('success', 'PO lines updated successfully.');
     }
 
@@ -1222,6 +1222,7 @@ class ProcurementController extends Controller
             ->get();
 
         $grnDetails = $netBase()
+            ->whereRaw("$netQtySql > 0")
             ->selectRaw("
                 goods_receipts.received_date,
                 goods_receipts.id as grn_id,

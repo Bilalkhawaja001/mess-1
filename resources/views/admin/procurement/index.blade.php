@@ -640,7 +640,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="14" class="text-center text-muted py-4">No purchase orders found.</td></tr>
+                                        <tr><td colspan="11" class="text-center text-muted py-4">No purchase orders found.</td></tr>
                                     @endforelse
                                 </tbody></table>
                             </div>
@@ -682,7 +682,7 @@
 
                                     <div class="d-flex gap-2 justify-content-end">
                                         <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="btn btn-outline-secondary">Close</a>
-                                        <button class="btn btn-primary">Save PO Changes</button>
+                                        <button type="submit" class="btn btn-primary">Save PO Changes</button>
                                     </div>
                                 </form>
                             </div>
@@ -1047,13 +1047,9 @@
                                 <th>Item Code</th>
                                 <th>Item Name</th>
                                 <th>Category</th>
-                                <th>Gross Qty</th>
-                                <th>Returned Qty</th>
                                 <th>Net Qty</th>
                                 <th>UOM</th>
                                 <th>Unit Cost</th>
-                                <th>Gross Cost</th>
-                                <th>Returned Cost</th>
                                 <th>Net Cost</th>
                             </tr>
                         </thead>
@@ -1067,18 +1063,14 @@
                                     <td>{{ $row->sku ?? $row->item_code ?? '' }}</td>
                                     <td>{{ $row->item_name ?? '' }}</td>
                                     <td>{{ $row->category ?? '' }}</td>
-                                    <td>{{ number_format((float) ($row->qty_received ?? 0), 3) }}</td>
-                                    <td>{{ number_format((float) ($row->returned_qty ?? 0), 3) }}</td>
-                                    <td>{{ number_format((float) ($row->net_qty ?? ($row->qty_received ?? 0)), 3) }}</td>
+                                    <td>{{ number_format((float) ($row->net_qty ?? 0), 3) }}</td>
                                     <td>{{ $row->uom ?? '' }}</td>
                                     <td>{{ number_format((float) ($row->unit_cost ?? 0), 2) }}</td>
-                                    <td>{{ number_format((float) ($row->gross_cost ?? 0), 2) }}</td>
-                                    <td>{{ number_format((float) ($row->returned_cost ?? 0), 2) }}</td>
                                     <td>{{ number_format((float) ($row->total_cost ?? 0), 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="14" class="text-center text-muted py-4">No GRN details found.</td>
+                                    <td colspan="11" class="text-center text-muted py-4">No GRN details found.</td>
                                 </tr>
                             @endforelse
                         </tbody>

@@ -48,7 +48,7 @@
                 </div>
 
                 <div class="sb-group sidebar-group">
-                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-operations" aria-expanded="{{ $opsOpen ? 'true' : 'false' }}" aria-controls="sidebar-operations">Operations <i class="bi {{ $opsOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
+                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-operations" aria-expanded="{{ $opsOpen ? 'true' : 'false' }}" aria-controls="sidebar-operations">Members & Operations <i class="bi {{ $opsOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
                     <nav class="nav flex-column gap-1 collapse {{ $opsOpen ? 'show' : '' }}" id="sidebar-operations">
                         @if(auth()->user()->hasPermission('member.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.members.*') ? 'active' : '' }}" href="{{ route('admin.members.index') }}" title="Members"><span class="sidebar-icon-wrap"><i class="bi bi-person-lines-fill sidebar-icon"></i></span><span>Members</span></a>
@@ -72,6 +72,19 @@
                 </div>
 
                 <div class="sb-group sidebar-group">
+                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-meals" aria-expanded="{{ $mealsOpen ? 'true' : 'false' }}" aria-controls="sidebar-meals">Meals Management <i class="bi {{ $mealsOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
+                    <nav class="nav flex-column gap-1 collapse {{ $mealsOpen ? 'show' : '' }}" id="sidebar-meals">
+                        @if(auth()->user()->hasPermission('kitchen.manage'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.kitchen.*') ? 'active' : '' }}" href="{{ route('admin.kitchen.index') }}" title="Kitchen"><span class="sidebar-icon-wrap"><i class="bi bi-egg-fried sidebar-icon"></i></span><span>Kitchen</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('menu.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.menu.*') ? 'active' : '' }}" href="{{ route('admin.menu.index') }}" title="Menu"><span class="sidebar-icon-wrap"><i class="bi bi-card-list sidebar-icon"></i></span><span>Menu</span></a>
+                        @endif
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.meals') ? 'active' : '' }}" href="{{ route('admin.hubs.meals') }}" title="Meals Hub"><span class="sidebar-icon-wrap"><i class="bi bi-grid-3x3-gap sidebar-icon"></i></span><span>Meals Hub</span></a>
+                    </nav>
+                </div>
+
+                <div class="sb-group sidebar-group">
                     <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-inventory" aria-expanded="{{ $invOpen ? 'true' : 'false' }}" aria-controls="sidebar-inventory">Inventory & Procurement <i class="bi {{ $invOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
                     <nav class="nav flex-column gap-1 collapse {{ $invOpen ? 'show' : '' }}" id="sidebar-inventory">
                         @if(auth()->user()->hasPermission('inventory.manage'))
@@ -81,19 +94,6 @@
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.procurement.*') ? 'active' : '' }}" href="{{ route('admin.procurement.index') }}" title="Procurement"><span class="sidebar-icon-wrap"><i class="bi bi-truck sidebar-icon"></i></span><span>Procurement</span></a>
                         @endif
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.inventory') ? 'active' : '' }}" href="{{ route('admin.hubs.inventory') }}" title="Inventory Hub"><span class="sidebar-icon-wrap"><i class="bi bi-boxes sidebar-icon"></i></span><span>Inventory Hub</span></a>
-                    </nav>
-                </div>
-
-                <div class="sb-group sidebar-group">
-                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-meals" aria-expanded="{{ $mealsOpen ? 'true' : 'false' }}" aria-controls="sidebar-meals">Kitchen & Meals <i class="bi {{ $mealsOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
-                    <nav class="nav flex-column gap-1 collapse {{ $mealsOpen ? 'show' : '' }}" id="sidebar-meals">
-                        @if(auth()->user()->hasPermission('kitchen.manage'))
-                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.kitchen.*') ? 'active' : '' }}" href="{{ route('admin.kitchen.index') }}" title="Kitchen"><span class="sidebar-icon-wrap"><i class="bi bi-egg-fried sidebar-icon"></i></span><span>Kitchen</span></a>
-                        @endif
-                        @if(auth()->user()->hasPermission('menu.view'))
-                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.menu.*') ? 'active' : '' }}" href="{{ route('admin.menu.index') }}" title="Menu"><span class="sidebar-icon-wrap"><i class="bi bi-card-list sidebar-icon"></i></span><span>Menu</span></a>
-                        @endif
-                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.meals') ? 'active' : '' }}" href="{{ route('admin.hubs.meals') }}" title="Meals Hub"><span class="sidebar-icon-wrap"><i class="bi bi-grid-3x3-gap sidebar-icon"></i></span><span>Meals Hub</span></a>
                     </nav>
                 </div>
 
@@ -120,7 +120,7 @@
                 </div>
 
                 <div class="sb-group sidebar-group">
-                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-reports" aria-expanded="{{ $reportsOpen ? 'true' : 'false' }}" aria-controls="sidebar-reports">Reports <i class="bi {{ $reportsOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
+                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-reports" aria-expanded="{{ $reportsOpen ? 'true' : 'false' }}" aria-controls="sidebar-reports">Reports & Exports <i class="bi {{ $reportsOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
                     <nav class="nav flex-column gap-1 collapse {{ $reportsOpen ? 'show' : '' }}" id="sidebar-reports">
                         @if(auth()->user()->hasPermission('report.view'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.summary.*') ? 'active' : '' }}" href="{{ route('admin.summary.index') }}" title="Summary"><span class="sidebar-icon-wrap"><i class="bi bi-clipboard-data sidebar-icon"></i></span><span>Summary</span></a>
@@ -140,7 +140,7 @@
                 </div>
 
                 <div class="sb-group sidebar-group">
-                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-admin" aria-expanded="{{ $adminOpen ? 'true' : 'false' }}" aria-controls="sidebar-admin">Admin <i class="bi {{ $adminOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
+                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-admin" aria-expanded="{{ $adminOpen ? 'true' : 'false' }}" aria-controls="sidebar-admin">System Admin <i class="bi {{ $adminOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
                     <nav class="nav flex-column gap-1 collapse {{ $adminOpen ? 'show' : '' }}" id="sidebar-admin">
                         @if(auth()->user()->hasPermission('users.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}" title="Users"><span class="sidebar-icon-wrap"><i class="bi bi-people sidebar-icon"></i></span><span>Users</span></a>

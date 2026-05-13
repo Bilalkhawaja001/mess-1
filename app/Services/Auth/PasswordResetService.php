@@ -23,7 +23,7 @@ class PasswordResetService
             ->orWhere('email', $identifier)
             ->first();
 
-        if (! $user || blank($user->email)) {
+        if (! $user || ! $this->hasDeliverableEmail((string) $user->email)) {
             return null;
         }
 
@@ -42,6 +42,17 @@ class PasswordResetService
         $this->auditLogService->log('password.reset.requested', User::class, (int) $user->id);
 
         return 'issued';
+    }
+
+    private function hasDeliverableEmail(string $email): bool
+    {
+        $email = trim($email);
+
+        if ($email === '' || str_ends_with(strtolower($email), '@member.local')) {
+            return false;
+        }
+
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
     }
 
     public function consumeToken(string $token, string $password): bool

@@ -45,8 +45,25 @@ class StatementController extends Controller
             $toMonth = $toMonth ?: $fromMonth;
         }
 
-        $fromDate = Carbon::createFromFormat('Y-m', $fromMonth)->startOfMonth()->toDateString();
-        $toDate = Carbon::createFromFormat('Y-m', $toMonth)->endOfMonth()->toDateString();
+        $monthPattern = '/^\\d{4}-(0[1-9]|1[0-2])$/';
+
+        if (! preg_match($monthPattern, $fromMonth)) {
+            $fromMonth = now()->format('Y-m');
+        }
+
+        if (! preg_match($monthPattern, $toMonth)) {
+            $toMonth = $fromMonth;
+        }
+
+        try {
+            $fromDate = Carbon::createFromFormat('Y-m', $fromMonth)->startOfMonth()->toDateString();
+            $toDate = Carbon::createFromFormat('Y-m', $toMonth)->endOfMonth()->toDateString();
+        } catch (\Throwable $e) {
+            $fromMonth = now()->format('Y-m');
+            $toMonth = $fromMonth;
+            $fromDate = now()->startOfMonth()->toDateString();
+            $toDate = now()->endOfMonth()->toDateString();
+        }
 
         $member = $memberId > 0
             ? DB::table('members')->where('id', $memberId)->first()

@@ -58,6 +58,9 @@
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance-monthly.*') ? 'active' : '' }}" href="{{ route('admin.attendance-monthly.index') }}" title="Monthly Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar3 sidebar-icon"></i></span><span>Monthly Attendance</span></a>
                         @endif
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.member-profile-change-requests.*') ? 'active' : '' }}" href="{{ route('admin.member-profile-change-requests.index') }}" title="Profile Change Requests"><span class="sidebar-icon-wrap"><i class="bi bi-person-gear sidebar-icon"></i></span><span>Profile Change Requests</span></a>
+                          @if(auth()->user()->hasPermission('complaint.view_all'))
+                              <a class="nav-link sidebar-link {{ request()->routeIs('admin.complaints.*') ? 'active' : '' }}" href="{{ route('admin.complaints.index') }}" title="Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>Complaints / Suggestions</span></a>
+                          @endif
                         @if(auth()->user()->hasPermission('guest.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.guests.*') ? 'active' : '' }}" href="{{ route('admin.guests.index') }}" title="Guests"><span class="sidebar-icon-wrap"><i class="bi bi-person-badge sidebar-icon"></i></span><span>Guests</span></a>
                         @endif

@@ -23,6 +23,18 @@ class PermissionSeeder extends Seeder
             'member.self_register', 'otp.request', 'otp.verify',
             'superadmin.member_account_create', 'superadmin.member_account_reset',
             'superadmin.member_account_activate', 'superadmin.member_account_deactivate',
+            'fleet.dashboard.view',
+            'fleet.vehicles.view', 'fleet.vehicles.manage',
+            'fleet.drivers.view', 'fleet.drivers.manage',
+            'fleet.fuel.view', 'fleet.fuel.manage',
+            'fleet.maintenance.view', 'fleet.maintenance.manage', 'fleet.maintenance.approve',
+            'fleet.documents.view', 'fleet.documents.manage',
+            'fleet.trips.view', 'fleet.trips.manage',
+            'fleet.tyres_batteries.view', 'fleet.tyres_batteries.manage',
+            'fleet.incidents.view', 'fleet.incidents.manage',
+            'fleet.challans.view', 'fleet.challans.manage',
+            'fleet.reports.view', 'fleet.reports.export',
+            'fleet.settings.view', 'fleet.settings.manage',
         ];
 
         foreach ($codes as $code) {
@@ -43,16 +55,35 @@ class PermissionSeeder extends Seeder
             'guest.manage', 'accounting.manage', 'report.view', 'report.export', 'audit.view',
             'rates.manage', 'complaint.manage', 'complaint.close', 'complaint.view_all', 'complaint.export',
             'menu.view', 'menu.manage', 'menu.approve', 'menu.export', 'month.close', 'month.reopen',
+            'fleet.dashboard.view',
+            'fleet.vehicles.view', 'fleet.vehicles.manage',
+            'fleet.drivers.view', 'fleet.drivers.manage',
+            'fleet.fuel.view', 'fleet.fuel.manage',
+            'fleet.maintenance.view', 'fleet.maintenance.manage', 'fleet.maintenance.approve',
+            'fleet.documents.view', 'fleet.documents.manage',
+            'fleet.trips.view', 'fleet.trips.manage',
+            'fleet.tyres_batteries.view', 'fleet.tyres_batteries.manage',
+            'fleet.incidents.view', 'fleet.incidents.manage',
+            'fleet.challans.view', 'fleet.challans.manage',
+            'fleet.reports.view', 'fleet.reports.export',
+            'fleet.settings.view', 'fleet.settings.manage',
         ]);
 
         $this->syncRolePermissions('DATA_ENTRY', [
             'member.manage', 'attendance.manage', 'payment.create', 'inventory.manage', 'procurement.manage',
             'kitchen.manage', 'guest.manage', 'complaint.manage', 'menu.view',
+            'fleet.dashboard.view', 'fleet.vehicles.view', 'fleet.drivers.view', 'fleet.fuel.view',
+            'fleet.maintenance.view', 'fleet.documents.view', 'fleet.trips.view',
+            'fleet.tyres_batteries.view', 'fleet.incidents.view', 'fleet.challans.view', 'fleet.reports.view',
         ]);
 
         $this->syncRolePermissions('AUDITOR', [
             'report.view', 'report.export', 'audit.view', 'payments.view_admin',
             'complaint.view_all', 'complaint.export', 'menu.view', 'menu.export',
+            'fleet.dashboard.view', 'fleet.vehicles.view', 'fleet.drivers.view', 'fleet.fuel.view',
+            'fleet.maintenance.view', 'fleet.documents.view', 'fleet.trips.view',
+            'fleet.tyres_batteries.view', 'fleet.incidents.view', 'fleet.challans.view',
+            'fleet.reports.view', 'fleet.reports.export',
         ]);
 
         $this->syncRolePermissions('MEMBER', [

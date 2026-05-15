@@ -6,6 +6,7 @@
     $mealsOpen = request()->routeIs('admin.kitchen.*') || request()->routeIs('admin.menu.*') || request()->routeIs('admin.hubs.meals');
     $financeOpen = request()->routeIs('admin.billing.*') || request()->routeIs('admin.mess-costing.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.ledger.*') || request()->routeIs('admin.rates.*') || request()->routeIs('admin.accounting.*');
     $reportsOpen = request()->routeIs('admin.summary.*') || request()->routeIs('admin.reports.*') || request()->routeIs('admin.statement.*') || request()->routeIs('admin.month.*') || request()->routeIs('admin.exports.*') || request()->routeIs('admin.hubs.reports');
+    $fleetOpen = request()->routeIs('admin.fleet.*');
     $adminOpen = request()->routeIs('admin.users.*') || request()->routeIs('admin.member-accounts.*') || request()->routeIs('admin.audit-log.*') || request()->routeIs('admin.settings.*');
 @endphp
 <aside class="sidebar sidebar-root" id="appSidebar">
@@ -131,6 +132,30 @@
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.exports.*') ? 'active' : '' }}" href="{{ route('admin.exports.index') }}" title="Export Center"><span class="sidebar-icon-wrap"><i class="bi bi-download sidebar-icon"></i></span><span>Export Center</span></a>
                         @endif
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.reports') ? 'active' : '' }}" href="{{ route('admin.hubs.reports') }}" title="Reports Hub"><span class="sidebar-icon-wrap"><i class="bi bi-bar-chart-steps sidebar-icon"></i></span><span>Reports Hub</span></a>
+                    </nav>
+                </div>
+
+                <div class="sb-group sidebar-group">
+                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-fleet" aria-expanded="{{ $fleetOpen ? 'true' : 'false' }}" aria-controls="sidebar-fleet">Fleet Management <i class="bi {{ $fleetOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
+                    <nav class="nav flex-column gap-1 collapse {{ $fleetOpen ? 'show' : '' }}" id="sidebar-fleet">
+                        @if(auth()->user()->hasPermission('fleet.dashboard.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.fleet.dashboard') ? 'active' : '' }}" href="{{ route('admin.fleet.dashboard') }}" title="Fleet Dashboard"><span class="sidebar-icon-wrap"><i class="bi bi-truck sidebar-icon"></i></span><span>Fleet Dashboard</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('fleet.vehicles.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.fleet.vehicles.*') ? 'active' : '' }}" href="{{ route('admin.fleet.vehicles.index') }}" title="Vehicles"><span class="sidebar-icon-wrap"><i class="bi bi-car-front sidebar-icon"></i></span><span>Vehicles</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('fleet.drivers.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.fleet.drivers.*') ? 'active' : '' }}" href="{{ route('admin.fleet.drivers.index') }}" title="Drivers"><span class="sidebar-icon-wrap"><i class="bi bi-person-badge sidebar-icon"></i></span><span>Drivers</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('fleet.fuel.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.fleet.fuel.*') ? 'active' : '' }}" href="{{ route('admin.fleet.fuel.index') }}" title="Fuel Logs"><span class="sidebar-icon-wrap"><i class="bi bi-fuel-pump sidebar-icon"></i></span><span>Fuel Logs</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('fleet.maintenance.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.fleet.maintenance.*') ? 'active' : '' }}" href="{{ route('admin.fleet.maintenance.index') }}" title="Maintenance"><span class="sidebar-icon-wrap"><i class="bi bi-tools sidebar-icon"></i></span><span>Maintenance</span></a>
+                        @endif
+                        @if(auth()->user()->hasPermission('fleet.reports.view'))
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.fleet.reports.*') ? 'active' : '' }}" href="{{ route('admin.fleet.reports.index') }}" title="Fleet Reports"><span class="sidebar-icon-wrap"><i class="bi bi-clipboard-data sidebar-icon"></i></span><span>Fleet Reports</span></a>
+                        @endif
                     </nav>
                 </div>
 

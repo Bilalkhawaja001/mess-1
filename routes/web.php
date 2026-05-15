@@ -28,6 +28,19 @@ use App\Http\Controllers\Admin\StatementController;
 use App\Http\Controllers\Admin\SummaryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\MemberAccountController;
+use App\Http\Controllers\Admin\Fleet\FleetChallanController;
+use App\Http\Controllers\Admin\Fleet\FleetDashboardController;
+use App\Http\Controllers\Admin\Fleet\FleetDocumentController;
+use App\Http\Controllers\Admin\Fleet\FleetDriverController;
+use App\Http\Controllers\Admin\Fleet\FleetExpenseController;
+use App\Http\Controllers\Admin\Fleet\FleetFuelLogController;
+use App\Http\Controllers\Admin\Fleet\FleetIncidentController;
+use App\Http\Controllers\Admin\Fleet\FleetMaintenanceController;
+use App\Http\Controllers\Admin\Fleet\FleetReportController;
+use App\Http\Controllers\Admin\Fleet\FleetSettingController;
+use App\Http\Controllers\Admin\Fleet\FleetTripController;
+use App\Http\Controllers\Admin\Fleet\FleetTyreBatteryController;
+use App\Http\Controllers\Admin\Fleet\FleetVehicleController;
 use App\Http\Controllers\Auth\MemberRegistrationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Member\ComplaintController as MemberComplaintController;
@@ -318,6 +331,94 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPE
         Route::post('/settings/messes/{mess}/update', [SettingController::class, 'updateMess'])->name('settings.messes.update');
         Route::post('/settings/messes/{mess}/remove', [SettingController::class, 'removeMess'])->name('settings.messes.remove');
         Route::post('/settings/messes/{mess}/reactivate', [SettingController::class, 'reactivateMess'])->name('settings.messes.reactivate');
+    });
+
+    Route::prefix('fleet')->name('fleet.')->group(function () {
+        Route::get('/', [FleetDashboardController::class, 'index'])->name('dashboard')->middleware('permission:fleet.dashboard.view');
+        Route::get('dashboard', [FleetDashboardController::class, 'index'])->name('dashboard.alias')->middleware('permission:fleet.dashboard.view');
+
+        Route::get('vehicles', [FleetVehicleController::class, 'index'])->name('vehicles.index')->middleware('permission:fleet.vehicles.view');
+        Route::get('vehicles/create', [FleetVehicleController::class, 'create'])->name('vehicles.create')->middleware('permission:fleet.vehicles.manage');
+        Route::post('vehicles', [FleetVehicleController::class, 'store'])->name('vehicles.store')->middleware('permission:fleet.vehicles.manage');
+        Route::get('vehicles/{vehicle}', [FleetVehicleController::class, 'show'])->name('vehicles.show')->middleware('permission:fleet.vehicles.view');
+        Route::get('vehicles/{vehicle}/edit', [FleetVehicleController::class, 'edit'])->name('vehicles.edit')->middleware('permission:fleet.vehicles.manage');
+        Route::put('vehicles/{vehicle}', [FleetVehicleController::class, 'update'])->name('vehicles.update')->middleware('permission:fleet.vehicles.manage');
+        Route::delete('vehicles/{vehicle}', [FleetVehicleController::class, 'destroy'])->name('vehicles.destroy')->middleware('permission:fleet.vehicles.manage');
+
+        Route::get('drivers', [FleetDriverController::class, 'index'])->name('drivers.index')->middleware('permission:fleet.drivers.view');
+        Route::get('drivers/create', [FleetDriverController::class, 'create'])->name('drivers.create')->middleware('permission:fleet.drivers.manage');
+        Route::post('drivers', [FleetDriverController::class, 'store'])->name('drivers.store')->middleware('permission:fleet.drivers.manage');
+        Route::get('drivers/{driver}', [FleetDriverController::class, 'show'])->name('drivers.show')->middleware('permission:fleet.drivers.view');
+        Route::get('drivers/{driver}/edit', [FleetDriverController::class, 'edit'])->name('drivers.edit')->middleware('permission:fleet.drivers.manage');
+        Route::put('drivers/{driver}', [FleetDriverController::class, 'update'])->name('drivers.update')->middleware('permission:fleet.drivers.manage');
+        Route::delete('drivers/{driver}', [FleetDriverController::class, 'destroy'])->name('drivers.destroy')->middleware('permission:fleet.drivers.manage');
+
+        Route::get('fuel', [FleetFuelLogController::class, 'index'])->name('fuel.index')->middleware('permission:fleet.fuel.view');
+        Route::get('fuel/create', [FleetFuelLogController::class, 'create'])->name('fuel.create')->middleware('permission:fleet.fuel.manage');
+        Route::post('fuel', [FleetFuelLogController::class, 'store'])->name('fuel.store')->middleware('permission:fleet.fuel.manage');
+        Route::get('fuel/{fuelLog}', [FleetFuelLogController::class, 'show'])->name('fuel.show')->middleware('permission:fleet.fuel.view');
+        Route::get('fuel/{fuelLog}/edit', [FleetFuelLogController::class, 'edit'])->name('fuel.edit')->middleware('permission:fleet.fuel.manage');
+        Route::put('fuel/{fuelLog}', [FleetFuelLogController::class, 'update'])->name('fuel.update')->middleware('permission:fleet.fuel.manage');
+        Route::delete('fuel/{fuelLog}', [FleetFuelLogController::class, 'destroy'])->name('fuel.destroy')->middleware('permission:fleet.fuel.manage');
+
+        Route::get('expenses', [FleetExpenseController::class, 'index'])->name('expenses.index')->middleware('permission:fleet.reports.view');
+
+        Route::get('maintenance', [FleetMaintenanceController::class, 'index'])->name('maintenance.index')->middleware('permission:fleet.maintenance.view');
+        Route::get('maintenance/create', [FleetMaintenanceController::class, 'create'])->name('maintenance.create')->middleware('permission:fleet.maintenance.manage');
+        Route::post('maintenance', [FleetMaintenanceController::class, 'store'])->name('maintenance.store')->middleware('permission:fleet.maintenance.manage');
+        Route::get('maintenance/{maintenance}', [FleetMaintenanceController::class, 'show'])->name('maintenance.show')->middleware('permission:fleet.maintenance.view');
+        Route::get('maintenance/{maintenance}/edit', [FleetMaintenanceController::class, 'edit'])->name('maintenance.edit')->middleware('permission:fleet.maintenance.manage');
+        Route::put('maintenance/{maintenance}', [FleetMaintenanceController::class, 'update'])->name('maintenance.update')->middleware('permission:fleet.maintenance.manage');
+        Route::delete('maintenance/{maintenance}', [FleetMaintenanceController::class, 'destroy'])->name('maintenance.destroy')->middleware('permission:fleet.maintenance.manage');
+        Route::post('maintenance/{maintenance}/approve', [FleetMaintenanceController::class, 'approve'])->name('maintenance.approve')->middleware('permission:fleet.maintenance.approve');
+        Route::post('maintenance/{maintenance}/start', [FleetMaintenanceController::class, 'start'])->name('maintenance.start')->middleware('permission:fleet.maintenance.manage');
+        Route::post('maintenance/{maintenance}/complete', [FleetMaintenanceController::class, 'complete'])->name('maintenance.complete')->middleware('permission:fleet.maintenance.manage');
+        Route::post('maintenance/{maintenance}/cancel', [FleetMaintenanceController::class, 'cancel'])->name('maintenance.cancel')->middleware('permission:fleet.maintenance.manage');
+
+        Route::get('documents', [FleetDocumentController::class, 'index'])->name('documents.index')->middleware('permission:fleet.documents.view');
+        Route::get('documents/create', [FleetDocumentController::class, 'create'])->name('documents.create')->middleware('permission:fleet.documents.manage');
+        Route::post('documents', [FleetDocumentController::class, 'store'])->name('documents.store')->middleware('permission:fleet.documents.manage');
+        Route::get('documents/{document}', [FleetDocumentController::class, 'show'])->name('documents.show')->middleware('permission:fleet.documents.view');
+        Route::get('documents/{document}/edit', [FleetDocumentController::class, 'edit'])->name('documents.edit')->middleware('permission:fleet.documents.manage');
+        Route::put('documents/{document}', [FleetDocumentController::class, 'update'])->name('documents.update')->middleware('permission:fleet.documents.manage');
+        Route::delete('documents/{document}', [FleetDocumentController::class, 'destroy'])->name('documents.destroy')->middleware('permission:fleet.documents.manage');
+
+        Route::get('trips', [FleetTripController::class, 'index'])->name('trips.index')->middleware('permission:fleet.trips.view');
+        Route::get('trips/create', [FleetTripController::class, 'create'])->name('trips.create')->middleware('permission:fleet.trips.manage');
+        Route::post('trips', [FleetTripController::class, 'store'])->name('trips.store')->middleware('permission:fleet.trips.manage');
+        Route::get('trips/{trip}', [FleetTripController::class, 'show'])->name('trips.show')->middleware('permission:fleet.trips.view');
+        Route::get('trips/{trip}/edit', [FleetTripController::class, 'edit'])->name('trips.edit')->middleware('permission:fleet.trips.manage');
+        Route::put('trips/{trip}', [FleetTripController::class, 'update'])->name('trips.update')->middleware('permission:fleet.trips.manage');
+        Route::delete('trips/{trip}', [FleetTripController::class, 'destroy'])->name('trips.destroy')->middleware('permission:fleet.trips.manage');
+
+        Route::get('tyres-batteries', [FleetTyreBatteryController::class, 'index'])->name('tyres-batteries.index')->middleware('permission:fleet.tyres_batteries.view');
+        Route::get('tyres-batteries/create', [FleetTyreBatteryController::class, 'create'])->name('tyres-batteries.create')->middleware('permission:fleet.tyres_batteries.manage');
+        Route::post('tyres-batteries', [FleetTyreBatteryController::class, 'store'])->name('tyres-batteries.store')->middleware('permission:fleet.tyres_batteries.manage');
+        Route::get('tyres-batteries/{tyreBattery}', [FleetTyreBatteryController::class, 'show'])->name('tyres-batteries.show')->middleware('permission:fleet.tyres_batteries.view');
+        Route::get('tyres-batteries/{tyreBattery}/edit', [FleetTyreBatteryController::class, 'edit'])->name('tyres-batteries.edit')->middleware('permission:fleet.tyres_batteries.manage');
+        Route::put('tyres-batteries/{tyreBattery}', [FleetTyreBatteryController::class, 'update'])->name('tyres-batteries.update')->middleware('permission:fleet.tyres_batteries.manage');
+        Route::delete('tyres-batteries/{tyreBattery}', [FleetTyreBatteryController::class, 'destroy'])->name('tyres-batteries.destroy')->middleware('permission:fleet.tyres_batteries.manage');
+
+        Route::get('incidents', [FleetIncidentController::class, 'index'])->name('incidents.index')->middleware('permission:fleet.incidents.view');
+        Route::get('incidents/create', [FleetIncidentController::class, 'create'])->name('incidents.create')->middleware('permission:fleet.incidents.manage');
+        Route::post('incidents', [FleetIncidentController::class, 'store'])->name('incidents.store')->middleware('permission:fleet.incidents.manage');
+        Route::get('incidents/{incident}', [FleetIncidentController::class, 'show'])->name('incidents.show')->middleware('permission:fleet.incidents.view');
+        Route::get('incidents/{incident}/edit', [FleetIncidentController::class, 'edit'])->name('incidents.edit')->middleware('permission:fleet.incidents.manage');
+        Route::put('incidents/{incident}', [FleetIncidentController::class, 'update'])->name('incidents.update')->middleware('permission:fleet.incidents.manage');
+        Route::delete('incidents/{incident}', [FleetIncidentController::class, 'destroy'])->name('incidents.destroy')->middleware('permission:fleet.incidents.manage');
+
+        Route::get('challans', [FleetChallanController::class, 'index'])->name('challans.index')->middleware('permission:fleet.challans.view');
+        Route::get('challans/create', [FleetChallanController::class, 'create'])->name('challans.create')->middleware('permission:fleet.challans.manage');
+        Route::post('challans', [FleetChallanController::class, 'store'])->name('challans.store')->middleware('permission:fleet.challans.manage');
+        Route::get('challans/{challan}', [FleetChallanController::class, 'show'])->name('challans.show')->middleware('permission:fleet.challans.view');
+        Route::get('challans/{challan}/edit', [FleetChallanController::class, 'edit'])->name('challans.edit')->middleware('permission:fleet.challans.manage');
+        Route::put('challans/{challan}', [FleetChallanController::class, 'update'])->name('challans.update')->middleware('permission:fleet.challans.manage');
+        Route::delete('challans/{challan}', [FleetChallanController::class, 'destroy'])->name('challans.destroy')->middleware('permission:fleet.challans.manage');
+
+        Route::get('reports', [FleetReportController::class, 'index'])->name('reports.index')->middleware('permission:fleet.reports.view');
+        Route::get('reports/export', [FleetReportController::class, 'export'])->name('reports.export')->middleware('permission:fleet.reports.export');
+        Route::get('settings', [FleetSettingController::class, 'index'])->name('settings.index')->middleware('permission:fleet.settings.view');
+        Route::post('settings', [FleetSettingController::class, 'update'])->name('settings.update')->middleware('permission:fleet.settings.manage');
     });
 });
 

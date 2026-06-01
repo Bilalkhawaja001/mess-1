@@ -26,7 +26,7 @@ class ProfileController extends Controller
             ->limit(20)
             ->get();
 
-        return view('member.profile.index', [
+        return view('member.mobile.profile', [
             'user' => $user,
             'member' => $member,
             'changeRequests' => $changeRequests,
@@ -61,6 +61,8 @@ class ProfileController extends Controller
             'status' => MemberProfileChangeRequest::STATUS_PENDING,
         ]);
 
-        return redirect()->route('member.profile.index')->with('success', 'Profile change request submitted for approval.');
+        return redirect()
+            ->route($request->routeIs('member.app.*') ? 'member.app.profile.index' : 'member.profile.index')
+            ->with('success', 'Profile change request submitted for approval.');
     }
 }

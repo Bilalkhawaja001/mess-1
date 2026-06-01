@@ -85,7 +85,7 @@ class DashboardController extends Controller
             }
         }
 
-        return view('member.dashboard', [
+        $data = [
             'user' => $user,
             'member' => $member,
             'memberProfileMissing' => $user?->isMemberRole() && ! $member,
@@ -97,6 +97,8 @@ class DashboardController extends Controller
             'recentLedgerEntries' => $recentLedgerEntries,
             'recentComplaints' => $recentComplaints,
             'todayMenu' => $todayMenu,
-        ]);
+        ];
+
+        return view('member.mobile.dashboard', $data);
     }
 }

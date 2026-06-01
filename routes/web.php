@@ -14,6 +14,8 @@ Route::middleware(['auth'])->group(function () {
 });
 
 use App\Http\Controllers\Admin\AccountingController;
+use App\Http\Controllers\Admin\AppSettingsController as AdminAppSettingsController;
+use App\Http\Controllers\Api\AppSettingsController as ApiAppSettingsController;
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\BillingController;
 use App\Http\Controllers\Admin\AuditLogController;
@@ -47,6 +49,7 @@ use App\Http\Controllers\Member\ComplaintController as MemberComplaintController
 use App\Http\Controllers\Member\DashboardController as MemberDashboardController;
 use App\Http\Controllers\Member\DeviceTokenController as MemberDeviceTokenController;
 use App\Http\Controllers\Member\MenuController as MemberMenuController;
+use App\Http\Controllers\Member\NotificationController as MemberNotificationController;
 use App\Http\Controllers\Member\PaymentController as MemberPaymentController;
 use App\Http\Controllers\Member\ProfileController as MemberProfileController;
 use App\Http\Controllers\Member\StatementController as MemberStatementController;
@@ -77,6 +80,7 @@ Route::get('/', function () {
 });
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
+Route::get('/api/app-settings', [ApiAppSettingsController::class, 'show'])->name('api.app-settings');
 Route::get('/ready', fn () => response()->json(['ready' => true]));
 
 Route::middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'])->group(function () {
@@ -335,6 +339,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
         Route::post('/settings/{setting}/toggle', [SettingController::class, 'toggle'])->name('settings.toggle');
+        Route::get('/app-settings', [AdminAppSettingsController::class, 'edit'])->name('app-settings.edit');
+        Route::post('/app-settings', [AdminAppSettingsController::class, 'update'])->name('app-settings.update');
     });
 
     Route::middleware('permission:accounting.manage')->group(function () {
@@ -355,6 +361,7 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'force_password_ch
     Route::delete('/device-token', [MemberDeviceTokenController::class, 'destroy'])->name('device-token.destroy');
     Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
     Route::middleware('permission:payments.view_own')->group(function () {
+        Route::get('/bill', [MemberPaymentController::class, 'index'])->name('bill');
         Route::get('/payments', [MemberPaymentController::class, 'index'])->name('payments.index');
         Route::get('/statement', [MemberStatementController::class, 'index'])->name('statement.index');
         Route::get('/profile', [MemberProfileController::class, 'index'])->name('profile.index');
@@ -375,6 +382,40 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'force_password_ch
     });
     Route::middleware('permission:menu.view')->group(function () {
         Route::get('/menu', [MemberMenuController::class, 'index'])->name('menu.index');
+    });
+    Route::get('/notifications', [MemberNotificationController::class, 'index'])->name('notifications.index');
+
+    Route::prefix('app')->name('app.')->group(function () {
+        Route::redirect('/', '/member/app/dashboard')->name('home');
+        Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
+
+        Route::middleware('permission:payments.view_own')->group(function () {
+            Route::get('/bill', [MemberPaymentController::class, 'index'])->name('bill');
+            Route::get('/payments', [MemberPaymentController::class, 'index'])->name('payments.index');
+            Route::get('/statement', [MemberStatementController::class, 'index'])->middleware('app_feature:statement')->name('statement.index');
+            Route::get('/profile', [MemberProfileController::class, 'index'])->name('profile.index');
+        });
+
+        Route::middleware('permission:payments.initiate_own')->group(function () {
+            Route::post('/payments/initiate', [MemberPaymentController::class, 'initiate'])->name('payments.initiate');
+        });
+
+        Route::middleware(['permission:menu.view', 'app_feature:menu'])->group(function () {
+            Route::get('/menu', [MemberMenuController::class, 'index'])->name('menu.index');
+        });
+
+        Route::middleware(['permission:complaint.view_own', 'app_feature:complaint'])->group(function () {
+            Route::get('/complaints', [MemberComplaintController::class, 'index'])->name('complaints.index');
+            Route::get('/complaints/{complaint}', [MemberComplaintController::class, 'show'])->name('complaints.show');
+        });
+
+        Route::middleware(['permission:complaint.submit_own', 'app_feature:complaint'])->group(function () {
+            Route::get('/complaints/create', [MemberComplaintController::class, 'create'])->name('complaints.create');
+            Route::post('/complaints', [MemberComplaintController::class, 'store'])->name('complaints.store');
+            Route::post('/profile/change-requests', [MemberProfileController::class, 'storeChangeRequest'])->name('profile.change-requests.store');
+        });
+
+        Route::get('/notifications', [MemberNotificationController::class, 'index'])->middleware('app_feature:notification')->name('notifications.index');
     });
 });
 

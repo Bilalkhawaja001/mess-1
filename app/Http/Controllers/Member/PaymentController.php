@@ -39,7 +39,11 @@ class PaymentController extends Controller
 
         $methods = PaymentMethod::query()->where('is_active', true)->orderBy('name')->get();
 
-        return view('member.payments.index', compact('member', 'bills', 'payments', 'methods'));
+        $view = request()->routeIs('member.bill', 'member.app.bill')
+            ? 'member.mobile.bill'
+            : 'member.mobile.payments';
+
+        return view($view, compact('member', 'bills', 'payments', 'methods'));
     }
 
     public function initiate(Request $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService): View|RedirectResponse

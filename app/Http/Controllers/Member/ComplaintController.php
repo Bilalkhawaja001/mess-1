@@ -22,7 +22,7 @@ class ComplaintController extends Controller
 
         $rows = Complaint::query()->where('member_id', $member->id)->latest('id')->paginate(25);
 
-        return view('member.complaints.index', compact('rows'));
+        return view('member.mobile.complaints.index', compact('rows'));
     }
 
     public function create(): View|RedirectResponse
@@ -31,7 +31,7 @@ class ComplaintController extends Controller
             return redirect()->route('member.dashboard')->with('warning', 'Your member profile is not linked yet. Please contact admin.');
         }
 
-        return view('member.complaints.create');
+        return view('member.mobile.complaints.create');
     }
 
     public function store(Request $request): RedirectResponse
@@ -80,7 +80,9 @@ class ComplaintController extends Controller
             ]);
         }
 
-        return redirect()->route('member.complaints.index')->with('success', 'Complaint / suggestion submitted successfully.');
+        return redirect()
+            ->route($request->routeIs('member.app.*') ? 'member.app.complaints.index' : 'member.complaints.index')
+            ->with('success', 'Complaint / suggestion submitted successfully.');
     }
 
     public function show(Complaint $complaint): View|RedirectResponse
@@ -95,6 +97,6 @@ class ComplaintController extends Controller
 
         $complaint->load('attachments');
 
-        return view('member.complaints.show', compact('complaint'));
+        return view(request()->routeIs('member.app.*') ? 'member.app.complaints.show' : 'member.complaints.show', compact('complaint'));
     }
 }

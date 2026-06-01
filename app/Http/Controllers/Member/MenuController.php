@@ -49,7 +49,7 @@ class MenuController extends Controller
             $grid[$key][$bucket] = $grid[$key][$bucket] === '-' ? $value : ($grid[$key][$bucket]."\n\n".$value);
         }
 
-        return view('member.menu.index', [
+        return view('member.mobile.menu', [
             'weekRows' => array_values($grid),
             'weekStart' => $weekStart,
             'weekEnd' => $weekEnd,

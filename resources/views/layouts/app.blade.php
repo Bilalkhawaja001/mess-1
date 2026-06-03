@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="{{ asset('branding/nodesky-theme.css') }}?v={{ @filemtime(public_path('branding/nodesky-theme.css')) ?: 'saas-ui-v2' }}">
     @stack('styles')
 </head>
-<body>
+<body class="topbar-nav-shell">
 @php
     $isMemberBottomNavPage = request()->routeIs('member.dashboard')
         || request()->routeIs('member.statement.*')

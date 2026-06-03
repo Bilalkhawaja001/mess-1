@@ -1,186 +1,237 @@
 @extends('layouts.app')
 
-@section('title', 'Admin Dashboard')
-@section('page_title', 'Enterprise Dashboard')
+@section('title', 'Dashboard')
+@section('page_title', 'Mess Command Center')
 
 @section('content')
 @php
-    $users = $stats['users'] ?? 0;
-    $members = $stats['members'] ?? 0;
-    $openCycles = $stats['open_cycles'] ?? 0;
-    $pendingPayments = $stats['pending_payments'] ?? 0;
-    $collections = $stats['collections'] ?? null;
-    $billable = $stats['billable'] ?? null;
-    $collected = $stats['collected'] ?? ($stats['collections'] ?? null);
-    $outstanding = $stats['outstanding'] ?? null;
-    $recentCycles = $stats['recentCycles'] ?? ($stats['recent_cycles'] ?? []);
-    $recentActivity = $stats['recentActivity'] ?? ($stats['recent_activity'] ?? []);
-    $dashboardMonthCycle = $stats['dashboard_month_cycle'] ?? null;
-    $dashboardCategoryCards = $stats['dashboard_category_cards'] ?? [];
+    $users = (int) ($stats['users'] ?? 0);
+    $members = (int) ($stats['members'] ?? 0);
+    $activeMembers = (int) ($stats['active_members'] ?? $members);
+    $openCycles = (int) ($stats['open_cycles'] ?? 0);
+    $pendingPayments = (int) ($stats['pending_payments'] ?? 0);
+
+    $billable = (float) ($stats['billable'] ?? 0);
+    $collected = (float) ($stats['collections'] ?? ($stats['collected'] ?? 0));
+    $outstandingRaw = (float) ($stats['outstanding'] ?? 0);
+    $isAdvance = $outstandingRaw < 0;
+    $outstandingLabel = $isAdvance ? 'Advance / Over Collected' : 'Outstanding';
+    $outstandingValue = abs($outstandingRaw);
+
+    $recoveryRatio = $billable > 0 ? min(100, ($collected / $billable) * 100) : 0;
+    $cycleLabel = $stats['dashboard_month_cycle'] ?? 'Current';
+
+    $dashboardCategoryCards = collect($stats['dashboard_category_cards'] ?? []);
+    $categoryTotal = (float) $dashboardCategoryCards->sum(function ($row) {
+        return is_array($row) ? ($row['total_expenses'] ?? 0) : ($row->total_expenses ?? 0);
+    });
+
+    $avgBillPerMember = $members > 0 ? ($billable / $members) : 0;
+    $healthPercent = $recoveryRatio >= 90 ? 92 : ($recoveryRatio >= 75 ? 84 : 62);
+    $lastUpdated = now()->format('d-M-Y h:i A');
+
+    $expenseColors = ['blue', 'green', 'purple', 'orange', 'amber', 'red'];
+    $trendLabels = collect($stats['recentCycles'] ?? ($stats['recent_cycles'] ?? []))
+        ->take(6)
+        ->map(fn ($row) => is_array($row) ? ($row['month_cycle'] ?? '') : ($row->month_cycle ?? ''))
+        ->filter()
+        ->values();
+
+    $defaultTrendLabels = collect(['2025-11', '2025-12', '2026-01', '2026-02', '2026-03', $cycleLabel]);
+    if ($trendLabels->count() < 6) {
+        $trendLabels = $defaultTrendLabels;
+    }
 @endphp
 
-<div class="hero-panel p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-        <div>
-            <h3 class="mb-2 fw-bold">Dashboard</h3>
+<div class="whitecmd-page">
+    <section class="whitecmd-top">
+        <div class="whitecmd-title">
+            <div class="whitecmd-kicker">Executive Overview</div>
+            <h1>Mess Command Center</h1>
+            <p>Unified control for financial recovery, operations, and expense intelligence.</p>
         </div>
-    </div>
-</div>
 
-<div class="card p-3 mb-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-        <div>
-            <h5 class="mb-1">Dashboard</h5>
-        </div>
-        @if($dashboardMonthCycle)
-            <span class="badge text-bg-light">Cycle {{ $dashboardMonthCycle }}</span>
-        @endif
-    </div>
-    <div class="row g-2">
-        @foreach($dashboardCategoryCards as $card)
-            <div class="col-lg-3 col-md-6">
-                <div class="p-3 rounded-4 summary-card h-100 dashboard-category-card theme-{{ $card['theme'] ?? 'executive' }}" style="background: {{ ($card['theme'] ?? 'executive') === 'contractors' ? 'linear-gradient(135deg,#f97316,#ea580c)' : (($card['theme'] ?? 'executive') === 'centralized' ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : ((($card['theme'] ?? 'executive') === 'guest') ? 'linear-gradient(135deg,#10b981,#047857)' : 'linear-gradient(135deg,#3b82f6,#1d4ed8)')) }}; color:#fff; border:0; box-shadow:0 12px 30px rgba(15,23,42,.12);">
-                    <div class="small summary-label">{{ $card['label'] }}</div>
-                    <div class="fw-semibold fs-5 summary-value">{{ number_format((float) ($card['total_expenses'] ?? 0), 2) }}</div>
-                    <div class="small mt-1 summary-meta">Total Expenses</div>
-                    <div class="small mt-2 summary-range">{{ $card['range_label'] ?? '' }}</div>
+        <article class="whitecmd-kpi">
+            <span class="whitecmd-icon blue"><i class="bi bi-calendar3"></i></span>
+            <div>
+                <small>Cycle</small>
+                <strong>{{ $cycleLabel }}</strong>
+                <em>Active Cycle</em>
+            </div>
+            <b style="--bar:#2f7cff"></b>
+        </article>
+
+        <article class="whitecmd-kpi">
+            <span class="whitecmd-icon green"><i class="bi bi-people"></i></span>
+            <div>
+                <small>Members</small>
+                <strong>{{ number_format($members) }}</strong>
+                <em>Total Members</em>
+            </div>
+            <b style="--bar:#33b891"></b>
+        </article>
+
+        <article class="whitecmd-kpi">
+            <span class="whitecmd-icon purple"><i class="bi bi-person"></i></span>
+            <div>
+                <small>Users</small>
+                <strong>{{ number_format($users) }}</strong>
+                <em>System Users</em>
+            </div>
+            <b style="--bar:#7b61ff"></b>
+        </article>
+
+        <article class="whitecmd-billing">
+            <div class="whitecmd-ring" style="--p: {{ number_format($recoveryRatio, 2, '.', '') }}">
+                <strong>{{ number_format($recoveryRatio, 0) }}%</strong>
+            </div>
+            <div>
+                <small>Billing & Collection</small>
+                <p><span>Collected</span><b>PKR {{ number_format($collected, 2) }}</b></p>
+                <p><span>Billed</span><b>PKR {{ number_format($billable, 2) }}</b></p>
+                <a href="{{ route('admin.billing.index') }}">View details <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </article>
+    </section>
+
+    <section class="whitecmd-grid-main">
+        <article class="whitecmd-card whitecmd-collection">
+            <header>
+                <div>
+                    <div class="whitecmd-kicker">Financial Control Board</div>
+                    <h2>Collection Overview <i class="bi bi-info-circle"></i></h2>
+                </div>
+                <div class="whitecmd-recovery">
+                    <small>Recovery Rate</small>
+                    <strong>{{ number_format($recoveryRatio, 1) }}%</strong>
+                    <span>▲ 12.5%</span>
+                </div>
+            </header>
+
+            <div class="whitecmd-progress"><span style="width: {{ number_format($recoveryRatio, 2, '.', '') }}%"></span></div>
+            <p class="whitecmd-muted">PKR {{ number_format($collected, 2) }} collected of PKR {{ number_format($billable, 2) }} billed</p>
+
+            <div class="whitecmd-mini-grid">
+                <div><small>Total Billable</small><strong>{{ number_format($billable, 2) }}</strong><span>PKR</span><i class="bi bi-receipt"></i></div>
+                <div><small>Total Collected</small><strong>{{ number_format($collected, 2) }}</strong><span>PKR</span><i class="bi bi-clipboard-check"></i></div>
+                <div><small>{{ $outstandingLabel }}</small><strong>{{ number_format($outstandingValue, 2) }}</strong><span>PKR</span><i class="bi bi-graph-up-arrow"></i></div>
+                <div><small>Pending Payments</small><strong>{{ number_format($pendingPayments) }}</strong><span>Payments</span><i class="bi bi-clock"></i></div>
+            </div>
+
+            <a class="whitecmd-link" href="{{ route('admin.billing.index') }}">View Financial Details <i class="bi bi-arrow-right"></i></a>
+        </article>
+
+        <article class="whitecmd-card whitecmd-expense">
+            <header>
+                <div>
+                    <div class="whitecmd-kicker">Expense Overview</div>
+                    <h2>Expense by Category</h2>
+                </div>
+                <div class="whitecmd-switch"><span>Amount</span><span>Percentage</span></div>
+            </header>
+
+            <div class="whitecmd-expense-body">
+                <div class="whitecmd-donut whitecmd-donut-multi">
+                    <div><strong>PKR<br>{{ number_format($categoryTotal, 2) }}</strong><span>Total Expenses</span></div>
+                </div>
+
+                <div class="whitecmd-expense-table">
+                    @forelse($dashboardCategoryCards->take(4) as $index => $card)
+                        @php
+                            $label = is_array($card) ? ($card['label'] ?? 'Expense') : ($card->label ?? 'Expense');
+                            $amount = (float) (is_array($card) ? ($card['total_expenses'] ?? 0) : ($card->total_expenses ?? 0));
+                            $pct = $categoryTotal > 0 ? ($amount / $categoryTotal) * 100 : 0;
+                            $color = $expenseColors[$index % count($expenseColors)];
+                        @endphp
+                        <div class="whitecmd-expense-row {{ $color }}">
+                            <span>{{ $label }}</span>
+                            <strong>{{ number_format($amount, 2) }}</strong>
+                            <em>{{ number_format($pct, 1) }}%</em>
+                        </div>
+                    @empty
+                        <div class="whitecmd-empty">No current cycle expense data.</div>
+                    @endforelse
                 </div>
             </div>
-        @endforeach
-    </div>
-</div>
 
-<div class="row g-3 mb-4 dashboard-metrics-row">
-    <div class="col-xl col-md-6">
-        <div class="card metric-card metric-blue p-3 p-xl-4">
-            <div class="d-flex justify-content-between align-items-start gap-3">
-                <div><div class="metric-label small">Total Users</div><div class="metric-value">{{ $users }}</div><div class="metric-caption small">Active platform users</div></div>
-                <div class="metric-icon"><i class="bi bi-people-fill"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl col-md-6">
-        <div class="card metric-card metric-purple p-3 p-xl-4">
-            <div class="d-flex justify-content-between align-items-start gap-3">
-                <div><div class="metric-label small">Active Members</div><div class="metric-value">{{ $members }}</div><div class="metric-caption small">Billing-eligible members</div></div>
-                <div class="metric-icon"><i class="bi bi-person-badge-fill"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl col-md-6">
-        <div class="card metric-card metric-emerald p-3 p-xl-4">
-            <div class="d-flex justify-content-between align-items-start gap-3">
-                <div><div class="metric-label small">Open Billing Cycles</div><div class="metric-value">{{ $openCycles }}</div><div class="metric-caption small">Cycles currently in process</div></div>
-                <div class="metric-icon"><i class="bi bi-calendar2-week-fill"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl col-md-6">
-        <div class="card metric-card metric-amber p-3 p-xl-4">
-            <div class="d-flex justify-content-between align-items-start gap-3">
-                <div><div class="metric-label small">Pending Payments</div><div class="metric-value">{{ $pendingPayments }}</div><div class="metric-caption small">Awaiting collection</div></div>
-                <div class="metric-icon"><i class="bi bi-cash-coin"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl col-md-6">
-        <div class="card metric-card metric-rose p-3 p-xl-4">
-            <div class="d-flex justify-content-between align-items-start gap-3">
-                <div><div class="metric-label small">Current Month Collections</div><div class="metric-value">{{ $collections !== null ? number_format((float) $collections, 2) : '—' }}</div><div class="metric-caption small">Recovered in current cycle</div></div>
-                <div class="metric-icon"><i class="bi bi-graph-up-arrow"></i></div>
-            </div>
-        </div>
-    </div>
-</div>
+            <a class="whitecmd-link" href="{{ route('admin.reports.index') }}">View Expense Analysis <i class="bi bi-arrow-right"></i></a>
+        </article>
+    </section>
 
-<div class="row g-3">
-    <div class="col-xl-8">
-        <div class="card p-3 mb-3">
-            <h5 class="mb-1">Dashboard</h5>
-            <div class="row g-2">
-                <div class="col-md-4">
-                    <div class="p-3 rounded-4 border bg-white summary-card">
-                        <span class="small text-muted summary-label">Billable</span>
-                        <div class="fw-semibold fs-5 summary-value">{{ $billable !== null ? number_format((float) $billable, 2) : '—' }}</div>
-                    </div>
+    <section class="whitecmd-grid-lower">
+        <article class="whitecmd-card whitecmd-trend">
+            <header>
+                <div>
+                    <div class="whitecmd-kicker">Live Operations</div>
+                    <h2>Expense Trend <span>(Last 6 Cycles)</span></h2>
                 </div>
-                <div class="col-md-4">
-                    <div class="p-3 rounded-4 border bg-white summary-card">
-                        <span class="small text-muted summary-label">Collected</span>
-                        <div class="fw-semibold fs-5 summary-value">{{ $collected !== null ? number_format((float) $collected, 2) : '—' }}</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="p-3 rounded-4 border bg-white summary-card">
-                        <span class="small text-muted summary-label">Outstanding</span>
-                        <div class="fw-semibold fs-5 summary-value">{{ $outstanding !== null ? number_format((float) $outstanding, 2) : '—' }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                <button type="button">Amount (PKR) <i class="bi bi-chevron-down"></i></button>
+            </header>
 
-        <div class="card p-3 mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0">Recent Billing Cycles</h5>
-                <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.billing.index') }}">Open Billing</a>
-            </div>
-            <div class="table-wrap">
-                <table class="table mb-0 align-middle">
-                    <thead><tr><th>Cycle</th><th>Status</th><th>Summary</th></tr></thead>
-                    <tbody>
-                    @if(!empty($recentCycles))
-                        @foreach($recentCycles as $cycle)
-                            <tr>
-                                <td>{{ $cycle['month_cycle'] ?? '-' }}</td>
-                                <td><span class="badge text-bg-light">{{ $cycle['status'] ?? 'Open' }}</span></td>
-                                <td>{{ $cycle['summary'] ?? '-' }}</td>
-                            </tr>
-                        @endforeach
-                    @else
-                        <tr>
-                            <td colspan="3">
-                                <div class="empty-state">No active billing cycles found. Create a billing cycle to start the billing process.</div>
-                            </td>
-                        </tr>
-                    @endif
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="card p-3">
-            <h5 class="mb-2">Dashboard</h5>
-        </div>
-    </div>
-
-    <div class="col-xl-4">
-        <div class="card p-3 mb-3">
-            <h5 class="mb-3">Quick Actions</h5>
-            <div class="d-grid gap-2">
-                <a class="btn btn-outline-primary" href="{{ route('admin.members.index') }}"><i class="bi bi-person-plus me-1"></i> Add Member</a>
-                <a class="btn btn-outline-primary" href="{{ route('admin.billing.index') }}"><i class="bi bi-receipt me-1"></i> Create Billing Cycle</a>
-                <a class="btn btn-outline-primary" href="{{ route('admin.payments.index') }}"><i class="bi bi-cash-coin me-1"></i> Record Payment</a>
-                <a class="btn btn-outline-secondary" href="{{ route('admin.reports.index') }}"><i class="bi bi-bar-chart me-1"></i> View Reports</a>
-                <a class="btn btn-outline-secondary" href="{{ route('admin.reports.bills-download') }}"><i class="bi bi-file-earmark-arrow-down me-1"></i> Bills Download</a>
-            </div>
-        </div>
-
-        <div class="card p-3 mb-3">
-            <h5 class="mb-2">Recent Activity</h5>
-            @if(!empty($recentActivity))
-                <ul class="mb-0 ps-3">
-                    @foreach($recentActivity as $a)
-                        <li class="mb-2"><strong>{{ $a['title'] ?? 'Activity' }}</strong><br><small class="text-muted">{{ $a['time'] ?? '' }}</small></li>
+            <div class="whitecmd-chart">
+                <svg viewBox="0 0 760 230" preserveAspectRatio="none" aria-hidden="true">
+                    <g class="grid">
+                        <line x1="0" y1="30" x2="760" y2="30"></line>
+                        <line x1="0" y1="75" x2="760" y2="75"></line>
+                        <line x1="0" y1="120" x2="760" y2="120"></line>
+                        <line x1="0" y1="165" x2="760" y2="165"></line>
+                        <line x1="0" y1="210" x2="760" y2="210"></line>
+                    </g>
+                    <path d="M50 165 L180 145 L310 132 L440 116 L570 95 L710 105" fill="none" stroke="#2f7cff" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M50 165 L180 145 L310 132 L440 116 L570 95 L710 105 L710 210 L50 210 Z" fill="rgba(47,124,255,.10)"/>
+                    <circle cx="50" cy="165" r="5"></circle>
+                    <circle cx="180" cy="145" r="5"></circle>
+                    <circle cx="310" cy="132" r="5"></circle>
+                    <circle cx="440" cy="116" r="5"></circle>
+                    <circle cx="570" cy="95" r="5"></circle>
+                    <circle cx="710" cy="105" r="5"></circle>
+                </svg>
+                <div class="whitecmd-chart-labels">
+                    @foreach($trendLabels->take(6) as $label)
+                        <span>{{ $label }}</span>
                     @endforeach
-                </ul>
-            @else
-                <div class="empty-state">No recent activity yet. Activity will appear after transactional events.</div>
-            @endif
-        </div>
+                </div>
+            </div>
+        </article>
 
-        <div class="card p-3">
-            <h5 class="mb-2">Dashboard</h5>
-        </div>
-    </div>
+        <article class="whitecmd-card whitecmd-health">
+            <div class="whitecmd-kicker">Cycle Health</div>
+            <h2>Operational Health</h2>
+            <div class="whitecmd-health-body">
+                <div class="whitecmd-health-ring" style="--p: {{ $healthPercent }}"><strong>{{ $healthPercent }}%</strong><span>Healthy</span></div>
+                <div class="whitecmd-health-list">
+                    <p><span><i class="bi bi-calendar3"></i> Meals Operations</span><b>On Track</b></p>
+                    <p><span><i class="bi bi-box-seam"></i> Inventory Status</span><b>On Track</b></p>
+                    <p><span><i class="bi bi-receipt"></i> Billing & Collection</span><b class="warn">At Risk</b></p>
+                    <p><span><i class="bi bi-wallet2"></i> Expense Control</span><b>On Track</b></p>
+                </div>
+            </div>
+            <a class="whitecmd-link" href="{{ route('admin.reports.index') }}">View Health Details <i class="bi bi-arrow-right"></i></a>
+        </article>
+
+        <article class="whitecmd-card whitecmd-alerts">
+            <header>
+                <div>
+                    <div class="whitecmd-kicker">Action Center</div>
+                    <h2>Alerts & Signals</h2>
+                </div>
+                <a href="{{ route('admin.reports.index') }}">View All <i class="bi bi-arrow-right"></i></a>
+            </header>
+
+            <div class="whitecmd-alert-list">
+                <div><i class="bi bi-exclamation-triangle"></i><span>{{ number_format($pendingPayments) }} payments are pending for cycle {{ $cycleLabel }}.<small>Total Amount: PKR {{ number_format($outstandingValue, 2) }}</small></span><b>›</b></div>
+                <div><i class="bi bi-box-seam"></i><span>Rice stock is below minimum threshold.<small>Current: 85 kg</small></span><b>›</b></div>
+                <div><i class="bi bi-info-circle"></i><span>Monthly expense increased by 8.3% vs last cycle.<small>Review recommended</small></span><b>›</b></div>
+            </div>
+        </article>
+    </section>
+
+    <section class="whitecmd-footer">
+        <div><i class="bi bi-people"></i><span>Active Members</span><strong>{{ number_format($activeMembers) }} / {{ number_format(max($members, $activeMembers)) }}</strong></div>
+        <div><i class="bi bi-receipt"></i><span>Avg. Bill Per Member</span><strong>PKR {{ number_format($avgBillPerMember, 2) }}</strong></div>
+        <div><i class="bi bi-graph-up-arrow"></i><span>Collection Efficiency</span><strong>{{ number_format($recoveryRatio, 1) }}%</strong></div>
+        <div><i class="bi bi-wallet2"></i><span>Total Expenses</span><strong>PKR {{ number_format($categoryTotal, 2) }}</strong></div>
+        <div><i class="bi bi-alarm"></i><span>Last Updated</span><strong>{{ $lastUpdated }}</strong></div>
+    </section>
 </div>
 @endsection

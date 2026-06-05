@@ -10,6 +10,7 @@ Route::prefix('member')->group(function () {
     Route::get('/bill/current', [MemberApiController::class, 'currentBill']);
     Route::get('/statement', [MemberApiController::class, 'statement']);
     Route::get('/payments', [MemberApiController::class, 'payments']);
+    Route::post('/payments/upload', [MemberApiController::class, 'uploadPayment']);
     Route::get('/complaints', [MemberApiController::class, 'complaints']);
     Route::post('/complaints', [MemberApiController::class, 'createComplaint']);
 });

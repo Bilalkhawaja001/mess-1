@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\Payment;
+use App\Services\Payments\PaymentReconciliationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MemberApiController extends Controller
@@ -291,6 +294,130 @@ class MemberApiController extends Controller
             ])->values(),
         ]);
     }
+
+    public function uploadPayment(Request $request, PaymentReconciliationService $reconciliationService): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $payload = $request->validate([
+            'amount' => ['required', 'numeric', 'min:1'],
+            'reference_no' => ['nullable', 'string', 'max:120'],
+            'payment_method' => ['nullable', 'string', 'max:80'],
+            'screenshot' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $bill = DB::table('billings')
+            ->where('member_id', $row->member_id)
+            ->orderByDesc('month_cycle')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $bill) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No bill found for this member',
+            ], 422);
+        }
+
+        $methodCode = strtoupper(trim((string) ($payload['payment_method'] ?? 'MANUAL_BANK_TRANSFER')));
+        $methodCode = str_replace([' ', '-'], '_', $methodCode);
+
+        $method = DB::table('payment_methods')
+            ->where('is_active', true)
+            ->where(function ($q) use ($methodCode) {
+                $q->where('code', $methodCode)
+                    ->orWhere('name', $methodCode);
+            })
+            ->first();
+
+        if (! $method) {
+            $method = DB::table('payment_methods')
+                ->where('code', 'MANUAL_BANK_TRANSFER')
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (! $method) {
+            $method = DB::table('payment_methods')
+                ->where('is_manual', true)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->first();
+        }
+
+        if (! $method) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active manual payment method configured',
+            ], 422);
+        }
+
+        $path = $request->file('screenshot')->store('member-payment-screenshots/'.now()->format('Y/m'), 'public');
+
+        try {
+            $payment = DB::transaction(function () use ($row, $bill, $method, $payload, $path, $reconciliationService) {
+                $payment = Payment::query()->create([
+                    'member_id' => $row->member_id,
+                    'bill_id' => $bill->id,
+                    'payment_method_id' => $method->id,
+                    'payment_ref' => 'APP-UPLOAD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'payment_date' => now()->toDateString(),
+                    'amount' => (float) $payload['amount'],
+                    'currency' => 'PKR',
+                    'method' => $method->code,
+                    'reference_no' => $payload['reference_no'] ?? null,
+                    'notes' => 'Member app payment screenshot uploaded. File: '.$path,
+                    'status' => Payment::STATUS_SUCCESS,
+                    'posted_by_user_id' => null,
+                ]);
+
+                $reconciliation = $reconciliationService->createPending($payment);
+
+                $meta = $reconciliation->meta ?? [];
+                $meta['source'] = 'android_member_app';
+                $meta['upload_type'] = 'payment_screenshot';
+                $meta['screenshot_disk'] = 'public';
+                $meta['screenshot_path'] = $path;
+                $meta['original_filename'] = request()->file('screenshot')?->getClientOriginalName();
+                $meta['reference_no'] = $payload['reference_no'] ?? null;
+
+                $reconciliation->meta = $meta;
+                $reconciliation->notes = 'Member uploaded payment screenshot for admin review.';
+                $reconciliation->save();
+
+                return $payment->fresh();
+            });
+        } catch (\Throwable $e) {
+            Storage::disk('public')->delete($path);
+
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment upload failed',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment uploaded and sent for admin review',
+            'payment' => [
+                'id' => (int) $payment->id,
+                'date' => (string) $payment->payment_date,
+                'paid_at' => (string) $payment->payment_date,
+                'method' => (string) $payment->method,
+                'amount' => $this->apiMoney($payment->amount),
+                'receipt' => $payment->reference_no ?? '',
+                'receipt_no' => $payment->reference_no ?? '',
+                'status' => (string) $payment->status,
+            ],
+        ], 201);
+    }
+
 
     public function complaints(Request $request): JsonResponse
     {

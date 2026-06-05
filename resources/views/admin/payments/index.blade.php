@@ -813,7 +813,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle table-hover">
-                <thead><tr><th>ID</th><th>Member</th><th>Bill</th><th>Ref</th><th>Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>ID</th><th>Member</th><th>Bill</th><th>Ref</th><th>Amount</th><th>Method</th><th>Proof</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                 @forelse($paymentRows as $p)
                     <tr>
@@ -835,17 +835,43 @@
                         <td class="fw-semibold">{{ number_format((float)$p->amount,2) }}</td>
                         <td>{{ $p->method }}</td>
                         <td>
-                            @php($displayStatus = $p->status === \App\Models\Payment::STATUS_RECONCILIATION_PENDING ? \App\Models\Payment::STATUS_APPROVED : $p->status)
-                            <span class="badge {{ in_array($displayStatus, ['APPROVED','SUCCESS','RECONCILED'], true) ? 'bg-success' : 'bg-secondary' }}">{{ $displayStatus }}</span>
+                            @if(!empty($proofMap[$p->id]['url']))
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-dark"
+                                    onclick="showPaymentProof('{{ $proofMap[$p->id]['url'] }}', '{{ $p->id }}', '{{ $p->reference_no ?? $p->payment_ref ?? '-' }}')">
+                                    View Proof
+                                </button>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                         <td>
-                            @if(!in_array($p->status, ['SUCCESS','RECONCILED']))
+                            @php($displayStatus = $p->status === \App\Models\Payment::STATUS_RECONCILIATION_PENDING ? 'PENDING REVIEW' : $p->status)
+                            <span class="badge {{ in_array($displayStatus, ['APPROVED','SUCCESS','RECONCILED'], true) ? 'bg-success' : ($displayStatus === 'PENDING REVIEW' ? 'bg-warning text-dark' : 'bg-secondary') }}">{{ $displayStatus }}</span>
+                        </td>
+                        <td>
+                            @if($p->status === \App\Models\Payment::STATUS_RECONCILIATION_PENDING)
+                                <div class="d-flex flex-wrap gap-2">
+                                    <form method="POST" action="{{ route('admin.payments.approve-uploaded-proof', $p->id) }}">
+                                        @csrf
+                                        <button class="btn btn-sm btn-outline-success">Approve</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('admin.payments.reject-uploaded-proof', $p->id) }}" onsubmit="return confirm('Reject this payment proof?');">
+                                        @csrf
+                                        <input type="hidden" name="reject_reason" value="Rejected by admin after proof review">
+                                        <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                    </form>
+                                </div>
+                            @elseif(!in_array($p->status, ['SUCCESS','RECONCILED','FAILED']))
                                 <form method="POST" action="{{ route('admin.payments.approve', $p->id) }}">@csrf<button class="btn btn-sm btn-outline-success">Manual Verify Paid</button></form>
+                            @else
+                                <span class="text-muted">-</span>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="payments-empty">No payment rows found for the current filter.</td></tr>
+                    <tr><td colspan="9" class="payments-empty">No payment rows found for the current filter.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -908,4 +934,44 @@
         </div>
     </section>
 </div>
+
+
+<script>
+function showPaymentProof(url, paymentId, ref) {
+    let existing = document.getElementById('paymentProofOverlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'paymentProofOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.68);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;';
+
+    overlay.innerHTML = `
+        <div style="background:#fff;border-radius:18px;max-width:900px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 24px 80px rgba(15,23,42,.35);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e5e7eb;">
+                <div>
+                    <div style="font-weight:800;color:#0f172a;font-size:18px;">Payment Proof</div>
+                    <div style="color:#64748b;font-size:13px;margin-top:2px;">Payment ID: ${paymentId} | Ref: ${ref}</div>
+                </div>
+                <button type="button" onclick="document.getElementById('paymentProofOverlay').remove()" style="border:0;background:#f1f5f9;border-radius:999px;width:36px;height:36px;font-size:22px;line-height:1;">×</button>
+            </div>
+            <div style="padding:20px;text-align:center;">
+                <img src="${url}" alt="Payment proof" style="max-width:100%;height:auto;border-radius:14px;border:1px solid #e5e7eb;">
+            </div>
+        </div>
+    `;
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.remove();
+    });
+
+    document.body.appendChild(overlay);
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const overlay = document.getElementById('paymentProofOverlay');
+        if (overlay) overlay.remove();
+    }
+});
+</script>
+
 @endsection

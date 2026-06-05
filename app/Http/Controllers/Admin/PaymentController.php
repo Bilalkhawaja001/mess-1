@@ -29,7 +29,7 @@ class PaymentController extends Controller
         $members = Member::query()->where('is_active', true)->orderBy('member_code')->get();
         $methods = PaymentMethod::query()->where('is_active', true)->orderBy('name')->get();
 
-        $rows = Payment::query()->with(['member', 'bill', 'methodRecord'])->orderByDesc('created_at');
+        $rows = Payment::query()->with(['member', 'bill', 'methodRecord', 'reconciliations'])->orderByDesc('created_at');
 
         if ($request->filled('member_id')) {
             $rows->where('member_id', (int) $request->input('member_id'));
@@ -97,10 +97,28 @@ class PaymentController extends Controller
         $pendingTransactionAmount = (float) $pendingTransactionsQuery->sum('amount');
         $pendingBalanceAmount = max(round($postedBillAmount - $receivedPaymentAmount, 2), 0);
 
+        $paymentRows = $rows->limit(300)->get();
+
+        $proofMap = [];
+        foreach ($paymentRows as $paymentRow) {
+            $proofRow = $paymentRow->reconciliations->sortByDesc('id')->first();
+            $meta = $proofRow?->meta ?? [];
+            if (! is_array($meta)) {
+                $meta = json_decode((string) $meta, true) ?: [];
+            }
+            if (! empty($meta['screenshot_path'])) {
+                $proofMap[$paymentRow->id] = [
+                    'url' => asset('storage/'.$meta['screenshot_path']),
+                    'source' => $meta['source'] ?? '',
+                ];
+            }
+        }
+
         return view('admin.payments.index', [
             'members' => $members,
             'methods' => $methods,
-            'rows' => $rows->limit(300)->get(),
+            'rows' => $paymentRows,
+            'proofMap' => $proofMap,
             'txns' => PaymentTransaction::query()->latest('id')->limit(200)->get(),
             'reconciliations' => PaymentReconciliation::query()->latest('id')->limit(200)->get(),
             'selectedMonthCycle' => $selectedMonthCycle,
@@ -327,6 +345,93 @@ class PaymentController extends Controller
 
         return redirect()->route('admin.payments.index')->with('success', 'Payment manually verified and posted to ledger.');
     }
+
+    public function approveUploadedProof(Payment $payment): RedirectResponse
+    {
+        if ($payment->status !== Payment::STATUS_RECONCILIATION_PENDING) {
+            return back()->with('error', 'Only pending review uploaded payments can be approved.');
+        }
+
+        DB::transaction(function () use ($payment) {
+            $existingLedger = MemberLedger::query()
+                ->where('member_id', $payment->member_id)
+                ->where('ref_type', 'PAYMENT')
+                ->where('ref_id', $payment->id)
+                ->first();
+
+            if (! $existingLedger) {
+                $lastBal = (float) (MemberLedger::query()
+                    ->where('member_id', $payment->member_id)
+                    ->orderByDesc('entry_date')
+                    ->orderByDesc('id')
+                    ->value('balance_after') ?? 0);
+
+                $newBal = round($lastBal - (float) $payment->amount, 2);
+
+                MemberLedger::query()->create([
+                    'member_id' => $payment->member_id,
+                    'entry_date' => $payment->payment_date,
+                    'debit' => 0,
+                    'credit' => $payment->amount,
+                    'ref_type' => 'PAYMENT',
+                    'ref_id' => $payment->id,
+                    'balance_after' => $newBal,
+                    'reason_code' => 'ANDROID_PAYMENT_PROOF_APPROVED',
+                    'posted_by_user_id' => Auth::id(),
+                ]);
+            }
+
+            $payment->status = Payment::STATUS_RECONCILED;
+            $payment->approved_by_user_id = Auth::id();
+            $payment->approved_at = now();
+            $payment->save();
+
+            PaymentReconciliation::query()
+                ->where('payment_id', $payment->id)
+                ->update([
+                    'status' => Payment::STATUS_RECONCILED,
+                    'ledger_sync_status' => 'SYNCED',
+                    'accounting_sync_status' => 'SYNCED',
+                    'reconciled_by_user_id' => Auth::id(),
+                    'reconciled_at' => now(),
+                    'notes' => 'Android payment proof approved from admin payments screen.',
+                    'updated_at' => now(),
+                ]);
+        });
+
+        return redirect()->route('admin.payments.index')->with('success', 'Payment proof approved and posted to ledger.');
+    }
+
+    public function rejectUploadedProof(Payment $payment, Request $request): RedirectResponse
+    {
+        if ($payment->status !== Payment::STATUS_RECONCILIATION_PENDING) {
+            return back()->with('error', 'Only pending review uploaded payments can be rejected.');
+        }
+
+        $payload = $request->validate([
+            'reject_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use ($payment, $payload) {
+            $payment->status = Payment::STATUS_FAILED;
+            $payment->notes = trim(($payment->notes ? $payment->notes.PHP_EOL : '').'Rejected: '.($payload['reject_reason'] ?? 'Payment proof rejected by admin.'));
+            $payment->save();
+
+            PaymentReconciliation::query()
+                ->where('payment_id', $payment->id)
+                ->update([
+                    'status' => Payment::STATUS_FAILED,
+                    'ledger_sync_status' => 'REJECTED',
+                    'accounting_sync_status' => 'REJECTED',
+                    'mismatch_reason' => $payload['reject_reason'] ?? 'Rejected by admin',
+                    'notes' => 'Android payment proof rejected from admin payments screen.',
+                    'updated_at' => now(),
+                ]);
+        });
+
+        return redirect()->route('admin.payments.index')->with('success', 'Payment proof rejected.');
+    }
+
 
     public function verifyTransaction(PaymentTransaction $transaction, Request $request, PaymentTransactionService $service): RedirectResponse
     {

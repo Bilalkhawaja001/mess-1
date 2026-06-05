@@ -195,6 +195,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
     });
     Route::middleware('permission:payments.verify_admin')->group(function () {
         Route::post('/payments/{payment}/approve', [PaymentController::class, 'approve'])->name('payments.approve');
+        Route::post('/payments/{payment}/approve-uploaded-proof', [PaymentController::class, 'approveUploadedProof'])->name('payments.approve-uploaded-proof');
+        Route::post('/payments/{payment}/reject-uploaded-proof', [PaymentController::class, 'rejectUploadedProof'])->name('payments.reject-uploaded-proof');
         Route::post('/payments/transactions/{transaction}/verify', [PaymentController::class, 'verifyTransaction'])->name('payments.transactions.verify');
     });
     Route::middleware('permission:payments.reconcile_admin')->group(function () {

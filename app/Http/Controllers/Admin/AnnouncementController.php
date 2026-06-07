@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AnnouncementController extends Controller
@@ -21,7 +22,14 @@ class AnnouncementController extends Controller
             ->latest('id')
             ->paginate(25);
 
-        return view('admin.announcements.index', compact('rows'));
+        $memberOptions = DB::table('members')
+            ->select('id', 'member_code', 'name', 'department_name')
+            ->where('is_active', true)
+            ->orderBy('member_code')
+            ->limit(1500)
+            ->get();
+
+        return view('admin.announcements.index', compact('rows', 'memberOptions'));
     }
 
     public function store(Request $request, FirebaseNotificationService $firebase): RedirectResponse
@@ -29,18 +37,60 @@ class AnnouncementController extends Controller
         $payload = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'message' => ['required', 'string', 'max:1000'],
+            'target_scope' => ['required', Rule::in(['all', 'single', 'selected'])],
+            'member_ids' => ['nullable', 'array'],
+            'member_ids.*' => ['integer', 'exists:members,id'],
+            'severity' => ['required', Rule::in([
+                Announcement::SEVERITY_NORMAL,
+                Announcement::SEVERITY_MODERATE,
+                Announcement::SEVERITY_STRICT,
+                Announcement::SEVERITY_FINAL,
+            ])],
         ]);
+
+        $targetScope = (string) $payload['target_scope'];
+        $memberIds = collect($payload['member_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($targetScope !== 'all' && $memberIds->isEmpty()) {
+            return back()
+                ->withInput()
+                ->withErrors(['member_ids' => 'Select at least one member for this target.']);
+        }
+
+        if ($targetScope === 'single' && $memberIds->count() !== 1) {
+            return back()
+                ->withInput()
+                ->withErrors(['member_ids' => 'Select exactly one member for single-member notification.']);
+        }
+
+        $targetType = match ($targetScope) {
+            'single' => 'SINGLE_MEMBER',
+            'selected' => 'SELECTED_MEMBERS',
+            default => 'ALL_MEMBERS',
+        };
 
         $announcement = Announcement::query()->create([
             'title' => $payload['title'],
             'message' => $payload['message'],
-            'target_type' => 'ALL_MEMBERS',
+            'target_type' => $targetType,
+            'severity' => $payload['severity'],
+            'target_member_ids' => $targetScope === 'all' ? null : $memberIds->all(),
             'sent_by_user_id' => Auth::id(),
             'sent_at' => now(),
         ]);
 
-        $tokens = DB::table('member_device_tokens')
-            ->whereNotNull('device_token')
+        $tokensQuery = DB::table('member_device_tokens')
+            ->whereNotNull('device_token');
+
+        if ($targetScope !== 'all') {
+            $tokensQuery->whereIn('member_id', $memberIds->all());
+        }
+
+        $tokens = $tokensQuery
             ->pluck('device_token')
             ->filter()
             ->unique()
@@ -61,6 +111,9 @@ class AnnouncementController extends Controller
                     [
                         'type' => 'announcement',
                         'announcement_id' => (string) $announcement->id,
+                        'severity' => (string) $announcement->severity,
+                        'target_type' => (string) $announcement->target_type,
+                        'sound_profile' => $this->soundProfile((string) $announcement->severity),
                     ]
                 );
 
@@ -118,7 +171,17 @@ class AnnouncementController extends Controller
 
         return redirect()
             ->route('admin.announcements.index')
-            ->with('success', "Announcement sent. Success: {$success}, Failed: {$failed}");
+            ->with('success', "Notification sent. Success: {$success}, Failed: {$failed}");
+    }
+
+    private function soundProfile(string $severity): string
+    {
+        return match ($severity) {
+            Announcement::SEVERITY_STRICT => 'long',
+            Announcement::SEVERITY_FINAL => 'long_urgent',
+            Announcement::SEVERITY_MODERATE => 'medium',
+            default => 'normal',
+        };
     }
 
     private function isInvalidFirebaseTokenResponse(array $result): bool
@@ -137,5 +200,4 @@ class AnnouncementController extends Controller
             || str_contains($message, 'NOT REGISTERED')
             || str_contains($message, 'INVALID REGISTRATION');
     }
-
 }

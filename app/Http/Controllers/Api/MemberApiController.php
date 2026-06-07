@@ -64,6 +64,8 @@ class MemberApiController extends Controller
                 'users.id as user_id',
                 'users.email',
                 'users.password',
+                  'users.must_change_password',
+                  'users.password_changed_at',
                 'users.is_active as user_is_active',
                 'users.member_id as user_member_id',
                 'members.id as member_id',
@@ -806,6 +808,8 @@ class MemberApiController extends Controller
                 'users.id as user_id',
                 'users.email',
                 'users.member_id as user_member_id',
+                  'users.must_change_password',
+                  'users.password_changed_at',
                 'members.id as member_id',
                 'members.member_code',
                 'members.name',
@@ -868,6 +872,7 @@ class MemberApiController extends Controller
             'department' => $row->department_name ?? null,
             'room_no' => null,
             'mess_name' => $row->mess_name ?? null,
+              'must_change_password' => (bool) ($row->must_change_password ?? false),
         ];
     }
     private function unreadAnnouncementCount(int $memberId): int

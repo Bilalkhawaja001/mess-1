@@ -215,6 +215,60 @@ class MemberApiController extends Controller
             ],
         ], 201);
     }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $payload = $request->validate([
+            'current_password' => ['nullable', 'string', 'max:255'],
+            'new_password' => ['required', 'string', 'min:6', 'max:255', 'confirmed'],
+        ]);
+
+        $user = DB::table('users')->where('id', $row->user_id)->first();
+
+        if (! $user) {
+            return $this->unauthenticated();
+        }
+
+        $mustChange = (bool) ($user->must_change_password ?? false);
+        $currentPassword = (string) ($payload['current_password'] ?? '');
+
+        if (! $mustChange && ! Hash::check($currentPassword, (string) $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect.',
+            ], 422);
+        }
+
+        if (Hash::check((string) $payload['new_password'], (string) $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'New password must be different from current password.',
+            ], 422);
+        }
+
+        DB::table('users')
+            ->where('id', $row->user_id)
+            ->update([
+                'password' => Hash::make((string) $payload['new_password']),
+                'must_change_password' => 0,
+                'password_changed_at' => now(),
+                'remember_token' => null,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully. Please login again.',
+            'must_change_password' => false,
+        ]);
+    }
+
     public function dashboard(Request $request): JsonResponse
     {
         $row = $this->memberFromToken($request);
@@ -256,12 +310,93 @@ class MemberApiController extends Controller
                 'current_bill' => $this->apiMoney($currentBill),
                 'opening_balance' => $this->apiMoney($openingBalance),
                 'complaints_open' => (int) $complaintsOpen,
-                'notifications_unread' => 0,
+                'notifications_unread' => $this->unreadAnnouncementCount((int) $row->member_id),
                 'last_payment' => $this->apiMoney($lastPayment),
             ],
         ]);
     }
 
+
+
+    public function notifications(Request $request): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $items = $this->announcementBaseQuery((int) $row->member_id)
+            ->leftJoin('member_announcement_reads as reads', function ($join) use ($row) {
+                $join->on('reads.announcement_id', '=', 'announcements.id')
+                    ->where('reads.member_id', '=', (int) $row->member_id);
+            })
+            ->orderByDesc('announcements.sent_at')
+            ->orderByDesc('announcements.id')
+            ->limit(100)
+            ->select([
+                'announcements.id',
+                'announcements.title',
+                'announcements.message',
+                'announcements.severity',
+                'announcements.target_type',
+                'announcements.sent_at',
+                'announcements.created_at',
+                'reads.id as read_id',
+            ])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'notifications' => $items->map(fn ($item) => [
+                'id' => (int) $item->id,
+                'title' => (string) $item->title,
+                'body' => (string) $item->message,
+                'message' => (string) $item->message,
+                'date' => $item->sent_at ? \Illuminate\Support\Carbon::parse($item->sent_at)->format('d-M-Y H:i') : '',
+                'created_at' => $item->created_at ? \Illuminate\Support\Carbon::parse($item->created_at)->format('Y-m-d H:i:s') : '',
+                'severity' => (string) ($item->severity ?? 'normal'),
+                'status' => (string) ($item->severity ?? 'normal'),
+                'target_type' => (string) $item->target_type,
+                'unread' => $item->read_id === null,
+            ])->values(),
+            'unread_count' => $this->unreadAnnouncementCount((int) $row->member_id),
+        ]);
+    }
+
+    public function markNotificationsRead(Request $request): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $ids = $this->announcementBaseQuery((int) $row->member_id)
+            ->pluck('announcements.id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        foreach ($ids as $id) {
+            DB::table('member_announcement_reads')->updateOrInsert(
+                [
+                    'announcement_id' => $id,
+                    'member_id' => (int) $row->member_id,
+                ],
+                [
+                    'read_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'read_count' => $ids->count(),
+            'unread_count' => 0,
+        ]);
+    }
 
     public function currentBill(Request $request): JsonResponse
     {
@@ -451,10 +586,12 @@ class MemberApiController extends Controller
             ], 422);
         }
 
-        $path = $request->file('screenshot')->store('member-payment-screenshots/'.now()->format('Y/m'), 'public');
+        $uploadedFile = $request->file('screenshot');
+        $path = $uploadedFile->store('member-payment-screenshots/'.now()->format('Y/m'), 'local');
+        $screenshotHash = hash_file('sha256', $uploadedFile->getRealPath());
 
         try {
-            $payment = DB::transaction(function () use ($row, $bill, $method, $payload, $path, $reconciliationService) {
+            $payment = DB::transaction(function () use ($row, $bill, $method, $payload, $path, $screenshotHash, $reconciliationService) {
                 $payment = Payment::query()->create([
                     'member_id' => $row->member_id,
                     'bill_id' => $bill->id,
@@ -466,7 +603,7 @@ class MemberApiController extends Controller
                     'method' => $method->code,
                     'reference_no' => $payload['reference_no'] ?? null,
                     'notes' => 'Member app payment screenshot uploaded. File: '.$path,
-                    'status' => Payment::STATUS_SUCCESS,
+                    'status' => Payment::STATUS_RECONCILIATION_PENDING,
                     'posted_by_user_id' => null,
                 ]);
 
@@ -475,8 +612,9 @@ class MemberApiController extends Controller
                 $meta = $reconciliation->meta ?? [];
                 $meta['source'] = 'android_member_app';
                 $meta['upload_type'] = 'payment_screenshot';
-                $meta['screenshot_disk'] = 'public';
+                $meta['screenshot_disk'] = 'local';
                 $meta['screenshot_path'] = $path;
+                $meta['screenshot_sha256'] = $screenshotHash;
                 $meta['original_filename'] = request()->file('screenshot')?->getClientOriginalName();
                 $meta['reference_no'] = $payload['reference_no'] ?? null;
 
@@ -487,7 +625,7 @@ class MemberApiController extends Controller
                 return $payment->fresh();
             });
         } catch (\Throwable $e) {
-            Storage::disk('public')->delete($path);
+            Storage::disk('local')->delete($path);
 
             report($e);
 
@@ -732,4 +870,25 @@ class MemberApiController extends Controller
             'mess_name' => $row->mess_name ?? null,
         ];
     }
+    private function unreadAnnouncementCount(int $memberId): int
+    {
+        return (int) $this->announcementBaseQuery($memberId)
+            ->leftJoin('member_announcement_reads as reads', function ($join) use ($memberId) {
+                $join->on('reads.announcement_id', '=', 'announcements.id')
+                    ->where('reads.member_id', '=', $memberId);
+            })
+            ->whereNull('reads.id')
+            ->count('announcements.id');
+    }
+
+    private function announcementBaseQuery(int $memberId)
+    {
+        return DB::table('announcements')
+            ->whereNotNull('announcements.sent_at')
+            ->where(function ($query) use ($memberId) {
+                $query->where('announcements.target_type', 'ALL_MEMBERS')
+                    ->orWhereJsonContains('announcements.target_member_ids', $memberId);
+            });
+    }
+
 }

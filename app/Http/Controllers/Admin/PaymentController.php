@@ -108,7 +108,7 @@ class PaymentController extends Controller
             }
             if (! empty($meta['screenshot_path'])) {
                 $proofMap[$paymentRow->id] = [
-                    'url' => asset('storage/'.$meta['screenshot_path']),
+                    'url' => route('admin.payments.proof', $paymentRow),
                     'source' => $meta['source'] ?? '',
                 ];
             }
@@ -352,6 +352,28 @@ class PaymentController extends Controller
             return back()->with('error', 'Only pending review uploaded payments can be approved.');
         }
 
+        $proofRow = $payment->reconciliations()->latest('id')->first();
+        $meta = $proofRow?->meta ?? [];
+
+        if (! is_array($meta)) {
+            $meta = json_decode((string) $meta, true) ?: [];
+        }
+
+        $path = (string) ($meta['screenshot_path'] ?? '');
+        $disk = (string) ($meta['screenshot_disk'] ?? 'local');
+        $expectedHash = (string) ($meta['screenshot_sha256'] ?? '');
+
+        if ($path === '' || ! in_array($disk, ['local', 'public'], true) || ! \Illuminate\Support\Facades\Storage::disk($disk)->exists($path)) {
+            return back()->with('error', 'Payment proof file is missing. Cannot approve.');
+        }
+
+        if ($expectedHash !== '') {
+            $actualHash = hash_file('sha256', \Illuminate\Support\Facades\Storage::disk($disk)->path($path));
+            if (! hash_equals($expectedHash, $actualHash)) {
+                return back()->with('error', 'Payment proof file integrity check failed. Cannot approve.');
+            }
+        }
+
         DB::transaction(function () use ($payment) {
             $existingLedger = MemberLedger::query()
                 ->where('member_id', $payment->member_id)
@@ -400,6 +422,39 @@ class PaymentController extends Controller
         });
 
         return redirect()->route('admin.payments.index')->with('success', 'Payment proof approved and posted to ledger.');
+    }
+
+    public function uploadedProof(Payment $payment)
+    {
+        $proofRow = $payment->reconciliations()->latest('id')->first();
+        $meta = $proofRow?->meta ?? [];
+
+        if (! is_array($meta)) {
+            $meta = json_decode((string) $meta, true) ?: [];
+        }
+
+        $path = (string) ($meta['screenshot_path'] ?? '');
+        $disk = (string) ($meta['screenshot_disk'] ?? 'local');
+
+        if ($path === '') {
+            abort(404);
+        }
+
+        if (! in_array($disk, ['local', 'public'], true)) {
+            abort(404);
+        }
+
+        if (! \Illuminate\Support\Facades\Storage::disk($disk)->exists($path)) {
+            abort(404);
+        }
+
+        $fullPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($path);
+
+        return response()->file($fullPath, [
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function rejectUploadedProof(Payment $payment, Request $request): RedirectResponse

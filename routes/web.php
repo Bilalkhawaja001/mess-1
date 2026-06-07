@@ -185,6 +185,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
 
     Route::middleware('permission:payments.view_admin')->group(function () {
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/{payment}/proof', [PaymentController::class, 'uploadedProof'])->name('payments.proof');
     });
     Route::middleware('permission:payments.manual_record_admin')->group(function () {
         Route::get('/payments/member-bill-lookup', [PaymentController::class, 'memberBillLookup'])->name('payments.member-bill-lookup');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Payment;
+use App\Models\Menu;
 use App\Services\Payments\PaymentReconciliationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -68,6 +69,7 @@ class MemberApiController extends Controller
                 'members.member_code',
                 'members.name',
                 'members.mobile_number',
+                'members.mess_id',
                 'members.department_name',
                 'members.is_active as member_is_active',
                 'messes.name as mess_name',
@@ -193,7 +195,7 @@ class MemberApiController extends Controller
             'success' => true,
             'total' => $bill ? $this->apiMoney($bill->net_payable) : 0,
             'total_payable' => $bill ? $this->apiMoney($bill->net_payable) : 0,
-            'due_date' => '',
+            'due_date' => $bill?->due_date ? \Illuminate\Support\Carbon::parse($bill->due_date)->format('d-M-Y') : '',
             'month' => $bill->month_cycle ?? '',
             'summary' => $bill ? [
                 [
@@ -419,6 +421,65 @@ class MemberApiController extends Controller
     }
 
 
+
+    public function todayMenu(Request $request): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $buckets = [
+            'BREAKFAST' => 'Breakfast',
+            'LUNCH' => 'Lunch',
+            'DINNER' => 'Dinner',
+            'TEA_OTHER' => 'Tea / Other',
+        ];
+
+        $menus = Menu::query()
+            ->where('status', Menu::STATUS_APPROVED)
+            ->whereDate('menu_date', now()->toDateString())
+            ->where('mess_id', $row->mess_id)
+            ->orderByRaw("FIELD(meal_type, 'BREAKFAST', 'LUNCH', 'DINNER', 'TEA', 'OTHER')")
+            ->orderBy('id')
+            ->get();
+
+        $meals = [];
+
+        foreach ($menus as $menu) {
+            $bucket = in_array($menu->meal_type, ['TEA', 'OTHER'], true) ? 'TEA_OTHER' : (string) $menu->meal_type;
+
+            if (! array_key_exists($bucket, $buckets)) {
+                continue;
+            }
+
+            $lines = preg_split('/\r\n|\r|\n/', trim((string) $menu->items_text));
+            $items = collect($lines)
+                ->map(fn ($line) => trim((string) $line))
+                ->filter()
+                ->values()
+                ->all();
+
+            if (trim((string) $menu->title) !== '') {
+                array_unshift($items, trim((string) $menu->title));
+            }
+
+            $meals[] = [
+                'name' => $buckets[$bucket],
+                'meal' => $buckets[$bucket],
+                'meal_type' => $bucket,
+                'items' => $items,
+                'date' => optional($menu->menu_date)->format('Y-m-d') ?? now()->toDateString(),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'date' => now()->toDateString(),
+            'meals' => $meals,
+        ]);
+    }
     public function complaints(Request $request): JsonResponse
     {
         $row = $this->memberFromToken($request);
@@ -518,6 +579,7 @@ class MemberApiController extends Controller
                 'members.member_code',
                 'members.name',
                 'members.mobile_number',
+                'members.mess_id',
                 'members.department_name',
                 'members.is_active as member_is_active',
                 'messes.name as mess_name',

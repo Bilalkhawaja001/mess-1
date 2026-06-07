@@ -50,3 +50,5 @@ _local_backups_ignored/
 error_log
 import_flask_data.php
 public/branding/*.save
+_backups/
+storage/audit-backups/

@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\MemberApiController;
 Route::prefix('member')->group(function () {
     Route::post('/login', [MemberApiController::class, 'login']);
     Route::get('/profile', [MemberApiController::class, 'profile']);
+    Route::post('/profile/change-requests', [MemberApiController::class, 'storeProfileChangeRequest']);
+    Route::post('/profile-change-request', [MemberApiController::class, 'storeProfileChangeRequest']);
     Route::get('/dashboard', [MemberApiController::class, 'dashboard']);
     Route::get('/bill/current', [MemberApiController::class, 'currentBill']);
     Route::get('/statement', [MemberApiController::class, 'statement']);

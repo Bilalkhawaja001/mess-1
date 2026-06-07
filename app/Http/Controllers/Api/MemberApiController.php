@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Payment;
 use App\Models\Menu;
+use App\Models\MemberProfileChangeRequest;
 use App\Services\Payments\PaymentReconciliationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -122,6 +123,98 @@ class MemberApiController extends Controller
         ]);
     }
 
+
+    public function storeProfileChangeRequest(Request $request): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $payload = $request->validate([
+            'field_name' => ['required', 'in:email,mobile'],
+            'new_value' => ['required', 'string', 'max:255'],
+        ]);
+
+        $fieldName = (string) $payload['field_name'];
+        $newValue = trim((string) $payload['new_value']);
+
+        if ($fieldName === MemberProfileChangeRequest::FIELD_EMAIL && ! filter_var($newValue, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a valid email address.',
+            ], 422);
+        }
+
+        if ($fieldName === MemberProfileChangeRequest::FIELD_MOBILE) {
+            $normalizedMobile = preg_replace('/[\s\-\(\)]/', '', $newValue);
+
+            if (! preg_match('/^\+?[0-9]{10,15}$/', $normalizedMobile)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please enter a valid mobile number.',
+                ], 422);
+            }
+
+            $newValue = $normalizedMobile;
+        }
+
+        $oldValue = $fieldName === MemberProfileChangeRequest::FIELD_EMAIL
+            ? ($row->email ?? null)
+            : ($row->mobile_number ?? null);
+
+        if ((string) $oldValue === $newValue) {
+            return response()->json([
+                'success' => false,
+                'message' => 'New value is same as current value.',
+            ], 422);
+        }
+
+        $existingPending = MemberProfileChangeRequest::query()
+            ->where('member_id', $row->member_id)
+            ->where('field_name', $fieldName)
+            ->where('status', MemberProfileChangeRequest::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+
+        if ($existingPending) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A pending change request already exists for this field.',
+                'request' => [
+                    'id' => $existingPending->id,
+                    'field_name' => $existingPending->field_name,
+                    'old_value' => $existingPending->old_value,
+                    'new_value' => $existingPending->new_value,
+                    'status' => $existingPending->status,
+                    'created_at' => optional($existingPending->created_at)->format('Y-m-d H:i:s'),
+                ],
+            ], 409);
+        }
+
+        $changeRequest = MemberProfileChangeRequest::query()->create([
+            'member_id' => $row->member_id,
+            'requested_by_user_id' => $row->user_id,
+            'field_name' => $fieldName,
+            'old_value' => $oldValue,
+            'new_value' => $newValue,
+            'status' => MemberProfileChangeRequest::STATUS_PENDING,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile change request submitted for admin approval.',
+            'request' => [
+                'id' => $changeRequest->id,
+                'field_name' => $changeRequest->field_name,
+                'old_value' => $changeRequest->old_value,
+                'new_value' => $changeRequest->new_value,
+                'status' => $changeRequest->status,
+                'created_at' => optional($changeRequest->created_at)->format('Y-m-d H:i:s'),
+            ],
+        ], 201);
+    }
     public function dashboard(Request $request): JsonResponse
     {
         $row = $this->memberFromToken($request);

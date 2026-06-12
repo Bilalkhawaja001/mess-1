@@ -204,7 +204,12 @@
     <div class="card-body p-3 p-xl-4">
         <div class="print-title d-none">
             <h3 class="mb-1">Guest Meal Report</h3>
-            <p class="mb-2">Date: {{ $gmFrom ?: 'All' }} to {{ $gmTo ?: 'All' }}</p>
+            <p class="mb-2">
+                Complete Date Range:
+                <strong>{{ $gmFrom ? \Illuminate\Support\Carbon::parse($gmFrom)->format('d-M-Y') : 'All dates' }}</strong>
+                to
+                <strong>{{ $gmTo ? \Illuminate\Support\Carbon::parse($gmTo)->format('d-M-Y') : 'All dates' }}</strong>
+            </p>
         </div>
 
         <div class="table-responsive">
@@ -375,29 +380,217 @@
 
 <style>
 @media print {
+    /* GUEST_MEAL_PRINT_FULL_TABLE_FIX_20260609 */
+    @page {
+        size: A4 portrait;
+        margin: 7mm;
+    }
+
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
     body * {
         visibility: hidden !important;
     }
+
     .guest-meal-report-print-area,
     .guest-meal-report-print-area * {
         visibility: visible !important;
     }
+
     .guest-meal-report-print-area {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
+        position: static !important;
         width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
         border: 0 !important;
         box-shadow: none !important;
+        background: #ffffff !important;
     }
+
+    .guest-meal-report-print-area .card-header {
+        display: none !important;
+    }
+
+    .guest-meal-report-print-area .card-body {
+        padding: 0 !important;
+    }
+
+    .guest-meal-report-print-area .table-responsive {
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .guest-meal-report-print-area table {
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+        font-size: 8.5px !important;
+    }
+
+    .guest-meal-report-print-area th,
+    .guest-meal-report-print-area td {
+        padding: 5px 6px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        vertical-align: middle !important;
+    }
+
+    .guest-meal-report-print-area thead {
+        display: table-header-group !important;
+    }
+
+    .guest-meal-report-print-area tbody {
+        display: table-row-group !important;
+    }
+
+    .guest-meal-report-print-area tfoot {
+        display: table-footer-group !important;
+    }
+
+    .guest-meal-report-print-area tfoot tr,
+    .guest-meal-report-print-area tfoot td {
+        font-weight: 800 !important;
+        background: #f3f4f6 !important;
+        color: #111827 !important;
+    }
+
+    /* GUEST_MEAL_PRINT_HIDE_STATUS_COLUMN_20260609 */
+    .guest-meal-report-print-area table thead th:nth-child(5),
+    .guest-meal-report-print-area table tbody td:nth-child(5) {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    .guest-meal-report-print-area table {
+        font-size: 8.5px !important;
+    }
+
+    /* GUEST_MEAL_PRINT_PORTRAIT_CLEAN_20260609 */
+    /* GUEST_MEAL_PRINT_BLANK_RECOVERY_20260609 */
+    .guest-meal-report-print-area {
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    .guest-meal-report-print-area {
+        page-break-inside: auto !important;
+    }
+
+    .guest-meal-report-print-area tr {
+        page-break-inside: avoid !important;
+        page-break-after: auto !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(1),
+    .guest-meal-report-print-area td:nth-child(1) {
+        width: 12% !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(2),
+    .guest-meal-report-print-area td:nth-child(2) {
+        width: 22% !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(3),
+    .guest-meal-report-print-area td:nth-child(3) {
+        width: 22% !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(4),
+    .guest-meal-report-print-area td:nth-child(4) {
+        width: 12% !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(6),
+    .guest-meal-report-print-area td:nth-child(6) {
+        width: 8% !important;
+        white-space: nowrap !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(7),
+    .guest-meal-report-print-area td:nth-child(7) {
+        width: 9% !important;
+        white-space: nowrap !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(8),
+    .guest-meal-report-print-area td:nth-child(8) {
+        width: 13% !important;
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+
+    /* GUEST_MEAL_PRINT_AMOUNT_WRAP_FIX_20260609 */
+    .guest-meal-report-print-area table {
+        font-size: 8px !important;
+    }
+
+    .guest-meal-report-print-area th,
+    .guest-meal-report-print-area td {
+        padding: 4px 4px !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(1),
+    .guest-meal-report-print-area td:nth-child(1) {
+        width: 11% !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(2),
+    .guest-meal-report-print-area td:nth-child(2) {
+        width: 21% !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(3),
+    .guest-meal-report-print-area td:nth-child(3) {
+        width: 20% !important;
+    }
+
+    .guest-meal-report-print-area th:nth-child(4),
+    .guest-meal-report-print-area td:nth-child(4) {
+        width: 10% !important;
+    }
+
+    .guest-meal-report-print-area tfoot td {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+
     .no-print,
     .sidebar,
     .topbar,
-    .navbar {
+    .navbar,
+    form,
+    button,
+    .btn {
         display: none !important;
     }
+
     .print-title {
         display: block !important;
+        visibility: visible !important;
+        margin-bottom: 10px !important;
+        text-align: center !important;
+    }
+
+    .print-title h3 {
+        font-size: 18px !important;
+        margin: 0 0 4px !important;
+    }
+
+    .print-title p {
+        font-size: 11px !important;
+        margin: 0 0 8px !important;
     }
 }
 </style>
@@ -427,10 +620,14 @@
     </div>
 
     <div class="card shadow-sm mb-3">
-        <div class="card-header">Guests ({{ $guests->count() }})</div>
+        <div class="card-header guest-panel-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <span>Guest Details</span>
+            <span class="text-muted small">Total Guests: {{ $guests->count() }}</span>
+        </div>
+        {{-- GUEST_DETAILS_HEADING_FIX_20260609 --}}
         <div class="card-body table-responsive">
             <table class="table table-sm align-middle">
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>ID</th>
                         <th>Code</th>

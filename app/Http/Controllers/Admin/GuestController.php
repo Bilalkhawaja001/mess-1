@@ -309,7 +309,7 @@ class GuestController extends Controller
                 }
 
                 $this->appendDepartmentLedgerEntryForMeal(
-                    meal: $meal->fresh(['guest']),
+                    meal: $meal->fresh(['guest.department']),
                     entryType: 'DEBIT',
                     remarks: 'Guest meal approved edit repost'
                 );
@@ -375,7 +375,7 @@ class GuestController extends Controller
         $toDate = (string) $data['to_date'];
 
         $meals = GuestMeal::query()
-            ->with(['guest'])
+            ->with(['guest.department'])
             ->whereNull('approved_at')
             ->whereDate('meal_date', '>=', $fromDate)
             ->whereDate('meal_date', '<=', $toDate)
@@ -385,6 +385,17 @@ class GuestController extends Controller
 
         if ($meals->isEmpty()) {
             return back()->with('error', 'No unapproved guest meals found in selected date range.');
+        }
+
+        $missingDepartmentMeals = $meals->filter(fn (GuestMeal $meal) => ! $meal->guest || ! $meal->guest->department_id);
+
+        if ($missingDepartmentMeals->isNotEmpty()) {
+            $sample = $missingDepartmentMeals
+                ->take(10)
+                ->map(fn (GuestMeal $meal) => '#' . $meal->id . ' / ' . Carbon::parse((string) $meal->meal_date)->format('Y-m-d') . ' / ' . optional($meal->guest)->name)
+                ->implode(', ');
+
+            return back()->with('error', 'Bulk approve blocked. Department missing on guest record for meal(s): ' . $sample);
         }
 
         $ratePayloads = [];
@@ -654,9 +665,12 @@ class GuestController extends Controller
 
     private function appendDepartmentLedgerEntryForMeal(GuestMeal $meal, string $entryType, string $remarks): void
     {
-        $guest = $meal->guest()->first();
+        $guest = $meal->guest ?: $meal->guest()->first();
+
         if (! $guest || ! $guest->department_id) {
-            throw new \RuntimeException('Guest department is required for department ledger posting');
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'department_id' => 'Guest department is required before approving guest meal #' . $meal->id . '.',
+            ]);
         }
 
         $this->appendDepartmentLedgerEntry(

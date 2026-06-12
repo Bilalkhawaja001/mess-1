@@ -1,5 +1,7 @@
 <?php
 
+Route::view("/privacy", "privacy")->name("privacy");
+
 /*
 |--------------------------------------------------------------------------
 | Forced Password Change
@@ -426,3 +428,7 @@ Route::match(['get','post'], '/jazzcash/return', [\App\Http\Controllers\JazzCash
 Route::post('/jazzcash/ipn', [\App\Http\Controllers\JazzCashController::class, 'ipn'])->name('jazzcash.ipn');
 Route::post('/jazzcash/payments/{payment}/status-inquiry', [\App\Http\Controllers\JazzCashController::class, 'statusInquiry'])->middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN'])->name('jazzcash.status-inquiry');
 
+
+Route::get('/data-deletion', function () {
+    return view('data-deletion');
+})->name('data-deletion');

@@ -124,8 +124,6 @@ class MemberApiController extends Controller
             'member' => $this->memberPayload($row),
         ]);
     }
-
-
     public function storeProfileChangeRequest(Request $request): JsonResponse
     {
         $row = $this->memberFromToken($request);
@@ -427,6 +425,8 @@ class MemberApiController extends Controller
             'total_payable' => $bill ? $this->apiMoney($bill->net_payable) : 0,
             'due_date' => $bill?->due_date ? \Illuminate\Support\Carbon::parse($bill->due_date)->format('d-M-Y') : '',
             'month' => $bill->month_cycle ?? '',
+            'active_days' => $bill ? (int) $bill->active_days : 0,
+            'rate_per_day' => $bill ? $this->apiMoney($bill->rate_per_day) : 0,
             'summary' => $bill ? [
                 [
                     'label' => 'Net payable',

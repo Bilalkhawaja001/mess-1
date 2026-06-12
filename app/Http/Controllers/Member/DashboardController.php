@@ -99,6 +99,6 @@ class DashboardController extends Controller
             'todayMenu' => $todayMenu,
         ];
 
-        return view('member.mobile.dashboard', $data);
+        return view('member.app.dashboard', $data);
     }
 }

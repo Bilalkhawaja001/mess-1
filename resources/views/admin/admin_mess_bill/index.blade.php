@@ -379,6 +379,76 @@
             display: block !important;
         }
     }
+
+    /* AMB_PRINT_LAYOUT_FIX_20260609 */
+    @media print {
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+
+        html,
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body * {
+            visibility: hidden !important;
+        }
+
+        .print-only,
+        .print-only * {
+            visibility: visible !important;
+        }
+
+        .print-only {
+            display: block !important;
+            position: static !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            z-index: 999999 !important;
+        }
+
+        .app-sidebar,
+        .sidebar,
+        .topbar,
+        .app-topbar,
+        .navbar,
+        header,
+        nav,
+        aside,
+        form,
+        button,
+        .btn,
+        .alert,
+        .breadcrumb,
+        .dropdown-menu,
+        .modal,
+        .offcanvas,
+        .no-print {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        .print-invoice {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            color: #111827 !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+        }
+    }
 </style>
 
 <div class="amb-shell">

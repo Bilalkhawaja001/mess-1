@@ -863,7 +863,7 @@
                                         <button class="btn btn-sm btn-outline-danger">Reject</button>
                                     </form>
                                 </div>
-                            @elseif(!in_array($p->status, ['SUCCESS','RECONCILED','FAILED']))
+                            @elseif(!in_array($p->status, ['APPROVED','SUCCESS','RECONCILED','FAILED']))
                                 <form method="POST" action="{{ route('admin.payments.approve', $p->id) }}">@csrf<button class="btn btn-sm btn-outline-success">Manual Verify Paid</button></form>
                             @else
                                 <span class="text-muted">-</span>

@@ -35,7 +35,7 @@ class PaymentService
             throw new RuntimeException('Payment already settled for this bill.');
         }
 
-        return DB::transaction(function () use ($memberId, $billId, $methodId, $amount, $userId) {
+        return DB::transaction(function () use ($bill, $memberId, $billId, $methodId, $amount, $userId) {
             $pending = Payment::query()
                 ->where('member_id', $memberId)
                 ->where('bill_id', $billId)
@@ -51,6 +51,8 @@ class PaymentService
             $payment = Payment::query()->create([
                 'member_id' => $memberId,
                 'bill_id' => $billId,
+                'month_cycle' => (string) $bill->month_cycle,
+                'duplicate_guard_version' => Payment::DUPLICATE_GUARD_VERSION,
                 'payment_method_id' => $methodId,
                 'payment_ref' => 'PAY-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
                 'payment_date' => now()->toDateString(),

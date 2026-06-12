@@ -597,6 +597,8 @@ class MemberApiController extends Controller
                 $payment = Payment::query()->create([
                     'member_id' => $row->member_id,
                     'bill_id' => $bill->id,
+                    'month_cycle' => (string) $bill->month_cycle,
+                    'duplicate_guard_version' => Payment::DUPLICATE_GUARD_VERSION,
                     'payment_method_id' => $method->id,
                     'payment_ref' => 'APP-UPLOAD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
                     'payment_date' => now()->toDateString(),

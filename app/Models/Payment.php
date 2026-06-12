@@ -27,9 +27,13 @@ class Payment extends Model
     public const STATUS_RECONCILIATION_PENDING = 'RECONCILIATION_PENDING';
     public const STATUS_RECONCILED = 'RECONCILED';
 
+    public const DUPLICATE_GUARD_VERSION = 'phase2c_app_v1';
+
     protected $fillable = [
         'member_id',
         'bill_id',
+        'month_cycle',
+        'duplicate_guard_version',
         'payment_method_id',
         'payment_ref',
         'payment_date',

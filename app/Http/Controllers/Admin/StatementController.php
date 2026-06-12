@@ -88,12 +88,31 @@ class StatementController extends Controller
             ->orderBy('id')
             ->get();
 
-        $billIds = $ledgerRows
-            ->where('ref_type', 'BILL')
-            ->pluck('ref_id')
-            ->filter()
-            ->unique()
-            ->values();
+        $existingLedgerIds = $ledgerRows->pluck('id')->filter()->values();
+
+        $billMonthPaymentLedgerRows = DB::table('member_ledgers as ml')
+            ->join('payments as p', function ($join) {
+                $join->on('p.id', '=', 'ml.ref_id')
+                    ->where('ml.ref_type', '=', 'PAYMENT');
+            })
+            ->join('billings as b', 'b.id', '=', 'p.bill_id')
+            ->where('ml.member_id', $memberId)
+            ->whereBetween('b.month_cycle', [$fromMonth, $toMonth])
+            ->when($existingLedgerIds->isNotEmpty(), function ($query) use ($existingLedgerIds) {
+                $query->whereNotIn('ml.id', $existingLedgerIds);
+            })
+            ->select('ml.*')
+            ->get();
+
+        if ($billMonthPaymentLedgerRows->isNotEmpty()) {
+            $ledgerRows = $ledgerRows
+                ->merge($billMonthPaymentLedgerRows)
+                ->sortBy([
+                    ['entry_date', 'asc'],
+                    ['id', 'asc'],
+                ])
+                ->values();
+        }
 
         $paymentIds = $ledgerRows
             ->where('ref_type', 'PAYMENT')
@@ -102,12 +121,20 @@ class StatementController extends Controller
             ->unique()
             ->values();
 
-        $billings = $billIds->isNotEmpty()
-            ? DB::table('billings')->whereIn('id', $billIds)->get()->keyBy('id')
-            : collect();
-
         $payments = $paymentIds->isNotEmpty()
             ? DB::table('payments')->whereIn('id', $paymentIds)->get()->keyBy('id')
+            : collect();
+
+        $billIds = $ledgerRows
+            ->where('ref_type', 'BILL')
+            ->pluck('ref_id')
+            ->filter()
+            ->merge($payments->pluck('bill_id')->filter())
+            ->unique()
+            ->values();
+
+        $billings = $billIds->isNotEmpty()
+            ? DB::table('billings')->whereIn('id', $billIds)->get()->keyBy('id')
             : collect();
 
         $rows = $ledgerRows->map(function ($row) use ($billings, $payments) {
@@ -115,7 +142,10 @@ class StatementController extends Controller
             $bill = $refType === 'BILL' ? ($billings[$row->ref_id] ?? null) : null;
             $payment = $refType === 'PAYMENT' ? ($payments[$row->ref_id] ?? null) : null;
 
+            $paymentBill = $payment && !empty($payment->bill_id) ? ($billings[$payment->bill_id] ?? null) : null;
+
             $month = $bill->month_cycle
+                ?? $paymentBill->month_cycle
                 ?? ($payment && !empty($payment->payment_date) ? Carbon::parse($payment->payment_date)->format('Y-m') : Carbon::parse($row->entry_date)->format('Y-m'));
 
             return (object) [

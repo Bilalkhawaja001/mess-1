@@ -74,18 +74,97 @@
     </div>
 </div>
 
-<div class="card shadow-sm"><div class="card-header">Monthly Present Days</div><div class="card-body table-responsive">
-<form method="POST" action="{{ route('admin.attendance-monthly.store') }}">@csrf
-<input type="hidden" name="month_cycle" value="{{ $monthCycle }}">
-<table class="table table-sm align-middle"><thead><tr><th>Member</th><th>Present Days</th><th>Locked</th></tr></thead><tbody>
-@foreach($rows as $i => $r)
-<tr>
-<td>{{ $r['member']->member_code }} - {{ $r['member']->name }}<input type="hidden" name="rows[{{ $i }}][member_id]" value="{{ $r['member']->id }}"></td>
-<td><input type="number" min="0" max="31" class="form-control form-control-sm" name="rows[{{ $i }}][present_days]" value="{{ $r['present_days'] }}"></td>
-<td>{{ $r['is_locked'] ? 'Yes' : 'No' }}</td>
-</tr>
-@endforeach
-</tbody></table>
-<div class="d-flex gap-2"><button class="btn btn-primary">Save</button><button name="approve" value="1" class="btn btn-success">Save & Approve/Lock</button></div>
-</form></div></div>
+<div class="card shadow-sm">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>Monthly Present Days</span>
+        <span class="small text-muted" id="attendanceMemberResultCount">{{ count($rows) }} members</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-6 col-lg-5">
+                <label class="form-label">Find Member</label>
+                <input
+                    type="search"
+                    id="attendanceMemberSearch"
+                    class="form-control"
+                    placeholder="Search by code, name, department..."
+                    autocomplete="off"
+                >
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-secondary w-100" id="attendanceMemberSearchClear">Clear</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <form method="POST" action="{{ route('admin.attendance-monthly.store') }}">@csrf
+                <input type="hidden" name="month_cycle" value="{{ $monthCycle }}">
+                <table class="table table-sm align-middle" id="attendanceMonthlyTable">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th>Present Days</th>
+                            <th>Locked</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($rows as $i => $r)
+                        <tr data-member-search="{{ strtolower(trim(($r['member']->member_code ?? '') . ' ' . ($r['member']->name ?? '') . ' ' . ($r['member']->department_name ?? '') . ' ' . ($r['member']->mess_code ?? '') . ' ' . ($r['member']->member_type ?? ''))) }}">
+                            <td>
+                                {{ $r['member']->member_code }} - {{ $r['member']->name }}
+                                @if(!empty($r['member']->department_name))
+                                    <div class="small text-muted">{{ $r['member']->department_name }}</div>
+                                @endif
+                                <input type="hidden" name="rows[{{ $i }}][member_id]" value="{{ $r['member']->id }}">
+                            </td>
+                            <td>
+                                <input type="number" min="0" max="31" class="form-control form-control-sm" name="rows[{{ $i }}][present_days]" value="{{ $r['present_days'] }}">
+                            </td>
+                            <td>{{ $r['is_locked'] ? 'Yes' : 'No' }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary">Save</button>
+                    <button name="approve" value="1" class="btn btn-success">Save & Approve/Lock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('attendanceMemberSearch');
+    const clearButton = document.getElementById('attendanceMemberSearchClear');
+    const resultCount = document.getElementById('attendanceMemberResultCount');
+    const rows = Array.from(document.querySelectorAll('#attendanceMonthlyTable tbody tr'));
+    const totalRows = rows.length;
+
+    function applyMemberSearch() {
+        const query = (searchInput.value || '').toLowerCase().trim();
+        let visibleRows = 0;
+
+        rows.forEach(function (row) {
+            const haystack = row.getAttribute('data-member-search') || '';
+            const matched = query === '' || haystack.includes(query);
+            row.style.display = matched ? '' : 'none';
+            if (matched) visibleRows++;
+        });
+
+        resultCount.textContent = query
+            ? visibleRows + ' of ' + totalRows + ' members'
+            : totalRows + ' members';
+    }
+
+    searchInput.addEventListener('input', applyMemberSearch);
+
+    clearButton.addEventListener('click', function () {
+        searchInput.value = '';
+        applyMemberSearch();
+        searchInput.focus();
+    });
+});
+</script>
 @endsection

@@ -1057,8 +1057,8 @@
                             @forelse($purchaseReportData['grnDetails'] ?? $purchaseReportData['grn_details'] ?? [] as $row)
                                 <tr>
                                     <td>{{ $row->received_date ?? '' }}</td>
-                                    <td>{{ $row->grn_number ?? $row->grn_id ?? '' }}</td>
-                                    <td>{{ $row->po_number ?? $row->po_id ?? '' }}</td>
+                                    <td>{{ $row->grn_number ?? ('GRN#'.$row->grn_id) ?? '' }}</td>
+                                    <td>{{ $row->po_number ?? ('PO#'.$row->po_id) ?? '' }}</td>
                                     <td>{{ $row->vendor_name ?? '' }}</td>
                                     <td>{{ $row->sku ?? $row->item_code ?? '' }}</td>
                                     <td>{{ $row->item_name ?? '' }}</td>

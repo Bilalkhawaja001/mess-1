@@ -66,7 +66,6 @@ class ProcurementController extends Controller
         $grnEligiblePos = $pos
             ->filter(fn (PurchaseOrder $po) => $po->lines->contains(fn ($line) => (float) ($line->pending_qty ?? 0) > 0))
             ->values();
-        $grns = GoodsReceipt::query()->with(['purchaseOrder.vendor', 'lines.item'])->latest()->limit(50)->get();
 
         $poImportPreview = session('procurement_po_import_preview');
         $grnImportPreview = session('procurement_grn_import_preview');
@@ -74,6 +73,25 @@ class ProcurementController extends Controller
         [$grnFromDate, $grnToDate] = $this->resolveGrnDateRange($request);
         [$reportFromDate, $reportToDate] = $this->resolvePurchaseReportDateRange($request);
         $reportSearch = trim((string) $request->input('q', ''));
+
+        $grns = GoodsReceipt::query()
+            ->with(['purchaseOrder.vendor', 'lines.item'])
+            ->whereBetween('received_date', [$grnFromDate, $grnToDate])
+            ->when($reportSearch !== '', function ($query) use ($reportSearch) {
+                $like = '%'.$reportSearch.'%';
+                $query->where(function ($q) use ($like) {
+                    $q->where('grn_number', 'like', $like)
+                        ->orWhereHas('purchaseOrder', function ($po) use ($like) {
+                            $po->where('po_number', 'like', $like)
+                                ->orWhereHas('vendor', fn ($vendor) => $vendor->where('name', 'like', $like));
+                        });
+                });
+            })
+            ->orderByDesc('received_date')
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get();
+
         $purchaseReportData = $this->buildPurchaseReportData($reportFromDate, $reportToDate, $reportSearch);
 
         $editPo = null;
@@ -1226,7 +1244,9 @@ class ProcurementController extends Controller
             ->selectRaw("
                 goods_receipts.received_date,
                 goods_receipts.id as grn_id,
+                goods_receipts.grn_number,
                 purchase_orders.id as po_id,
+                purchase_orders.po_number,
                 vendors.name as vendor_name,
                 items.sku as item_code,
                 items.name as item_name,
@@ -1257,8 +1277,8 @@ class ProcurementController extends Controller
 
     private function resolvePurchaseReportDateRange(Request $request, bool $validate = false): array
     {
-        $defaultFrom = now()->startOfMonth()->toDateString();
-        $defaultTo = now()->endOfMonth()->toDateString();
+        $defaultFrom = DB::table('goods_receipts')->min('received_date') ?: now()->startOfMonth()->toDateString();
+        $defaultTo = DB::table('goods_receipts')->max('received_date') ?: now()->endOfMonth()->toDateString();
 
         $data = [
             'from_date' => $request->input('from_date', $defaultFrom),
@@ -1280,8 +1300,8 @@ class ProcurementController extends Controller
 
     private function resolveGrnDateRange(Request $request, bool $validate = false): array
     {
-        $defaultFrom = now()->startOfMonth()->toDateString();
-        $defaultTo = now()->endOfMonth()->toDateString();
+        $defaultFrom = DB::table('goods_receipts')->min('received_date') ?: now()->startOfMonth()->toDateString();
+        $defaultTo = DB::table('goods_receipts')->max('received_date') ?: now()->endOfMonth()->toDateString();
 
         $data = [
             'from_date' => $request->input('from_date', $defaultFrom),

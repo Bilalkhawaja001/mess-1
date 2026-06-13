@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\Billing;
 use App\Models\Payment;
 use App\Models\Menu;
 use App\Models\MemberProfileChangeRequest;
+use App\Services\Payments\DuplicateActivePaymentException;
+use App\Services\Payments\PaymentDuplicateGuard;
 use App\Services\Payments\PaymentReconciliationService;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -406,7 +410,7 @@ class MemberApiController extends Controller
             return $this->unauthenticated();
         }
 
-        $bill = DB::table('billings')
+        $bill = Billing::query()
             ->where('member_id', $row->member_id)
             ->orderByDesc('month_cycle')
             ->orderByDesc('id')
@@ -527,7 +531,7 @@ class MemberApiController extends Controller
         ]);
     }
 
-    public function uploadPayment(Request $request, PaymentReconciliationService $reconciliationService): JsonResponse
+    public function uploadPayment(Request $request, PaymentReconciliationService $reconciliationService, PaymentDuplicateGuard $duplicateGuard): JsonResponse
     {
         $row = $this->memberFromToken($request);
 
@@ -542,7 +546,7 @@ class MemberApiController extends Controller
             'screenshot' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
-        $bill = DB::table('billings')
+        $bill = Billing::query()
             ->where('member_id', $row->member_id)
             ->orderByDesc('month_cycle')
             ->orderByDesc('id')
@@ -589,16 +593,21 @@ class MemberApiController extends Controller
         }
 
         $uploadedFile = $request->file('screenshot');
-        $path = $uploadedFile->store('member-payment-screenshots/'.now()->format('Y/m'), 'local');
         $screenshotHash = hash_file('sha256', $uploadedFile->getRealPath());
+        $path = null;
 
         try {
-            $payment = DB::transaction(function () use ($row, $bill, $method, $payload, $path, $screenshotHash, $reconciliationService) {
-                $payment = Payment::query()->create([
+            $payment = DB::transaction(function () use ($row, $bill, $method, $payload, $uploadedFile, &$path, $screenshotHash, $reconciliationService, $duplicateGuard) {
+                $lockedBill = $duplicateGuard->lockBill((int) $bill->id, (int) $row->member_id);
+                $monthCycle = (string) $lockedBill->month_cycle;
+
+                $duplicateGuard->assertNoActiveDuplicate((int) $row->member_id, $monthCycle);
+
+                $path = $uploadedFile->store('member-payment-screenshots/'.now()->format('Y/m'), 'local');
+
+                $payment = Payment::query()->create($duplicateGuard->withGuardAttributes([
                     'member_id' => $row->member_id,
-                    'bill_id' => $bill->id,
-                    'month_cycle' => (string) $bill->month_cycle,
-                    'duplicate_guard_version' => Payment::DUPLICATE_GUARD_VERSION,
+                    'bill_id' => $lockedBill->id,
                     'payment_method_id' => $method->id,
                     'payment_ref' => 'APP-UPLOAD-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
                     'payment_date' => now()->toDateString(),
@@ -609,7 +618,7 @@ class MemberApiController extends Controller
                     'notes' => 'Member app payment screenshot uploaded. File: '.$path,
                     'status' => Payment::STATUS_RECONCILIATION_PENDING,
                     'posted_by_user_id' => null,
-                ]);
+                ], $monthCycle));
 
                 $reconciliation = $reconciliationService->createPending($payment);
 
@@ -628,8 +637,32 @@ class MemberApiController extends Controller
 
                 return $payment->fresh();
             });
+        } catch (DuplicateActivePaymentException $e) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (QueryException $e) {
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
+
+            if (PaymentDuplicateGuard::isGuardUniqueIndexViolation($e)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Active payment already exists for this member/month.',
+                ], 422);
+            }
+
+            throw $e;
         } catch (\Throwable $e) {
-            Storage::disk('local')->delete($path);
+            if ($path) {
+                Storage::disk('local')->delete($path);
+            }
 
             report($e);
 

@@ -17,6 +17,7 @@ class PaymentReconciliationService
         private readonly PaymentService $paymentService,
         private readonly AuditLogService $auditLogService,
         private readonly FirebaseNotificationService $firebaseNotificationService,
+        private readonly PaymentDuplicateGuard $duplicateGuard,
     ) {
     }
 
@@ -93,18 +94,29 @@ class PaymentReconciliationService
 
     public function reconcile(PaymentReconciliation $row, int $userId, string $notes = ''): PaymentReconciliation
     {
-        $before = $row->toArray();
-        $row->status = Payment::STATUS_RECONCILED;
-        $row->ledger_sync_status = 'SYNCED';
-        $row->accounting_sync_status = 'SYNCED';
-        $row->reconciled_by_user_id = $userId;
-        $row->reconciled_at = now();
-        $row->notes = $notes ?: $row->notes;
-        $row->save();
+        return DB::transaction(function () use ($row, $userId, $notes) {
+            $lockedRow = PaymentReconciliation::query()->whereKey($row->id)->lockForUpdate()->firstOrFail();
+            $before = $lockedRow->toArray();
 
-        $this->paymentService->transition($row->payment, Payment::STATUS_RECONCILED, 'reconciliation-completed');
-        $this->auditLogService->log('payment.reconciliation_changed', PaymentReconciliation::class, (int) $row->id, $before, $row->toArray(), 'reconciled');
+            $payment = Payment::query()->whereKey($lockedRow->payment_id)->lockForUpdate()->firstOrFail();
+            $bill = $this->duplicateGuard->lockBill((int) $payment->bill_id, (int) $payment->member_id);
+            $monthCycle = (string) $bill->month_cycle;
 
-        return $row->fresh();
+            $this->duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id);
+            $this->duplicateGuard->applyGuardAttributes($payment, Payment::STATUS_RECONCILED, $monthCycle)->save();
+
+            $lockedRow->status = Payment::STATUS_RECONCILED;
+            $lockedRow->ledger_sync_status = 'SYNCED';
+            $lockedRow->accounting_sync_status = 'SYNCED';
+            $lockedRow->reconciled_by_user_id = $userId;
+            $lockedRow->reconciled_at = now();
+            $lockedRow->notes = $notes ?: $lockedRow->notes;
+            $lockedRow->save();
+
+            $this->paymentService->transition($payment, Payment::STATUS_RECONCILED, 'reconciliation-completed');
+            $this->auditLogService->log('payment.reconciliation_changed', PaymentReconciliation::class, (int) $lockedRow->id, $before, $lockedRow->toArray(), 'reconciled');
+
+            return $lockedRow->fresh();
+        });
     }
 }

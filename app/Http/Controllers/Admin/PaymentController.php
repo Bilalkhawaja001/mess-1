@@ -12,9 +12,12 @@ use App\Models\PaymentMethod;
 use App\Models\PaymentReconciliation;
 use App\Models\PaymentTransaction;
 use App\Services\PaymentEditService;
+use App\Services\Payments\DuplicateActivePaymentException;
 use App\Services\Payments\PaymentAttemptService;
+use App\Services\Payments\PaymentDuplicateGuard;
 use App\Services\Payments\PaymentReconciliationService;
 use App\Services\Payments\PaymentTransactionService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -133,7 +136,7 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function store(StorePaymentRequest $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService): RedirectResponse
+    public function store(StorePaymentRequest $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService, PaymentDuplicateGuard $duplicateGuard): RedirectResponse
     {
         $memberId = (int) $request->input('member_id');
         $billId = (int) $request->input('bill_id');
@@ -141,36 +144,34 @@ class PaymentController extends Controller
         $amount = round((float) $request->input('amount'), 2);
         $userId = (int) Auth::id();
 
-        $payment = DB::transaction(function () use ($request, $memberId, $billId, $methodId, $amount, $userId) {
-            $bill = Billing::query()
-                ->whereKey($billId)
-                ->where('member_id', $memberId)
-                ->lockForUpdate()
-                ->firstOrFail();
+        try {
+            $payment = DB::transaction(function () use ($request, $memberId, $billId, $methodId, $amount, $userId, $duplicateGuard) {
+                $bill = $duplicateGuard->lockBill($billId, $memberId);
+                $monthCycle = (string) $bill->month_cycle;
 
-            $method = PaymentMethod::query()
-                ->whereKey($methodId)
-                ->where('is_active', true)
-                ->firstOrFail();
+                $duplicateGuard->assertNoActiveDuplicate($memberId, $monthCycle);
 
-            $payment = Payment::query()->create([
-                'member_id' => $memberId,
-                'bill_id' => $bill->id,
-                'month_cycle' => (string) $bill->month_cycle,
-                'duplicate_guard_version' => Payment::DUPLICATE_GUARD_VERSION,
-                'payment_method_id' => $method->id,
-                'payment_ref' => 'MANPAY-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
-                'payment_date' => $request->input('payment_date') ?: now()->toDateString(),
-                'amount' => $amount,
-                'currency' => 'PKR',
-                'method' => $method->code,
-                'reference_no' => $request->input('reference_no') ?: null,
-                'notes' => $request->input('notes') ?: null,
-                'status' => Payment::STATUS_APPROVED,
-                'posted_by_user_id' => $userId,
-                'approved_by_user_id' => $userId,
-                'approved_at' => now(),
-            ]);
+                $method = PaymentMethod::query()
+                    ->whereKey($methodId)
+                    ->where('is_active', true)
+                    ->firstOrFail();
+
+                $payment = Payment::query()->create($duplicateGuard->withGuardAttributes([
+                    'member_id' => $memberId,
+                    'bill_id' => $bill->id,
+                    'payment_method_id' => $method->id,
+                    'payment_ref' => 'MANPAY-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'payment_date' => $request->input('payment_date') ?: now()->toDateString(),
+                    'amount' => $amount,
+                    'currency' => 'PKR',
+                    'method' => $method->code,
+                    'reference_no' => $request->input('reference_no') ?: null,
+                    'notes' => $request->input('notes') ?: null,
+                    'status' => Payment::STATUS_APPROVED,
+                    'posted_by_user_id' => $userId,
+                    'approved_by_user_id' => $userId,
+                    'approved_at' => now(),
+                ], $monthCycle));
 
             $exists = MemberLedger::query()
                 ->where('member_id', $memberId)
@@ -198,8 +199,17 @@ class PaymentController extends Controller
                 ]);
             }
 
-            return $payment;
-        });
+                return $payment;
+            });
+        } catch (DuplicateActivePaymentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (QueryException $e) {
+            if (PaymentDuplicateGuard::isGuardUniqueIndexViolation($e)) {
+                return back()->withInput()->with('error', 'Active payment already exists for this member/month.');
+            }
+
+            throw $e;
+        }
 
         return redirect()->route('admin.payments.index')->with('success', 'Manual payment posted to ledger. Payment ID: '.$payment->id);
     }
@@ -302,7 +312,7 @@ class PaymentController extends Controller
         return redirect()->route('admin.payments.index')->with('success', 'Payment edited.');
     }
 
-    public function approve(Payment $payment, PaymentTransactionService $transactionService): RedirectResponse
+    public function approve(Payment $payment, PaymentTransactionService $transactionService, PaymentDuplicateGuard $duplicateGuard): RedirectResponse
     {
         if (in_array($payment->status, [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILIATION_PENDING, Payment::STATUS_RECONCILED], true)) {
             return back()->with('info', 'Payment already verified.');
@@ -313,42 +323,62 @@ class PaymentController extends Controller
             return back()->with('error', 'No transaction found for this payment.');
         }
 
-        DB::transaction(function () use ($payment, $txn, $transactionService) {
-            $transactionService->manualVerify($txn, (int) Auth::id(), true);
+        try {
+            DB::transaction(function () use ($payment, $txn, $transactionService, $duplicateGuard) {
+                $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+                $bill = $duplicateGuard->lockBill((int) $lockedPayment->bill_id, (int) $lockedPayment->member_id);
+                $monthCycle = (string) $bill->month_cycle;
 
-            $existingLedger = MemberLedger::query()
-                ->where('member_id', $payment->member_id)
-                ->where('ref_type', 'PAYMENT')
-                ->where('ref_id', $payment->id)
-                ->first();
+                $duplicateGuard->assertNoActiveDuplicate((int) $lockedPayment->member_id, $monthCycle, (int) $lockedPayment->id);
+                $duplicateGuard->applyGuardAttributes($lockedPayment, Payment::STATUS_SUCCESS, $monthCycle)->save();
+
+                $lockedTxn = PaymentTransaction::query()->whereKey($txn->id)->lockForUpdate()->firstOrFail();
+                $transactionService->manualVerify($lockedTxn, (int) Auth::id(), true);
+
+                $lockedPayment = $lockedPayment->fresh();
+
+                $existingLedger = MemberLedger::query()
+                    ->where('member_id', $lockedPayment->member_id)
+                    ->where('ref_type', 'PAYMENT')
+                    ->where('ref_id', $lockedPayment->id)
+                    ->first();
 
             if (! $existingLedger) {
                 $lastBal = (float) (MemberLedger::query()
-                    ->where('member_id', $payment->member_id)
+                    ->where('member_id', $lockedPayment->member_id)
                     ->orderByDesc('entry_date')
                     ->orderByDesc('id')
                     ->value('balance_after') ?? 0);
 
-                $newBal = round($lastBal - (float) $payment->amount, 2);
+                $newBal = round($lastBal - (float) $lockedPayment->amount, 2);
 
                 MemberLedger::query()->create([
-                    'member_id' => $payment->member_id,
-                    'entry_date' => $payment->payment_date,
+                    'member_id' => $lockedPayment->member_id,
+                    'entry_date' => $lockedPayment->payment_date,
                     'debit' => 0,
-                    'credit' => $payment->amount,
+                    'credit' => $lockedPayment->amount,
                     'ref_type' => 'PAYMENT',
-                    'ref_id' => $payment->id,
+                    'ref_id' => $lockedPayment->id,
                     'balance_after' => $newBal,
                     'reason_code' => 'PAYMENT_MANUAL_VERIFIED',
                     'posted_by_user_id' => Auth::id(),
                 ]);
             }
-        });
+            });
+        } catch (DuplicateActivePaymentException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (QueryException $e) {
+            if (PaymentDuplicateGuard::isGuardUniqueIndexViolation($e)) {
+                return back()->with('error', 'Active payment already exists for this member/month.');
+            }
+
+            throw $e;
+        }
 
         return redirect()->route('admin.payments.index')->with('success', 'Payment manually verified and posted to ledger.');
     }
 
-    public function approveUploadedProof(Payment $payment): RedirectResponse
+    public function approveUploadedProof(Payment $payment, PaymentDuplicateGuard $duplicateGuard): RedirectResponse
     {
         if ($payment->status !== Payment::STATUS_RECONCILIATION_PENDING) {
             return back()->with('error', 'Only pending review uploaded payments can be approved.');
@@ -376,39 +406,47 @@ class PaymentController extends Controller
             }
         }
 
-        DB::transaction(function () use ($payment) {
-            $existingLedger = MemberLedger::query()
-                ->where('member_id', $payment->member_id)
-                ->where('ref_type', 'PAYMENT')
-                ->where('ref_id', $payment->id)
-                ->first();
+        try {
+            DB::transaction(function () use ($payment, $duplicateGuard) {
+                $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+                $bill = $duplicateGuard->lockBill((int) $lockedPayment->bill_id, (int) $lockedPayment->member_id);
+                $monthCycle = (string) $bill->month_cycle;
+
+                $duplicateGuard->assertNoActiveDuplicate((int) $lockedPayment->member_id, $monthCycle, (int) $lockedPayment->id);
+                $duplicateGuard->applyGuardAttributes($lockedPayment, Payment::STATUS_RECONCILED, $monthCycle);
+
+                $existingLedger = MemberLedger::query()
+                    ->where('member_id', $lockedPayment->member_id)
+                    ->where('ref_type', 'PAYMENT')
+                    ->where('ref_id', $lockedPayment->id)
+                    ->first();
 
             if (! $existingLedger) {
                 $lastBal = (float) (MemberLedger::query()
-                    ->where('member_id', $payment->member_id)
+                    ->where('member_id', $lockedPayment->member_id)
                     ->orderByDesc('entry_date')
                     ->orderByDesc('id')
                     ->value('balance_after') ?? 0);
 
-                $newBal = round($lastBal - (float) $payment->amount, 2);
+                $newBal = round($lastBal - (float) $lockedPayment->amount, 2);
 
                 MemberLedger::query()->create([
-                    'member_id' => $payment->member_id,
-                    'entry_date' => $payment->payment_date,
+                    'member_id' => $lockedPayment->member_id,
+                    'entry_date' => $lockedPayment->payment_date,
                     'debit' => 0,
-                    'credit' => $payment->amount,
+                    'credit' => $lockedPayment->amount,
                     'ref_type' => 'PAYMENT',
-                    'ref_id' => $payment->id,
+                    'ref_id' => $lockedPayment->id,
                     'balance_after' => $newBal,
                     'reason_code' => 'ANDROID_PAYMENT_PROOF_APPROVED',
                     'posted_by_user_id' => Auth::id(),
                 ]);
             }
 
-            $payment->status = Payment::STATUS_RECONCILED;
-            $payment->approved_by_user_id = Auth::id();
-            $payment->approved_at = now();
-            $payment->save();
+            $lockedPayment->status = Payment::STATUS_RECONCILED;
+            $lockedPayment->approved_by_user_id = Auth::id();
+            $lockedPayment->approved_at = now();
+            $lockedPayment->save();
 
             PaymentReconciliation::query()
                 ->where('payment_id', $payment->id)
@@ -421,7 +459,16 @@ class PaymentController extends Controller
                     'notes' => 'Android payment proof approved from admin payments screen.',
                     'updated_at' => now(),
                 ]);
-        });
+            });
+        } catch (DuplicateActivePaymentException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (QueryException $e) {
+            if (PaymentDuplicateGuard::isGuardUniqueIndexViolation($e)) {
+                return back()->with('error', 'Active payment already exists for this member/month.');
+            }
+
+            throw $e;
+        }
 
         return redirect()->route('admin.payments.index')->with('success', 'Payment proof approved and posted to ledger.');
     }

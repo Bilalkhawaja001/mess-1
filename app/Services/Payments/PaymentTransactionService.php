@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\PaymentAttempt;
 use App\Models\PaymentTransaction;
 use App\Services\AuditLogService;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class PaymentTransactionService
@@ -14,6 +15,7 @@ class PaymentTransactionService
         private readonly PaymentService $paymentService,
         private readonly PaymentReconciliationService $paymentReconciliationService,
         private readonly AuditLogService $auditLogService,
+        private readonly PaymentDuplicateGuard $duplicateGuard,
     ) {
     }
 
@@ -71,24 +73,37 @@ class PaymentTransactionService
 
     public function manualVerify(PaymentTransaction $txn, int $userId, bool $markSuccess = true): PaymentTransaction
     {
-        $before = $txn->toArray();
-        $txn->status = $markSuccess ? Payment::STATUS_SUCCESS : Payment::STATUS_FAILED;
-        $txn->verified_at = now();
-        $txn->completed_at = $txn->completed_at ?: now();
-        $txn->save();
+        return DB::transaction(function () use ($txn, $userId, $markSuccess) {
+            $lockedTxn = PaymentTransaction::query()->whereKey($txn->id)->lockForUpdate()->firstOrFail();
+            $before = $lockedTxn->toArray();
+            $lockedTxn->status = $markSuccess ? Payment::STATUS_SUCCESS : Payment::STATUS_FAILED;
+            $lockedTxn->verified_at = now();
+            $lockedTxn->completed_at = $lockedTxn->completed_at ?: now();
+            $lockedTxn->save();
 
-        $payment = $txn->payment;
-        if ($payment) {
-            if (! in_array($payment->status, [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED], true)) {
-                $this->paymentService->transition($payment, $txn->status, 'admin-manual-verify');
+            $payment = $lockedTxn->payment
+                ? Payment::query()->whereKey($lockedTxn->payment->id)->lockForUpdate()->first()
+                : null;
+
+            if ($payment) {
+                if ($markSuccess) {
+                    $bill = $this->duplicateGuard->lockBill((int) $payment->bill_id, (int) $payment->member_id);
+                    $monthCycle = (string) $bill->month_cycle;
+                    $this->duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id);
+                    $this->duplicateGuard->applyGuardAttributes($payment, Payment::STATUS_SUCCESS, $monthCycle)->save();
+                }
+
+                if (! in_array($payment->status, [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED], true)) {
+                    $this->paymentService->transition($payment, $lockedTxn->status, 'admin-manual-verify');
+                }
+                if ($lockedTxn->status === Payment::STATUS_SUCCESS && ! $payment->reconciliations()->exists()) {
+                    $this->paymentReconciliationService->createPending($payment, $lockedTxn);
+                }
             }
-            if ($txn->status === Payment::STATUS_SUCCESS && ! $payment->reconciliations()->exists()) {
-                $this->paymentReconciliationService->createPending($payment, $txn);
-            }
-        }
 
-        $this->auditLogService->log('payment.transaction_verified_manual', PaymentTransaction::class, (int) $txn->id, $before, $txn->toArray(), 'manual-verify');
+            $this->auditLogService->log('payment.transaction_verified_manual', PaymentTransaction::class, (int) $lockedTxn->id, $before, $lockedTxn->toArray(), 'manual-verify');
 
-        return $txn->fresh();
+            return $lockedTxn->fresh();
+        });
     }
 }

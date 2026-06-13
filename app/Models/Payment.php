@@ -34,6 +34,8 @@ class Payment extends Model
         'bill_id',
         'month_cycle',
         'duplicate_guard_version',
+        'active_month_guard_key',
+        'active_month_guard_key_v2',
         'payment_method_id',
         'payment_ref',
         'payment_date',

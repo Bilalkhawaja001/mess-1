@@ -14,6 +14,7 @@ class PaymentService
     public function __construct(
         private readonly PaymentStatusTransitionService $statusTransitionService,
         private readonly AuditLogService $auditLogService,
+        private readonly PaymentDuplicateGuard $duplicateGuard,
     ) {
     }
 
@@ -23,36 +24,16 @@ class PaymentService
             throw new RuntimeException('Invalid amount. Amount must be greater than zero.');
         }
 
-        $bill = Billing::query()->whereKey($billId)->where('member_id', $memberId)->firstOrFail();
+        return DB::transaction(function () use ($memberId, $billId, $methodId, $amount, $userId) {
+            $bill = $this->duplicateGuard->lockBill($billId, $memberId);
+            $monthCycle = (string) $bill->month_cycle;
 
-        $alreadySuccess = Payment::query()
-            ->where('member_id', $memberId)
-            ->where('bill_id', $bill->id)
-            ->whereIn('status', [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED])
-            ->exists();
-
-        if ($alreadySuccess) {
-            throw new RuntimeException('Payment already settled for this bill.');
-        }
-
-        return DB::transaction(function () use ($bill, $memberId, $billId, $methodId, $amount, $userId) {
-            $pending = Payment::query()
-                ->where('member_id', $memberId)
-                ->where('bill_id', $billId)
-                ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_INITIATED, Payment::STATUS_RECONCILIATION_PENDING])
-                ->latest('id')
-                ->first();
-
-            if ($pending) {
-                return $pending;
-            }
+            $this->duplicateGuard->assertNoActiveDuplicate($memberId, $monthCycle);
 
             $method = PaymentMethod::query()->findOrFail($methodId);
-            $payment = Payment::query()->create([
+            $payment = Payment::query()->create($this->duplicateGuard->withGuardAttributes([
                 'member_id' => $memberId,
-                'bill_id' => $billId,
-                'month_cycle' => (string) $bill->month_cycle,
-                'duplicate_guard_version' => Payment::DUPLICATE_GUARD_VERSION,
+                'bill_id' => $bill->id,
                 'payment_method_id' => $methodId,
                 'payment_ref' => 'PAY-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
                 'payment_date' => now()->toDateString(),
@@ -61,7 +42,7 @@ class PaymentService
                 'method' => $method->code,
                 'status' => Payment::STATUS_PENDING,
                 'posted_by_user_id' => $userId,
-            ]);
+            ], $monthCycle));
 
             $this->auditLogService->log('payment.created', Payment::class, (int) $payment->id, [], $payment->toArray(), 'payment-root-created');
 

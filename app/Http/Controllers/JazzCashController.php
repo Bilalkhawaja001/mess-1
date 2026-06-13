@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Services\Payments\DuplicateActivePaymentException;
+use App\Services\Payments\PaymentDuplicateGuard;
 use App\Services\Payments\PaymentReconciliationService;
 
 class JazzCashController extends Controller
@@ -64,8 +66,18 @@ class JazzCashController extends Controller
             ? Payment::STATUS_SUCCESS
             : Payment::STATUS_FAILED;
 
-        DB::transaction(function () use ($payment, $status, $request, $responseMessage, $rrn, $txnRef) {
-            $txn = PaymentTransaction::query()
+        try {
+            DB::transaction(function () use ($payment, $status, $request, $responseMessage, $rrn, $txnRef) {
+                $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+                $duplicateGuard = app(PaymentDuplicateGuard::class);
+                if ($status === Payment::STATUS_SUCCESS) {
+                    $bill = $duplicateGuard->lockBill((int) $payment->bill_id, (int) $payment->member_id);
+                    $monthCycle = (string) $bill->month_cycle;
+                    $duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id);
+                    $duplicateGuard->applyGuardAttributes($payment, Payment::STATUS_SUCCESS, $monthCycle);
+                }
+
+                $txn = PaymentTransaction::query()
                 ->where('payment_id', $payment->id)
                 ->latest('id')
                 ->first();
@@ -91,7 +103,10 @@ class JazzCashController extends Controller
             if ($status === Payment::STATUS_SUCCESS && $txn && ! $payment->reconciliations()->exists()) {
                 app(PaymentReconciliationService::class)->createPending($payment->fresh(), $txn);
             }
-        });
+            });
+        } catch (DuplicateActivePaymentException $e) {
+            return redirect()->route('member.payments.index')->with('error', $e->getMessage());
+        }
 
         return redirect()->route('member.payments.index')
             ->with($status === Payment::STATUS_SUCCESS ? 'success' : 'warning', $responseMessage ?: 'JazzCash response received.');
@@ -162,8 +177,18 @@ class JazzCashController extends Controller
             ? Payment::STATUS_SUCCESS
             : Payment::STATUS_FAILED;
 
-        DB::transaction(function () use ($payment, $status, $request, $responseMessage, $rrn, $txnRef) {
-            $txn = PaymentTransaction::query()
+        try {
+            DB::transaction(function () use ($payment, $status, $request, $responseMessage, $rrn, $txnRef) {
+                $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+                $duplicateGuard = app(PaymentDuplicateGuard::class);
+                if ($status === Payment::STATUS_SUCCESS) {
+                    $bill = $duplicateGuard->lockBill((int) $payment->bill_id, (int) $payment->member_id);
+                    $monthCycle = (string) $bill->month_cycle;
+                    $duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id);
+                    $duplicateGuard->applyGuardAttributes($payment, Payment::STATUS_SUCCESS, $monthCycle);
+                }
+
+                $txn = PaymentTransaction::query()
                 ->where('payment_id', $payment->id)
                 ->latest('id')
                 ->first();
@@ -189,7 +214,16 @@ class JazzCashController extends Controller
             if ($status === Payment::STATUS_SUCCESS && $txn && ! $payment->reconciliations()->exists()) {
                 app(PaymentReconciliationService::class)->createPending($payment->fresh(), $txn);
             }
-        });
+            });
+        } catch (DuplicateActivePaymentException $e) {
+            return [
+                'ok' => false,
+                'message' => $e->getMessage(),
+                'payment_id' => $payment->id,
+                'status' => (string) $payment->status,
+                'http_status' => 422,
+            ];
+        }
 
         return [
             'ok' => true,

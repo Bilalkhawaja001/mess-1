@@ -34,8 +34,6 @@ class Payment extends Model
         'bill_id',
         'month_cycle',
         'duplicate_guard_version',
-        'active_month_guard_key',
-        'active_month_guard_key_v2',
         'payment_method_id',
         'payment_ref',
         'payment_date',
@@ -95,4 +93,17 @@ class Payment extends Model
     {
         return $this->hasMany(PaymentReconciliation::class);
     }
+
+    
+
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $payment): void {
+            // FIX_GENERATED_PAYMENT_GUARD_COLUMNS_20260615
+            unset($payment->attributes['active_month_guard_key']);
+            unset($payment->attributes['active_month_guard_key_v2']);
+        });
+    }
+
 }

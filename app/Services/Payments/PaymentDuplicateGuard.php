@@ -102,11 +102,7 @@ class PaymentDuplicateGuard
 
         if (in_array($status, self::ACTIVE_STATUSES, true)) {
             $guardKey = self::guardKey((int) $attributes['member_id'], $monthCycle);
-            $attributes['active_month_guard_key'] = $guardKey;
-            $attributes['active_month_guard_key_v2'] = $guardKey;
         } else {
-            $attributes['active_month_guard_key'] = null;
-            $attributes['active_month_guard_key_v2'] = null;
         }
 
         return $attributes;
@@ -119,11 +115,7 @@ class PaymentDuplicateGuard
 
         if (in_array($status, self::ACTIVE_STATUSES, true)) {
             $guardKey = self::guardKey((int) $payment->member_id, $monthCycle);
-            $payment->active_month_guard_key = $guardKey;
-            $payment->active_month_guard_key_v2 = $guardKey;
         } else {
-            $payment->active_month_guard_key = null;
-            $payment->active_month_guard_key_v2 = null;
         }
 
         return $payment;

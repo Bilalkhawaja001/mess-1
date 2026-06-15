@@ -149,7 +149,9 @@ class StatementController extends Controller
                 ?? ($payment && !empty($payment->payment_date) ? Carbon::parse($payment->payment_date)->format('Y-m') : Carbon::parse($row->entry_date)->format('Y-m'));
 
             return (object) [
+                // PAYMENT_DATE_STATEMENT_20260615
                 'month' => $month,
+                'payment_date' => $payment && !empty($payment->payment_date) ? Carbon::parse($payment->payment_date)->format('Y-m-d') : '',
                 'days' => $bill->active_days ?? '',
                 'rate_per_day' => $bill->rate_per_day ?? '',
                 'total_amount' => $bill->net_payable ?? (((float) $row->debit) > 0 ? $row->debit : (((float) $row->credit) * -1)),
@@ -203,7 +205,7 @@ class StatementController extends Controller
             fputcsv($out, ['Opening Balance', 'Total Debit', 'Total Credit', 'Closing Balance']);
             fputcsv($out, [$openingBalance, $totalDebit, $totalCredit, $closingBalance]);
             fputcsv($out, []);
-            fputcsv($out, ['Month', 'Days', 'Rate Per Day', 'Total Amount', 'Ref Type', 'Ref ID', 'Debit', 'Credit', 'Running Balance']);
+            fputcsv($out, ['Month', 'Payment Date', 'Days', 'Rate Per Day', 'Total Amount', 'Ref Type', 'Ref ID', 'Debit', 'Credit', 'Running Balance']);
 
             foreach ($rows as $row) {
                 fputcsv($out, [

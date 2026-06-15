@@ -460,6 +460,38 @@ class MemberApiController extends Controller
             ->orderBy('id')
             ->get();
 
+        // PAYMENT_DATE_STATEMENT_API_20260615
+
+
+        $paymentIds = $ledgerRows
+
+
+            ->where('ref_type', 'PAYMENT')
+
+
+            ->pluck('ref_id')
+
+
+            ->filter()
+
+
+            ->unique()
+
+
+            ->values();
+
+
+
+        $paymentDates = $paymentIds->isNotEmpty()
+
+
+            ? DB::table('payments')->whereIn('id', $paymentIds)->pluck('payment_date', 'id')
+
+
+            : collect();
+
+
+
         $first = $ledgerRows->first();
         $last = $ledgerRows->last();
 
@@ -475,7 +507,7 @@ class MemberApiController extends Controller
             'opening_balance' => $this->apiMoney($opening),
             'closing' => $this->apiMoney($closing),
             'closing_balance' => $this->apiMoney($closing),
-            'ledger' => $ledgerRows->map(function ($r) {
+            'ledger' => $ledgerRows->map(function ($r) use ($paymentDates) {
                 $isCredit = ((float) $r->credit) > 0;
                 $amount = $isCredit ? (float) $r->credit : (float) $r->debit;
 
@@ -491,7 +523,9 @@ class MemberApiController extends Controller
                 }
 
                 return [
-                    'date' => (string) $r->entry_date,
+                    'date' => strtoupper((string) $r->ref_type) === 'PAYMENT' && !empty($paymentDates[$r->ref_id] ?? null)
+                          ? (string) $paymentDates[$r->ref_id]
+                          : (string) $r->entry_date,
                     'title' => $parts !== [] ? implode(' - ', $parts) : ($isCredit ? 'Payment received' : 'Bill / charge'),
                     'description' => $parts !== [] ? implode(' - ', $parts) : ($isCredit ? 'Payment received' : 'Bill / charge'),
                     'amount' => $this->apiMoney($amount),

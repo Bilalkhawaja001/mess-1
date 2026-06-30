@@ -14,16 +14,67 @@ class StatementController extends Controller
 {
     public function index(Request $request): View|StreamedResponse
     {
-        $members = DB::table('members')
-            ->select('id', 'member_code', 'name', 'department_name', 'mess_id', 'join_date', 'leave_date')
-            ->orderBy('member_code')
-            ->orderBy('name')
-            ->get();
+        // MESS_STATEMENT_MEMBER_LOOKUP_PATCH_V1
+        $memberLookup = trim((string) $request->input('member_lookup', $request->input('employee_search', '')));
+        $hasMemberMobileColumn = Schema::hasColumn('members', 'mobile_number');
 
-        $memberId = (int) $request->input('member_id', 0);
-        if ($memberId <= 0 && $members->isNotEmpty()) {
-            $memberId = (int) $members->first()->id;
+        $memberColumns = ['id', 'member_code', 'name', 'department_name', 'mess_id', 'join_date', 'leave_date'];
+        if ($hasMemberMobileColumn) {
+            $memberColumns[] = 'mobile_number';
         }
+
+        $membersBaseQuery = DB::table('members')->select($memberColumns);
+        $memberLookupSuggestions = collect();
+        $memberLookupNoResults = false;
+
+        $requestedMemberId = (int) $request->input('member_id', 0);
+        $memberId = $requestedMemberId;
+
+        if ($memberLookup !== '') {
+            $needle = addcslashes($memberLookup, '\%_');
+            $lookupCode = trim((string) preg_split('/\s+[-|]\s+/', $memberLookup)[0]);
+            $lookupCode = trim((string) preg_replace('/\s+.*/', '', $lookupCode));
+
+            $searchQuery = (clone $membersBaseQuery)
+                ->where(function ($query) use ($needle, $hasMemberMobileColumn) {
+                    $query->where('member_code', 'like', "%{$needle}%")
+                        ->orWhere('name', 'like', "%{$needle}%")
+                        ->orWhere('department_name', 'like', "%{$needle}%");
+
+                    if ($hasMemberMobileColumn) {
+                        $query->orWhere('mobile_number', 'like', "%{$needle}%");
+                    }
+                });
+
+            $memberLookupSuggestions = (clone $searchQuery)
+                ->orderBy('member_code')
+                ->orderBy('name')
+                ->limit(25)
+                ->get();
+
+            $exactMember = $lookupCode !== ''
+                ? (clone $membersBaseQuery)->where('member_code', $lookupCode)->first()
+                : null;
+
+            $resolvedMember = $exactMember ?: $memberLookupSuggestions->first();
+            $memberId = $resolvedMember ? (int) $resolvedMember->id : 0;
+            $memberLookupNoResults = ! $resolvedMember;
+        } elseif ($memberId <= 0) {
+            $firstMember = (clone $membersBaseQuery)
+                ->orderBy('member_code')
+                ->orderBy('name')
+                ->first();
+
+            $memberId = $firstMember ? (int) $firstMember->id : 0;
+        }
+
+        $members = $memberLookupSuggestions->isNotEmpty()
+            ? $memberLookupSuggestions
+            : (clone $membersBaseQuery)
+                ->orderBy('member_code')
+                ->orderBy('name')
+                ->limit(50)
+                ->get();
 
         $singleMonth = trim((string) $request->input('single_month', $request->input('month_cycle', '')));
         $fromMonth = trim((string) $request->input('from_month', ''));
@@ -175,6 +226,9 @@ class StatementController extends Controller
 
         return view('admin.statement.index', compact(
             'members',
+            'memberLookup',
+            'memberLookupNoResults',
+            'memberLookupSuggestions',
             'memberId',
             'member',
             'messName',

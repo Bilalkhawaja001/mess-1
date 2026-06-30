@@ -5,19 +5,32 @@
 <div class="container-fluid py-2 compact-statement-page">
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.statement.index') }}" class="row g-3 align-items-end">
+            <form method="GET" action="{{ route('admin.statement.index') }}" class="statement-filter-grid">
+                {{-- MESS_STATEMENT_MEMBER_LOOKUP_PATCH_V1 --}}
                 <div class="col-md-4">
-                    <label class="form-label fw-semibold">Member</label>
-                    <select name="member_id" class="form-select">
-                        @foreach($members as $m)
-                            <option value="{{ $m->id }}" @selected((int) $memberId === (int) $m->id)>
-                                {{ $m->member_code }} - {{ $m->name }}
+                    <label class="form-label fw-semibold">Member Lookup</label>
+                    <input
+                        type="text"
+                        name="member_lookup"
+                        value="{{ $memberLookup ?? '' }}"
+                        class="form-control"
+                        list="statementMemberLookupList"
+                        placeholder="Member ID / Name / Department / Mobile"
+                        autocomplete="off"
+                    >
+                    <datalist id="statementMemberLookupList">
+                        @foreach(($memberLookupSuggestions ?? $members) as $m)
+                            <option value="{{ $m->member_code }} - {{ $m->name }}">
+                                {{ $m->department_name ?? '' }} @if(!empty($m->mobile_number)) | {{ $m->mobile_number }} @endif
                             </option>
                         @endforeach
-                    </select>
+                    </datalist>
+                    @if(($memberLookupNoResults ?? false))
+                        <div class="text-danger small mt-1">No matching member found.</div>
+                    @endif
                 </div>
 
-                <div class="col-md-2">
+<div class="col-md-2">
                     <label class="form-label fw-semibold">Single Month</label>
                     <input type="month" name="single_month" value="{{ $singleMonth }}" class="form-control">
                 </div>
@@ -32,9 +45,10 @@
                     <input type="month" name="to_month" value="{{ $toMonth }}" class="form-control">
                 </div>
 
-                <div class="col-md-2 d-flex gap-2">
+                <div class="col-md-3 d-flex gap-2 flex-wrap">
                     <button class="btn btn-secondary flex-fill" type="submit">View</button>
                     <button class="btn btn-success flex-fill" type="submit" name="export" value="csv">Excel</button>
+                    <a class="btn btn-outline-secondary flex-fill" href="{{ route('admin.statement.index') }}">Clear</a>
                 </div>
 
                 <div class="col-md-2">
@@ -47,7 +61,7 @@
     <div class="statement-print mx-auto bg-white border rounded shadow-sm p-2" style="max-width: 1080px;">
         <div class="d-flex justify-content-between align-items-start mb-3">
             <div>
-                <h3 class="mb-1 fw-bold">Mess Statment</h3>
+                <h3 class="mb-1 fw-bold">Mess Statement</h3>
                 <div class="text-muted">Member Account Statement</div>
             </div>
             <div class="text-muted small">Generated: {{ now()->format('Y-m-d') }}</div>
@@ -109,7 +123,8 @@
         </div>
 
         <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle statement-table-compact">
+
+<table class="table table-sm table-bordered align-middle statement-table-compact">
                 <thead class="table-light">
                     <tr>
                         <th>Month</th>
@@ -440,7 +455,7 @@ function printStatementOnly() {
 <html>
 <head>
 <meta charset="utf-8">
-<title>Mess Statment</title>
+<title>Mess Statement</title>
 <style>
 @page {
     size: A4 portrait;
@@ -566,5 +581,108 @@ window.onload = function () {
     printWindow.document.close();
 }
 </script>
+
+{{-- MESS_STATEMENT_MEMBER_LOOKUP_UI_V1 --}}
+<style>
+.compact-statement-page > .card {
+    max-width: 1424px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 16px;
+}
+
+.statement-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 10px 12px;
+    align-items: end;
+}
+
+.statement-filter-grid > [class*="col-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.statement-filter-grid > :nth-child(1) { grid-column: span 4; order: 1; }
+.statement-filter-grid > :nth-child(2) { grid-column: span 2; order: 2; }
+.statement-filter-grid > :nth-child(3) { grid-column: span 2; order: 3; }
+.statement-filter-grid > :nth-child(4) { grid-column: span 2; order: 4; }
+.statement-filter-grid > :nth-child(6) { grid-column: span 2; order: 5; }
+.statement-filter-grid > :nth-child(5) { grid-column: span 4; order: 6; }
+
+.statement-filter-grid .form-label {
+    font-size: 12px;
+    margin-bottom: 4px;
+    color: #334155;
+}
+
+.statement-filter-grid .form-control,
+.statement-filter-grid .form-select {
+    height: 38px;
+    min-height: 38px;
+    font-size: 14px;
+    border-radius: 10px;
+}
+
+.statement-filter-grid .text-danger.small {
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.statement-filter-grid .btn {
+    height: 38px;
+    min-height: 38px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.statement-filter-grid > :nth-child(5) {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+}
+
+.statement-filter-grid > :nth-child(5) .btn {
+    min-width: 96px;
+}
+
+.statement-filter-grid > :nth-child(6) .btn {
+    width: 100%;
+}
+
+.statement-print {
+    margin-top: 12px !important;
+}
+
+@media (max-width: 1199.98px) {
+    .statement-filter-grid > :nth-child(1) { grid-column: span 6; }
+    .statement-filter-grid > :nth-child(2),
+    .statement-filter-grid > :nth-child(3),
+    .statement-filter-grid > :nth-child(4) { grid-column: span 2; }
+    .statement-filter-grid > :nth-child(5),
+    .statement-filter-grid > :nth-child(6) { grid-column: span 6; }
+}
+
+@media (max-width: 767.98px) {
+    .statement-filter-grid > * {
+        grid-column: 1 / -1 !important;
+    }
+
+    .statement-filter-grid > :nth-child(5) {
+        flex-wrap: wrap !important;
+    }
+
+    .statement-filter-grid > :nth-child(5) .btn {
+        flex: 1 1 120px;
+    }
+}
+</style>
+{{-- /MESS_STATEMENT_MEMBER_LOOKUP_UI_V1 --}}
 
 @endsection

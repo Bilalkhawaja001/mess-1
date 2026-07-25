@@ -43,6 +43,17 @@ class PaymentController extends Controller
         if ($request->filled('status')) {
             $rows->where('status', (string) $request->input('status'));
         }
+        switch ((string) $request->input('tab', '')) {
+            case 'awaiting':
+                $rows->whereIn('status', ['PENDING', 'RECONCILIATION_PENDING']);
+                break;
+            case 'reconciliation':
+                $rows->where('status', 'RECONCILIATION_PENDING');
+                break;
+            case 'recent':
+                $rows->where('created_at', '>=', now()->subDays(7));
+                break;
+        }
         if ($request->filled('method')) {
             $rows->where('method', (string) $request->input('method'));
         }
@@ -117,7 +128,45 @@ class PaymentController extends Controller
             }
         }
 
+        // ── new UI: awaiting queue, ageing, variance ──────────────────────────
+        $awaitingStatuses = [
+            Payment::STATUS_PENDING ?? 'PENDING',
+            'RECONCILIATION_PENDING',
+        ];
+        $awaitingQuery = Payment::query()->whereIn('status', $awaitingStatuses);
+        $awaitingCount = (clone $awaitingQuery)->count();
+        $awaitingAmount = (float) (clone $awaitingQuery)->sum('amount');
+        $oldestAwaiting = (clone $awaitingQuery)->min('created_at');
+        $oldestAwaitingDays = $oldestAwaiting
+            ? (int) \Illuminate\Support\Carbon::parse($oldestAwaiting)->diffInDays(now())
+            : 0;
+
+        $reconciliationCount = Payment::query()
+            ->where('status', 'RECONCILIATION_PENDING')->count();
+
+        $varianceAmount = round($receivedPaymentAmount - $postedBillAmount, 2);
+
+        $ageMap = [];
+        foreach ($paymentRows as $paymentRow) {
+            $days = (int) \Illuminate\Support\Carbon::parse($paymentRow->created_at)->diffInDays(now());
+            $ageMap[$paymentRow->id] = [
+                'days' => $days,
+                'tone' => $days > 14 ? 'red' : ($days > 3 ? 'amber' : 'green'),
+            ];
+        }
+
+        $filteredTotal = (float) $paymentRows->sum('amount');
+        $activeTab = (string) $request->input('tab', 'awaiting');
+
         return view('admin.payments.index', [
+            'awaitingCount' => $awaitingCount,
+            'awaitingAmount' => $awaitingAmount,
+            'oldestAwaitingDays' => $oldestAwaitingDays,
+            'reconciliationCount' => $reconciliationCount,
+            'varianceAmount' => $varianceAmount,
+            'ageMap' => $ageMap,
+            'filteredTotal' => $filteredTotal,
+            'activeTab' => $activeTab,
             'members' => $members,
             'methods' => $methods,
             'rows' => $paymentRows,
@@ -134,6 +183,12 @@ class PaymentController extends Controller
             'pendingTransactionCount' => $pendingTransactionCount,
             'pendingBalanceAmount' => $pendingBalanceAmount,
         ]);
+    }
+
+    public function indexV2(Request $request): View
+    {
+        $view = $this->index($request);
+        return view('admin.payments.index-v2', $view->getData());
     }
 
     public function store(StorePaymentRequest $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService, PaymentDuplicateGuard $duplicateGuard): RedirectResponse
@@ -216,7 +271,7 @@ class PaymentController extends Controller
 
     public function memberBillLookup(Request $request): JsonResponse
     {
-        $rawMember = trim((string) $request->query('member_id', ''));
+        $rawMember = trim((string) $request->query('q', $request->query('member_id', '')));
         if ($rawMember === '') {
             return response()->json([
                 'ok' => false,
@@ -263,8 +318,12 @@ class PaymentController extends Controller
                     ->first();
             }
 
+            $billed = \App\Models\Billing::where('member_id', $member->id)->sum('net_payable');
+            $paid = \App\Models\Payment::whereHas('bill', function($q) use ($member){ $q->where('member_id', $member->id); })->whereIn('status', [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED])->sum('amount');
+            $outstanding = round((float)$billed - (float)$paid, 2);
             return [
                 'member_id' => $member->id,
+                'outstanding' => $outstanding,
                 'member_code' => $member->member_code,
                 'member_name' => $member->name,
                 'department' => $member->department_name,
@@ -280,9 +339,14 @@ class PaymentController extends Controller
             ]);
         }
 
+        $first = $matches->first();
         return response()->json([
-            'ok' => true,
-            'matches' => $matches,
+            "ok" => true,
+            "matches" => $matches,
+            "member_id" => $first["member_id"] ?? null,
+            "name" => $first["member_name"] ?? null,
+            "bill_id" => $first["bill_id"] ?? null,
+            "outstanding" => $first["outstanding"] ?? null,
         ]);
     }
 

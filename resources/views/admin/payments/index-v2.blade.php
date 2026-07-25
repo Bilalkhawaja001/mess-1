@@ -146,7 +146,7 @@
       <tbody>
       @forelse($paymentRows as $r)
         @php $a = $ageMap[$r->id] ?? ['days'=>0,'tone'=>'green']; @endphp
-        <tr class="{{ $a['tone'] === 'red' ? 'stale' : '' }}">
+        <tr class="{{ $a['tone'] === 'red' ? 'stale' : '' }}" style="cursor:pointer" data-pid="{{ $r->id }}" onclick="pv2OpenInspector({{ $r->id }})">
           <td style="white-space:nowrap">{{ \Illuminate\Support\Carbon::parse($r->payment_date)->format('d-M-Y') }}</td>
           <td>
             <div style="font-weight:600">{{ $r->member->member_code ?? '—' }}</div>
@@ -166,7 +166,7 @@
           </td>
           <td style="text-align:right;white-space:nowrap">
             @if(in_array($r->status, ['PENDING','RECONCILIATION_PENDING']))
-              <form method="POST" action="{{ route('admin.payments.approve', $r) }}" style="display:inline"
+              <form method="POST" action="{{ route('admin.payments.approve', $r) }}" style="display:inline" onclick="event.stopPropagation()"
                     onsubmit="return confirm('Approve payment of {{ number_format($r->amount,2) }} for {{ $r->member->member_code ?? '' }}?')">
                 @csrf
                 <button type="submit" style="border:0;background:none;color:#15803D;font-weight:600;font-size:12px;cursor:pointer">Approve</button>
@@ -240,6 +240,95 @@
     </form>
   </div>
 </div>
+
+<div id="pv2Inspector" style="display:none;position:fixed;top:0;right:0;height:100vh;width:480px;max-width:96vw;background:#fff;border-left:1px solid #E7E5E4;box-shadow:-8px 0 24px rgba(0,0,0,.06);z-index:1040;flex-direction:column">
+  <div style="padding:16px 20px;border-bottom:1px solid #E7E5E4;display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div id="insMemberCode" class="mono" style="font-weight:600;font-size:14px">—</div>
+      <div id="insMemberName" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#78716C;margin-top:2px">—</div>
+      <div style="font-size:11px;color:#a8a29e;margin-top:6px">J / K move · Esc close</div>
+    </div>
+    <div style="text-align:right">
+      <button type="button" onclick="pv2CloseInspector()" style="border:0;background:none;font-size:20px;cursor:pointer;color:#78716C;line-height:1">&times;</button>
+      <div style="font-size:10px;text-transform:uppercase;color:#78716C;margin-top:8px">Remaining</div>
+      <div id="insRemaining" class="mono" style="font-size:14px;margin-top:2px">—</div>
+    </div>
+  </div>
+  <div style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:20px">
+    <dl style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin:0">
+      <div><dt style="font-size:10px;text-transform:uppercase;color:#78716C;margin-bottom:2px">Date</dt><dd id="insDate" style="margin:0;font-size:13px">—</dd></div>
+      <div><dt style="font-size:10px;text-transform:uppercase;color:#78716C;margin-bottom:2px">Amount (PKR)</dt><dd id="insAmount" class="mono" style="margin:0;font-size:13px">—</dd></div>
+      <div><dt style="font-size:10px;text-transform:uppercase;color:#78716C;margin-bottom:2px">Method</dt><dd id="insMethod" style="margin:0;font-size:13px">—</dd></div>
+      <div><dt style="font-size:10px;text-transform:uppercase;color:#78716C;margin-bottom:2px">Status</dt><dd id="insStatus" style="margin:0;font-size:13px">—</dd></div>
+      <div style="grid-column:1/-1"><dt style="font-size:10px;text-transform:uppercase;color:#78716C;margin-bottom:2px">Reference</dt><dd id="insRef" class="mono" style="margin:0;font-size:12px;word-break:break-all">—</dd></div>
+    </dl>
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#78716C;margin-bottom:8px">Linked Bill <span id="insBillId"></span></div>
+      <div style="display:flex;border:1px solid #E7E5E4;border-radius:4px">
+        <div style="flex:1;padding:8px;text-align:center;border-right:1px solid #E7E5E4"><div style="font-size:10px;text-transform:uppercase;color:#78716C">Billed</div><div id="insBilled" class="mono" style="font-size:13px;margin-top:2px">—</div></div>
+        <div style="flex:1;padding:8px;text-align:center;border-right:1px solid #E7E5E4;background:#FAFAF9"><div style="font-size:10px;text-transform:uppercase;color:#78716C">Paid</div><div id="insPaid" class="mono" style="font-size:13px;margin-top:2px;color:#16a34a">—</div></div>
+        <div style="flex:1;padding:8px;text-align:center"><div style="font-size:10px;text-transform:uppercase;color:#78716C">Remaining</div><div id="insBillRemaining" class="mono" style="font-size:13px;margin-top:2px;color:#B45309">—</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#78716C;margin-bottom:12px">Status Timeline</div>
+      <ul id="insTimeline" style="list-style:none;margin:0;padding:0;border-left:1px solid #E7E5E4"></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+function pv2CloseInspector(){var p=document.getElementById("pv2Inspector");if(p)p.style.display="none";window.pv2CurrentPid=null;}
+function pv2OpenInspector(pid){
+  var p=document.getElementById("pv2Inspector");if(!p)return;
+  window.pv2CurrentPid=pid;
+  p.style.display="flex";
+  var base="{{ url('/admin/payments') }}";
+  fetch(base+"/"+pid+"/detail",{headers:{"Accept":"application/json"}})
+    .then(function(r){return r.json()})
+    .then(function(j){
+      if(!j.ok)return;
+      var $=function(id){return document.getElementById(id)};
+      $("insMemberCode").textContent=j.member.code||"—";
+      $("insMemberName").textContent=j.member.name||"";
+      $("insDate").textContent=j.payment.date||"—";
+      $("insAmount").textContent=j.payment.amount||"—";
+      $("insMethod").textContent=j.payment.method||"—";
+      $("insStatus").textContent=j.payment.status||"—";
+      $("insRef").textContent=j.payment.reference||"—";
+      $("insBillId").textContent=j.bill.id?("#"+j.bill.id):"";
+      $("insBilled").textContent=j.bill.billed||"—";
+      $("insPaid").textContent=j.bill.paid||"—";
+      $("insBillRemaining").textContent=j.bill.remaining||"—";
+      $("insRemaining").textContent=j.bill.remaining||"—";
+      var tl=$("insTimeline");tl.innerHTML="";
+      if(!j.timeline||!j.timeline.length){tl.innerHTML="<li style=\"padding-left:16px;color:#a8a29e;font-size:12px\">No history recorded.</li>";}
+      j.timeline.forEach(function(e){
+        var li=document.createElement("li");li.style.cssText="position:relative;padding-left:16px;margin-bottom:16px";
+        li.innerHTML="<span style=\"position:absolute;left:-4px;top:5px;width:7px;height:7px;border-radius:50%;background:#E7E5E4;border:1px solid #c4c6cf\"></span>"+
+          "<div style=\"font-size:13px;font-weight:500;text-transform:capitalize\">"+(e.action||"")+"</div>"+
+          "<div style=\"font-size:11px;color:#78716C;margin-top:1px\">"+(e.at||"")+" · "+(e.actor||"")+"</div>"+
+          (e.reason?"<div style=\"font-size:12px;color:#57534E;margin-top:3px\">"+e.reason+"</div>":"");
+        tl.appendChild(li);
+      });
+    }).catch(function(){});
+}
+function pv2MoveRow(dir){
+  var rows=Array.prototype.slice.call(document.querySelectorAll("tr[data-pid]"));
+  if(!rows.length)return;
+  var idx=rows.findIndex(function(r){return String(r.getAttribute("data-pid"))===String(window.pv2CurrentPid)});
+  idx=idx+dir;
+  if(idx<0)idx=0;if(idx>=rows.length)idx=rows.length-1;
+  var next=rows[idx];if(next){pv2OpenInspector(next.getAttribute("data-pid"));next.scrollIntoView({block:"nearest"});}
+}
+document.addEventListener("keydown",function(e){
+  if(document.getElementById("pv2Inspector").style.display==="none")return;
+  if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT"||e.target.tagName==="TEXTAREA")return;
+  if(e.key==="Escape")pv2CloseInspector();
+  else if(e.key==="j"||e.key==="J")pv2MoveRow(1);
+  else if(e.key==="k"||e.key==="K")pv2MoveRow(-1);
+});
+</script>
 
 <script>
 (function(){

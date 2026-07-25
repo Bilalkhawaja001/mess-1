@@ -30,8 +30,15 @@ class ProcurementController extends Controller
             ->with('units')
             ->orderBy('sku')
             ->get();
+        $poStatusFilter = strtoupper(trim((string) $request->input('po_status', '')));
+        $allowedPoStatuses = ['DRAFT', 'APPROVED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED'];
+        if (! in_array($poStatusFilter, $allowedPoStatuses, true)) {
+            $poStatusFilter = '';
+        }
+
         $pos = PurchaseOrder::query()
             ->with(['vendor', 'lines.item.units', 'goodsReceipts.lines.purchaseOrderLine'])
+            ->when($poStatusFilter !== '', fn ($q) => $q->where('status', $poStatusFilter))
             ->latest()
             ->limit(50)
             ->get()
@@ -64,7 +71,8 @@ class ProcurementController extends Controller
                 return $po;
             });
         $grnEligiblePos = $pos
-            ->filter(fn (PurchaseOrder $po) => $po->lines->contains(fn ($line) => (float) ($line->pending_qty ?? 0) > 0))
+            ->filter(fn (PurchaseOrder $po) => in_array($po->status, ['APPROVED', 'PARTIALLY_RECEIVED'], true)
+                && $po->lines->contains(fn ($line) => (float) ($line->pending_qty ?? 0) > 0))
             ->values();
 
         $poImportPreview = session('procurement_po_import_preview');
@@ -121,7 +129,8 @@ class ProcurementController extends Controller
             'reportToDate',
             'reportSearch',
             'purchaseReportData',
-            'editPo'
+            'editPo',
+            'poStatusFilter'
         ));
     }
 
@@ -129,7 +138,7 @@ class ProcurementController extends Controller
     {
         $rows = [
             ['vendor_name', 'po_date', 'item_sku', 'item_name', 'qty_ordered', 'unit_price', 'remarks'],
-            ['Demo Vendor', now()->toDateString(), 'ITEM-001', 'Demo Item', '10', '125.50', 'optional remarks'],
+            ['Demo Vendor', now()->toDateString(), 'ITEM-001', 'Demo Item', '10', '125.50', 'po_date format must be YYYY-MM-DD'],
         ];
 
         return $this->csvDownloadResponse('po_template.csv', $rows);
@@ -198,68 +207,72 @@ class ProcurementController extends Controller
 
     public function storePoImport(Request $request): RedirectResponse
     {
-        \Log::info('PO_IMPORT_STORE_HIT', [
-            'time' => now()->toDateTimeString(),
-            'method' => $request->method(),
-            'path' => $request->path(),
-            'all_keys' => array_keys($request->all()),
-            'session_keys' => array_keys($request->session()->all()),
-        ]);
-
         $preview = $request->session()->get('procurement_po_import_preview');
-        if (! is_array($preview) || empty($preview['valid_rows'])) {
+
+        if (! is_array($preview) || empty($preview['po_groups'])) {
             return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'No PO import preview data available. Upload and preview again.');
         }
 
         if (! empty($preview['error_rows'])) {
-            return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'Fix PO preview errors before creating PO from uploaded lines.');
+            return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'Fix PO preview errors before creating POs from uploaded lines.');
         }
 
-        $vendorId = (int) ($preview['vendor_id'] ?? 0);
-        $poDate = (string) ($preview['po_date'] ?? '');
-        $remarks = collect($preview['valid_rows'])->pluck('remarks')->filter()->unique()->implode(' | ');
-        $validRows = collect($preview['valid_rows']);
+        $expectedHash = (string) ($preview['file_hash'] ?? '');
+        $actualHash = md5(json_encode([$preview['po_groups'], $preview['error_rows'] ?? []]));
+        if ($expectedHash === '' || ! hash_equals($expectedHash, $actualHash)) {
+            $request->session()->forget('procurement_po_import_preview');
 
-        if ($vendorId <= 0 || $poDate === '' || $validRows->isEmpty()) {
-            return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'PO preview data is incomplete.');
+            return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'PO preview data failed integrity check. Re-upload the CSV.');
         }
 
-        $po = null;
-        $createdLineCount = 0;
+        $groups = collect($preview['po_groups']);
 
-        DB::transaction(function () use ($vendorId, $poDate, $remarks, $validRows, &$po, &$createdLineCount) {
-            $po = PurchaseOrder::create([
-                'vendor_id' => $vendorId,
-                'po_number' => DocumentNumber::generate('PO'),
-                'po_date' => $poDate,
-                'status' => 'DRAFT',
-                'remarks' => $remarks !== '' ? $remarks : null,
-            ]);
-
-            foreach ($validRows as $line) {
-                PurchaseOrderLine::create([
-                    'purchase_order_id' => $po->id,
-                    'item_id' => (int) $line['item_id'],
-                    'qty_ordered' => (float) $line['qty_ordered'],
-                    'unit_price' => (float) $line['unit_price'],
-                ]);
-                $createdLineCount++;
+        foreach ($groups as $group) {
+            $groupDate = $this->parseStrictImportDate((string) ($group['po_date'] ?? ''));
+            if ($groupDate === null || (int) ($group['vendor_id'] ?? 0) <= 0 || empty($group['rows'])) {
+                return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('error', 'PO preview data is incomplete or invalid. Clear preview and re-upload.');
             }
+        }
 
-            if (! $po || $createdLineCount <= 0) {
-                throw new \RuntimeException('PO import create failed before any PO lines were saved.');
+        $createdPoNumbers = [];
+
+        DB::transaction(function () use ($groups, &$createdPoNumbers) {
+            foreach ($groups as $group) {
+                $po = PurchaseOrder::create([
+                    'vendor_id' => (int) $group['vendor_id'],
+                    'po_number' => DocumentNumber::generate('PO'),
+                    'po_date' => $group['po_date'],
+                    'status' => 'DRAFT',
+                    'remarks' => collect($group['rows'])->pluck('remarks')->filter()->unique()->implode(' | ') ?: null,
+                ]);
+
+                $lineCount = 0;
+                foreach ($group['rows'] as $line) {
+                    PurchaseOrderLine::create([
+                        'purchase_order_id' => $po->id,
+                        'item_id' => (int) $line['item_id'],
+                        'qty_ordered' => (float) $line['qty_ordered'],
+                        'unit_price' => (float) $line['unit_price'],
+                    ]);
+                    $lineCount++;
+                }
+
+                if ($lineCount <= 0) {
+                    throw new \RuntimeException('PO group create failed before any PO lines were saved.');
+                }
+
+                $createdPoNumbers[] = $po->po_number;
             }
         });
 
         \Log::info('PO_IMPORT_STORE_RESULT', [
-            'valid_rows_count' => $validRows->count(),
-            'po_id' => $po->id ?? null,
-            'line_count' => isset($po) ? $po->lines()->count() : null,
+            'group_count' => $groups->count(),
+            'created_po_numbers' => $createdPoNumbers,
         ]);
 
         $request->session()->forget('procurement_po_import_preview');
 
-        return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('success', 'PO created from uploaded lines.');
+        return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('success', count($createdPoNumbers).' PO(s) created: '.implode(', ', $createdPoNumbers));
     }
 
     public function exportGrnDetail(Request $request): StreamedResponse
@@ -471,10 +484,10 @@ class ProcurementController extends Controller
 
         $rows = $this->readCsvRows($request->file('grn_import_file')->getRealPath());
         $preview = $this->buildGrnImportPreview($rows);
+        $request->session()->put('procurement_grn_import_preview', $preview);
 
         return redirect()->route('admin.procurement.index', ['tab' => 'grn'])
             ->withInput()
-            ->with('procurement_grn_import_preview', $preview)
             ->with($preview['error_count'] > 0 ? 'warning' : 'success', $preview['error_count'] > 0
                 ? 'GRN import preview generated with validation errors.'
                 : 'GRN import preview ready. Review and post GRN.');
@@ -483,7 +496,15 @@ class ProcurementController extends Controller
     public function storeGrnImport(Request $request): RedirectResponse
     {
         $preview = session('procurement_grn_import_preview');
-        if (! is_array($preview) || empty($preview['valid_rows'])) {
+
+        \Illuminate\Support\Facades\Log::info('procurement.grn_import.store.hit', [
+            'has_preview' => is_array($preview),
+            'grn_groups_count' => is_array($preview) && isset($preview['grn_groups']) && is_array($preview['grn_groups']) ? count($preview['grn_groups']) : 0,
+            'error_rows_count' => is_array($preview) && isset($preview['error_rows']) && is_array($preview['error_rows']) ? count($preview['error_rows']) : 0,
+            'file_hash_present' => is_array($preview) && ! empty($preview['file_hash']),
+        ]);
+
+        if (! is_array($preview) || empty($preview['grn_groups'])) {
             return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('error', 'No GRN import preview data available. Upload and preview again.');
         }
 
@@ -491,63 +512,96 @@ class ProcurementController extends Controller
             return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('error', 'Fix GRN preview errors before posting uploaded lines.');
         }
 
-        $poId = (int) ($preview['purchase_order_id'] ?? 0);
-        $receivedDate = (string) ($preview['received_date'] ?? '');
-        $validRows = collect($preview['valid_rows']);
+        $expectedHash = (string) ($preview['file_hash'] ?? '');
+        $actualHash = md5(json_encode([$preview['grn_groups'], $preview['error_rows'] ?? []]));
+        if ($expectedHash === '' || ! hash_equals($expectedHash, $actualHash)) {
+            $request->session()->forget('procurement_grn_import_preview');
 
-        if ($poId <= 0 || $receivedDate === '' || $validRows->isEmpty()) {
-            return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('error', 'GRN preview data is incomplete.');
+            return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('error', 'GRN preview data failed integrity check. Re-upload the CSV.');
         }
 
-        DB::transaction(function () use ($poId, $receivedDate, $validRows, &$grn) {
-            $po = PurchaseOrder::query()->with(['lines.item.units', 'goodsReceipts.lines'])->lockForUpdate()->findOrFail($poId);
+        $groups = collect($preview['grn_groups']);
 
-            $grn = GoodsReceipt::create([
-                'purchase_order_id' => $po->id,
-                'grn_number' => DocumentNumber::generate('GRN'),
-                'received_date' => $receivedDate,
-                'remarks' => $validRows->pluck('remarks')->filter()->implode(' | ') ?: null,
-            ]);
-
-            foreach ($validRows as $row) {
-                $grnLine = GoodsReceiptLine::create([
-                    'goods_receipt_id' => $grn->id,
-                    'purchase_order_line_id' => (int) $row['purchase_order_line_id'],
-                    'item_id' => (int) $row['item_id'],
-                    'qty_received' => (float) $row['qty_received'],
-                    'unit_cost' => (float) $row['unit_cost'],
-                ]);
-
-                $unitFactor = (float) ($row['unit_factor'] ?? 1);
-                StockTransaction::create([
-                    'item_id' => (int) $row['item_id'],
-                    'txn_type' => 'GRN',
-                    'quantity' => (float) $row['qty_received'] * $unitFactor,
-                    'unit_cost' => (float) $row['unit_cost'],
-                    'trans_unit_code' => $row['unit_code'],
-                    'trans_quantity' => (float) $row['qty_received'],
-                    'reference_type' => GoodsReceiptLine::class,
-                    'reference_id' => $grnLine->id,
-                    'txn_at' => $receivedDate,
-                    'remarks' => trim(implode(' | ', array_filter([
-                        'GRN bulk import',
-                        $row['remarks'] ?? null,
-                    ]))),
-                ]);
+        foreach ($groups as $group) {
+            if ($this->parseStrictImportDate((string) ($group['received_date'] ?? '')) === null || (int) ($group['po_id'] ?? 0) <= 0 || empty($group['rows'])) {
+                return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('error', 'GRN preview data is incomplete or invalid. Clear preview and re-upload.');
             }
+        }
 
-            $po->load(['lines', 'goodsReceipts.lines']);
-            $totalOrderedQty = (float) $po->lines->sum('qty_ordered');
-            $totalReceivedQty = (float) $po->goodsReceipts->flatMap->lines->sum('qty_received');
+        $createdGrnNumbers = [];
 
-            PurchaseOrder::whereKey($po->id)->update([
-                'status' => $totalReceivedQty < $totalOrderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
-            ]);
-        });
+        try {
+            DB::transaction(function () use ($groups, &$createdGrnNumbers) {
+                foreach ($groups as $group) {
+                    $lockedPo = PurchaseOrder::query()->with(['lines.item.units', 'goodsReceipts.lines'])->lockForUpdate()->findOrFail((int) $group['po_id']);
+
+                    if (! in_array($lockedPo->status, ['APPROVED', 'PARTIALLY_RECEIVED'], true)) {
+                        throw new \RuntimeException('PO '.$lockedPo->po_number.' status "'.($lockedPo->status ?? 'UNKNOWN').'" is not eligible for GRN.');
+                    }
+
+                    $grn = GoodsReceipt::create([
+                        'purchase_order_id' => $lockedPo->id,
+                        'grn_number' => DocumentNumber::generate('GRN'),
+                        'received_date' => $group['received_date'],
+                        'remarks' => collect($group['rows'])->pluck('remarks')->filter()->implode(' | ') ?: null,
+                    ]);
+
+                    foreach ($group['rows'] as $row) {
+                        $poLine = $lockedPo->lines->firstWhere('id', (int) $row['purchase_order_line_id']);
+                        if (! $poLine) {
+                            throw new \RuntimeException('PO '.$lockedPo->po_number.': preview line no longer matches PO. Re-upload the CSV.');
+                        }
+
+                        $alreadyReceived = (float) $lockedPo->goodsReceipts->flatMap->lines->where('purchase_order_line_id', $poLine->id)->sum('qty_received');
+                        $pendingNow = max((float) $poLine->qty_ordered - $alreadyReceived, 0);
+                        if ((float) $row['qty_received'] > $pendingNow + 0.0001) {
+                            throw new \RuntimeException('PO '.$lockedPo->po_number.' item '.$row['item_sku'].': receive qty exceeds current pending ('.$pendingNow.'). Stock may have been received since preview. Re-upload the CSV.');
+                        }
+
+                        $grnLine = GoodsReceiptLine::create([
+                            'goods_receipt_id' => $grn->id,
+                            'purchase_order_line_id' => (int) $row['purchase_order_line_id'],
+                            'item_id' => (int) $row['item_id'],
+                            'qty_received' => (float) $row['qty_received'],
+                            'unit_cost' => (float) $row['unit_cost'],
+                        ]);
+
+                        $unitFactor = (float) ($row['unit_factor'] ?? 1);
+                        StockTransaction::create([
+                            'item_id' => (int) $row['item_id'],
+                            'txn_type' => 'GRN',
+                            'quantity' => (float) $row['qty_received'] * $unitFactor,
+                            'unit_cost' => (float) $row['unit_cost'],
+                            'trans_unit_code' => $row['unit_code'],
+                            'trans_quantity' => (float) $row['qty_received'],
+                            'reference_type' => GoodsReceiptLine::class,
+                            'reference_id' => $grnLine->id,
+                            'txn_at' => $group['received_date'],
+                            'remarks' => trim(implode(' | ', array_filter([
+                                'GRN bulk import',
+                                $row['remarks'] ?? null,
+                            ]))),
+                        ]);
+                    }
+
+                    $lockedPo->load(['lines', 'goodsReceipts.lines']);
+                    $totalOrderedQty = (float) $lockedPo->lines->sum('qty_ordered');
+                    $totalReceivedQty = (float) $lockedPo->goodsReceipts->flatMap->lines->sum('qty_received');
+
+                    PurchaseOrder::whereKey($lockedPo->id)->update([
+                        'status' => $totalReceivedQty < $totalOrderedQty ? 'PARTIALLY_RECEIVED' : 'RECEIVED',
+                    ]);
+
+                    $createdGrnNumbers[] = $grn->grn_number;
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('error', $e->getMessage());
+        }
 
         $request->session()->forget('procurement_grn_import_preview');
 
-        return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('success', 'GRN posted from uploaded lines.');
+        return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('success', count($createdGrnNumbers).' GRN(s) posted: '.implode(', ', $createdGrnNumbers));
     }
 
     public function storeVendor(Request $r): RedirectResponse
@@ -836,6 +890,86 @@ class ProcurementController extends Controller
         return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('success', 'GRN posted for selected PO rows.');
     }
 
+    public function reverseGrn(GoodsReceipt $grn, Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            "reason" => "required|string|min:5|max:500",
+        ]);
+
+        $already = StockTransaction::query()
+            ->where("txn_type", "GRN_REVERSAL")
+            ->where("reference_type", GoodsReceipt::class)
+            ->where("reference_id", $grn->id)
+            ->exists();
+        if ($already) {
+            return back()->with("error", "This GRN has already been reversed.");
+        }
+
+        try {
+            DB::transaction(function () use ($grn, $data) {
+                $lockedGrn = GoodsReceipt::query()->with("lines")->lockForUpdate()->findOrFail($grn->id);
+
+                $reAgain = StockTransaction::query()
+                    ->where("txn_type", "GRN_REVERSAL")
+                    ->where("reference_type", GoodsReceipt::class)
+                    ->where("reference_id", $lockedGrn->id)
+                    ->lockForUpdate()
+                    ->exists();
+                if ($reAgain) {
+                    throw new \RuntimeException("This GRN has already been reversed.");
+                }
+
+                foreach ($lockedGrn->lines as $grnLine) {
+                    $orig = StockTransaction::query()
+                        ->where("txn_type", "GRN")
+                        ->where("reference_type", GoodsReceiptLine::class)
+                        ->where("reference_id", $grnLine->id)
+                        ->first();
+                    if (! $orig) {
+                        throw new \RuntimeException("Original stock transaction missing for a GRN line; cannot reverse safely.");
+                    }
+
+                    StockTransaction::create([
+                        "item_id" => $orig->item_id,
+                        "txn_type" => "GRN_REVERSAL",
+                        "quantity" => -1 * (float) $orig->quantity,
+                        "unit_cost" => $orig->unit_cost,
+                        "trans_unit_code" => $orig->trans_unit_code,
+                        "trans_quantity" => -1 * (float) $orig->trans_quantity,
+                        "reference_type" => GoodsReceipt::class,
+                        "reference_id" => $lockedGrn->id,
+                        "txn_at" => now(),
+                        "remarks" => "GRN reversal (" . $lockedGrn->grn_number . "). Reason: " . $data["reason"],
+                    ]);
+                }
+
+                $po = PurchaseOrder::query()->with(["lines", "goodsReceipts.lines"])->lockForUpdate()->find($lockedGrn->purchase_order_id);
+                if ($po) {
+                    $reversedGrnIds = StockTransaction::query()
+                        ->where("txn_type", "GRN_REVERSAL")
+                        ->where("reference_type", GoodsReceipt::class)
+                        ->pluck("reference_id")
+                        ->all();
+
+                    $totalOrderedQty = (float) $po->lines->sum("qty_ordered");
+                    $totalReceivedQty = (float) $po->goodsReceipts
+                        ->reject(fn ($g) => in_array($g->id, $reversedGrnIds, true))
+                        ->flatMap->lines->sum("qty_received");
+
+                    $status = $totalReceivedQty <= 0
+                        ? "APPROVED"
+                        : ($totalReceivedQty < $totalOrderedQty ? "PARTIALLY_RECEIVED" : "RECEIVED");
+
+                    PurchaseOrder::whereKey($po->id)->update(["status" => $status]);
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with("error", $e->getMessage());
+        }
+
+        return back()->with("success", "GRN reversed. Stock has been rolled back.");
+    }
+
     public function approveGrn(GoodsReceipt $grn): RedirectResponse
     {
         $this->acknowledgeGoodsReceiptRecord($grn);
@@ -861,15 +995,14 @@ class ProcurementController extends Controller
 
     private function buildPoImportPreview(array $rows): array
     {
-        $validRows = [];
+        $groups = [];
         $errorRows = [];
-        $vendorName = null;
-        $poDate = null;
-        $vendorId = null;
-        $seenItemIds = [];
+        $totalRows = 0;
 
         foreach ($rows as $index => $row) {
             $lineNumber = $index + 2;
+            $totalRows++;
+
             $normalized = [
                 'vendor_name' => trim((string) ($row['vendor_name'] ?? '')),
                 'po_date' => trim((string) ($row['po_date'] ?? '')),
@@ -881,11 +1014,14 @@ class ProcurementController extends Controller
             ];
 
             $errors = [];
+
             if ($normalized['vendor_name'] === '') {
                 $errors[] = 'vendor_name is required';
             }
-            if ($normalized['po_date'] === '' || ! strtotime($normalized['po_date'])) {
-                $errors[] = 'po_date must be a valid date';
+
+            $strictPoDate = $this->parseStrictImportDate($normalized['po_date']);
+            if ($strictPoDate === null) {
+                $errors[] = 'po_date must be in strict YYYY-MM-DD format (e.g. 2026-06-13). Formats like 17-06-26 or 24/06/26 are rejected';
             }
 
             $vendor = $normalized['vendor_name'] !== ''
@@ -910,28 +1046,6 @@ class ProcurementController extends Controller
                 $errors[] = 'unit_price must be greater than zero';
             }
 
-            if ($vendor) {
-                if ($vendorName === null) {
-                    $vendorName = $vendor->name;
-                    $vendorId = $vendor->id;
-                } elseif ($vendorName !== $vendor->name) {
-                    $errors[] = 'all rows must belong to the same vendor_name';
-                }
-            }
-
-            if ($normalized['po_date'] !== '' && strtotime($normalized['po_date'])) {
-                $normalizedDate = date('Y-m-d', strtotime($normalized['po_date']));
-                if ($poDate === null) {
-                    $poDate = $normalizedDate;
-                } elseif ($poDate !== $normalizedDate) {
-                    $errors[] = 'all rows must have the same po_date';
-                }
-            }
-
-            if ($item && in_array($item->id, $seenItemIds, true)) {
-                $errors[] = 'duplicate item in same PO upload is not allowed';
-            }
-
             if ($errors) {
                 $errorRows[] = [
                     'line_number' => $lineNumber,
@@ -941,12 +1055,34 @@ class ProcurementController extends Controller
                 continue;
             }
 
-            $seenItemIds[] = $item->id;
-            $validRows[] = [
+            $groupKey = $vendor->id.'|'.$strictPoDate;
+
+            if (! isset($groups[$groupKey])) {
+                $groups[$groupKey] = [
+                    'vendor_id' => $vendor->id,
+                    'vendor_name' => $vendor->name,
+                    'po_date' => $strictPoDate,
+                    'rows' => [],
+                    'row_count' => 0,
+                    'total_qty' => 0.0,
+                    'total_value' => 0.0,
+                    'seen_item_ids' => [],
+                    'errors' => [],
+                ];
+            }
+
+            if (in_array($item->id, $groups[$groupKey]['seen_item_ids'], true)) {
+                $errorRows[] = [
+                    'line_number' => $lineNumber,
+                    'data' => $normalized,
+                    'errors' => ['duplicate item in same PO group (same vendor + same po_date) is not allowed'],
+                ];
+                continue;
+            }
+
+            $groups[$groupKey]['seen_item_ids'][] = $item->id;
+            $groups[$groupKey]['rows'][] = [
                 'line_number' => $lineNumber,
-                'vendor_name' => $vendor->name,
-                'vendor_id' => $vendor->id,
-                'po_date' => $poDate,
                 'item_id' => $item->id,
                 'item_sku' => $item->sku,
                 'item_name' => $item->name,
@@ -954,29 +1090,46 @@ class ProcurementController extends Controller
                 'unit_price' => round($unitPrice, 2),
                 'remarks' => $normalized['remarks'],
             ];
+            $groups[$groupKey]['row_count']++;
+            $groups[$groupKey]['total_qty'] += $qtyOrdered;
+            $groups[$groupKey]['total_value'] += $qtyOrdered * round($unitPrice, 2);
         }
 
-        return [
-            'vendor_id' => $vendorId,
-            'vendor_name' => $vendorName,
-            'po_date' => $poDate,
-            'valid_rows' => $validRows,
+        $poGroups = array_values(array_map(function (array $g): array {
+            unset($g['seen_item_ids']);
+            $g['total_qty'] = round($g['total_qty'], 3);
+            $g['total_value'] = round($g['total_value'], 2);
+
+            return $g;
+        }, $groups));
+
+        $preview = [
+            'po_groups' => $poGroups,
             'error_rows' => $errorRows,
-            'valid_count' => count($validRows),
+            'total_rows' => $totalRows,
+            'vendor_count' => count(array_unique(array_column($poGroups, 'vendor_id'))),
+            'group_count' => count($poGroups),
+            'total_value' => round(array_sum(array_column($poGroups, 'total_value')), 2),
+            'valid_count' => (int) array_sum(array_column($poGroups, 'row_count')),
             'error_count' => count($errorRows),
         ];
+
+        $preview['file_hash'] = md5(json_encode([$preview['po_groups'], $preview['error_rows']]));
+
+        return $preview;
     }
 
     private function buildGrnImportPreview(array $rows): array
     {
-        $validRows = [];
+        $groups = [];
         $errorRows = [];
-        $po = null;
-        $receivedDate = null;
-        $seenLineIds = [];
+        $totalRows = 0;
+        $poCache = [];
 
         foreach ($rows as $index => $row) {
             $lineNumber = $index + 2;
+            $totalRows++;
+
             $normalized = [
                 'po_number' => trim((string) ($row['po_number'] ?? '')),
                 'received_date' => trim((string) ($row['received_date'] ?? '')),
@@ -990,26 +1143,30 @@ class ProcurementController extends Controller
             ];
 
             $errors = [];
+
             if ($normalized['po_number'] === '') {
                 $errors[] = 'po_number is required';
             }
-            if ($normalized['received_date'] === '' || ! strtotime($normalized['received_date'])) {
-                $errors[] = 'received_date must be a valid date';
+
+            $strictReceivedDate = $this->parseStrictImportDate($normalized['received_date']);
+            if ($strictReceivedDate === null) {
+                $errors[] = 'received_date must be in strict YYYY-MM-DD format (e.g. 2026-06-13). Formats like 17-06-26 or 24/06/26 are rejected';
             }
 
-            $poRow = $normalized['po_number'] !== ''
-                ? PurchaseOrder::query()->with(['lines.item.units', 'goodsReceipts.lines'])->where('po_number', $normalized['po_number'])->first()
-                : null;
+            $poRow = null;
+            if ($normalized['po_number'] !== '') {
+                if (! array_key_exists($normalized['po_number'], $poCache)) {
+                    $poCache[$normalized['po_number']] = PurchaseOrder::query()
+                        ->with(['vendor', 'lines.item.units', 'goodsReceipts.lines'])
+                        ->where('po_number', $normalized['po_number'])
+                        ->first();
+                }
+                $poRow = $poCache[$normalized['po_number']];
+            }
             if (! $poRow) {
                 $errors[] = 'po_number does not match existing PO';
-            }
-
-            if ($poRow) {
-                if ($po === null) {
-                    $po = $poRow;
-                } elseif ($po->id !== $poRow->id) {
-                    $errors[] = 'all rows must belong to the same po_number';
-                }
+            } elseif (! in_array($poRow->status, ['APPROVED', 'PARTIALLY_RECEIVED'], true)) {
+                $errors[] = 'PO status "'.($poRow->status ?? 'UNKNOWN').'" is not eligible for GRN. Only APPROVED or PARTIALLY_RECEIVED POs can be received';
             }
 
             $item = $this->resolveItemForImport($normalized['item_sku'], $normalized['item_name']);
@@ -1022,15 +1179,7 @@ class ProcurementController extends Controller
                 $errors[] = 'qty_received must be greater than zero';
             }
 
-            $normalizedDate = null;
-            if ($normalized['received_date'] !== '' && strtotime($normalized['received_date'])) {
-                $normalizedDate = date('Y-m-d', strtotime($normalized['received_date']));
-                if ($receivedDate === null) {
-                    $receivedDate = $normalizedDate;
-                } elseif ($receivedDate !== $normalizedDate) {
-                    $errors[] = 'all rows must have the same received_date';
-                }
-            }
+            $groupKey = ($poRow?->id ?? 0).'|'.($strictReceivedDate ?? '');
 
             $poLine = null;
             $pendingQty = null;
@@ -1038,7 +1187,7 @@ class ProcurementController extends Controller
             $unitFactor = 1.0;
             $unitCost = is_numeric($normalized['unit_cost']) ? (float) $normalized['unit_cost'] : null;
 
-            if ($poRow && $item) {
+            if ($poRow && $item && in_array($poRow->status, ['APPROVED', 'PARTIALLY_RECEIVED'], true)) {
                 $poLine = $poRow->lines->firstWhere('item_id', $item->id);
                 if (! $poLine) {
                     $errors[] = 'item does not belong to selected PO';
@@ -1078,8 +1227,8 @@ class ProcurementController extends Controller
                         $unitCost = (float) $poLine->unit_price;
                     }
 
-                    if ($poLine && in_array($poLine->id, $seenLineIds, true)) {
-                        $errors[] = 'duplicate PO line in same GRN upload is not allowed';
+                    if (isset($groups[$groupKey]) && in_array($poLine->id, $groups[$groupKey]['seen_line_ids'], true)) {
+                        $errors[] = 'duplicate PO line in same GRN group (same po_number + same received_date) is not allowed';
                     }
                 }
             }
@@ -1097,8 +1246,23 @@ class ProcurementController extends Controller
                 continue;
             }
 
-            $seenLineIds[] = $poLine->id;
-            $validRows[] = [
+            if (! isset($groups[$groupKey])) {
+                $groups[$groupKey] = [
+                    'po_id' => $poRow->id,
+                    'po_number' => $poRow->po_number,
+                    'vendor_name' => $poRow->vendor->name ?? '-',
+                    'received_date' => $strictReceivedDate,
+                    'rows' => [],
+                    'row_count' => 0,
+                    'total_qty' => 0.0,
+                    'total_value' => 0.0,
+                    'seen_line_ids' => [],
+                    'errors' => [],
+                ];
+            }
+
+            $groups[$groupKey]['seen_line_ids'][] = $poLine->id;
+            $groups[$groupKey]['rows'][] = [
                 'line_number' => $lineNumber,
                 'purchase_order_id' => $poRow->id,
                 'po_number' => $poRow->po_number,
@@ -1111,20 +1275,35 @@ class ProcurementController extends Controller
                 'unit_cost' => round((float) $unitCost, 2),
                 'unit_code' => $unitCode,
                 'unit_factor' => $unitFactor,
-                'received_date' => $receivedDate,
                 'remarks' => $normalized['remarks'],
             ];
+            $groups[$groupKey]['row_count']++;
+            $groups[$groupKey]['total_qty'] += $qtyReceived;
+            $groups[$groupKey]['total_value'] += $qtyReceived * round((float) $unitCost, 2);
         }
 
-        return [
-            'purchase_order_id' => $po?->id,
-            'po_number' => $po?->po_number,
-            'received_date' => $receivedDate,
-            'valid_rows' => $validRows,
+        $grnGroups = array_values(array_map(function (array $g): array {
+            unset($g['seen_line_ids']);
+            $g['total_qty'] = round($g['total_qty'], 3);
+            $g['total_value'] = round($g['total_value'], 2);
+
+            return $g;
+        }, $groups));
+
+        $preview = [
+            'grn_groups' => $grnGroups,
             'error_rows' => $errorRows,
-            'valid_count' => count($validRows),
+            'total_rows' => $totalRows,
+            'po_count' => count(array_unique(array_column($grnGroups, 'po_id'))),
+            'group_count' => count($grnGroups),
+            'total_value' => round(array_sum(array_column($grnGroups, 'total_value')), 2),
+            'valid_count' => (int) array_sum(array_column($grnGroups, 'row_count')),
             'error_count' => count($errorRows),
         ];
+
+        $preview['file_hash'] = md5(json_encode([$preview['grn_groups'], $preview['error_rows']]));
+
+        return $preview;
     }
 
     private function resolveItemForImport(string $sku, string $name): ?Item
@@ -1141,6 +1320,35 @@ class ProcurementController extends Controller
         }
 
         return null;
+    }
+
+    public function cancelPoImportPreview(Request $request): RedirectResponse
+    {
+        $request->session()->forget('procurement_po_import_preview');
+
+        return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('success', 'PO import preview cleared.');
+    }
+
+    public function cancelGrnImportPreview(Request $request): RedirectResponse
+    {
+        $request->session()->forget('procurement_grn_import_preview');
+
+        return redirect()->route('admin.procurement.index', ['tab' => 'grn'])->with('success', 'GRN import preview cleared.');
+    }
+
+    private function parseStrictImportDate(string $value): ?string
+    {
+        $value = trim($value);
+
+        if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
+            return null;
+        }
+
+        if (! checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return null;
+        }
+
+        return $value;
     }
 
     private function readCsvRows(string $path): array
@@ -1339,12 +1547,20 @@ class ProcurementController extends Controller
 
     private function approvePurchaseOrderRecord(PurchaseOrder $po): void
     {
+        if (! in_array($po->status, ['DRAFT', 'ISSUED'], true)) {
+            return;
+        }
+
         $po->status = 'APPROVED';
         $po->save();
     }
 
     private function buildValidatedGrnRows(PurchaseOrder $po, $selectedRows, bool $enforcePoRateOverride = true): Collection
     {
+        if (! in_array($po->status, ['APPROVED', 'PARTIALLY_RECEIVED'], true)) {
+            throw new \RuntimeException('PO status "'.($po->status ?? 'UNKNOWN').'" is not eligible for GRN. Only APPROVED or PARTIALLY_RECEIVED POs can be received.');
+        }
+
         $selectedRows = collect($selectedRows)->values();
 
         if ($selectedRows->isEmpty()) {

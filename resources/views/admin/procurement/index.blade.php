@@ -315,6 +315,32 @@
 @endpush
 
 @section('content')
+
+{{-- Procurement flash messages --}}
+@if(session('success'))
+    <div class="alert alert-success mb-3">{{ session('success') }}</div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger mb-3">{{ session('error') }}</div>
+@endif
+
+@if(session('warning'))
+    <div class="alert alert-warning mb-3">{{ session('warning') }}</div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger mb-3">
+        <strong>Validation errors:</strong>
+        <ul class="mb-0">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+
 @php
     $activeTab = request('tab', 'po');
     if (! in_array($activeTab, ['vendors', 'po', 'grn', 'reports'], true)) {
@@ -522,38 +548,63 @@
                     <div class="card-header"><span>PO Import Preview</span><span class="text-muted small">Validate before save</span></div>
                     <div class="card-body">
                         @if($poImportPreview)
-                            <div class="procurement-import-summary">
-                                <span class="badge text-bg-success">Valid rows: {{ $poImportPreview['valid_count'] ?? 0 }}</span>
-                                <span class="badge text-bg-danger">Error rows: {{ $poImportPreview['error_count'] ?? 0 }}</span>
-                                @if(!empty($poImportPreview['vendor_name']))
-                                    <span class="badge text-bg-light">Vendor: {{ $poImportPreview['vendor_name'] }}</span>
-                                @endif
-                                @if(!empty($poImportPreview['po_date']))
-                                    <span class="badge text-bg-light">PO Date: {{ $poImportPreview['po_date'] }}</span>
-                                @endif
-                            </div>
-
-                            @if(!empty($poImportPreview['valid_rows']))
-                                <div class="table-responsive mb-3">
-                                    <table class="table table-sm align-middle">
-                                        <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Remarks</th></tr></thead>
-                                        <tbody>
-                                            @foreach($poImportPreview['valid_rows'] as $row)
-                                                <tr>
-                                                    <td>{{ $row['line_number'] }}</td>
-                                                    <td>{{ $row['item_sku'] }}</td>
-                                                    <td>{{ $row['item_name'] }}</td>
-                                                    <td>{{ number_format((float) $row['qty_ordered'], 3) }}</td>
-                                                    <td>{{ number_format((float) $row['unit_price'], 2) }}</td>
-                                                    <td>{{ $row['remarks'] ?: '-' }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                            @if(isset($poImportPreview['po_groups']))
+                                <div class="procurement-import-summary">
+                                    <span class="badge text-bg-light">Total rows: {{ $poImportPreview['total_rows'] ?? 0 }}</span>
+                                    <span class="badge text-bg-light">Vendors: {{ $poImportPreview['vendor_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-light">PO groups: {{ $poImportPreview['group_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-success">Valid rows: {{ $poImportPreview['valid_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-danger">Error rows: {{ $poImportPreview['error_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-light">Total value: {{ number_format((float) ($poImportPreview['total_value'] ?? 0), 2) }}</span>
                                 </div>
-                                <form method="POST" action="{{ route('admin.procurement.po.import.store') }}">
+
+                                @if(!empty($poImportPreview['po_groups']))
+                                    @foreach($poImportPreview['po_groups'] as $gi => $group)
+                                        <div class="card mb-3">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <span>PO {{ $gi + 1 }}: {{ $group['vendor_name'] }} — {{ $group['po_date'] }}</span>
+                                                <span class="text-muted small">{{ $group['row_count'] }} rows · Qty {{ number_format((float) $group['total_qty'], 3) }} · Value {{ number_format((float) $group['total_value'], 2) }}</span>
+                                            </div>
+                                            <div class="card-body p-2">
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm align-middle mb-0">
+                                                        <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Remarks</th></tr></thead>
+                                                        <tbody>
+                                                            @foreach($group['rows'] as $row)
+                                                                <tr>
+                                                                    <td>{{ $row['line_number'] }}</td>
+                                                                    <td>{{ $row['item_sku'] }}</td>
+                                                                    <td>{{ $row['item_name'] }}</td>
+                                                                    <td>{{ number_format((float) $row['qty_ordered'], 3) }}</td>
+                                                                    <td>{{ number_format((float) $row['unit_price'], 2) }}</td>
+                                                                    <td>{{ $row['remarks'] ?: '-' }}</td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+
+                                    @if(empty($poImportPreview['error_rows']))
+                                        <form method="POST" action="{{ route('admin.procurement.po.import.store') }}">
+                                            @csrf
+                                            <button class="btn btn-success w-100">Create All POs ({{ $poImportPreview['group_count'] ?? 0 }})</button>
+                                        </form>
+                                    @else
+                                        <div class="text-danger small mb-2">Fix error rows below before creating POs. No PO will be created while errors exist.</div>
+                                    @endif
+                                    <form method="POST" action="{{ route('admin.procurement.po.import.cancel') }}" class="d-inline ms-2">
+                                        @csrf
+                                        <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
+                                    </form>
+                                @endif
+                            @else
+                                <div class="text-warning small mb-2">Preview format outdated (old session). Clear preview and re-upload the CSV.</div>
+                                <form method="POST" action="{{ route('admin.procurement.po.import.cancel') }}" class="d-inline">
                                     @csrf
-                                    <button class="btn btn-success w-100">Create PO from uploaded lines</button>
+                                    <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
                                 </form>
                             @endif
 
@@ -587,7 +638,17 @@
                             @csrf
                             <div class="bulk-action-bar">
                                 <div><span id="po-selected-count">0</span> PO(s) selected</div>
-                                <button type="submit" class="btn btn-sm btn-outline-success" id="po-bulk-submit" disabled>Bulk Approve</button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <select class="form-select form-select-sm" style="width:auto" onchange="window.location='{{ route('admin.procurement.index') }}?tab=po&po_status='+this.value">
+                                        <option value="" @selected(($poStatusFilter ?? '') === '')>All statuses</option>
+                                        <option value="DRAFT" @selected(($poStatusFilter ?? '') === 'DRAFT')>DRAFT</option>
+                                        <option value="APPROVED" @selected(($poStatusFilter ?? '') === 'APPROVED')>APPROVED</option>
+                                        <option value="PARTIALLY_RECEIVED" @selected(($poStatusFilter ?? '') === 'PARTIALLY_RECEIVED')>PARTIALLY_RECEIVED</option>
+                                        <option value="RECEIVED" @selected(($poStatusFilter ?? '') === 'RECEIVED')>RECEIVED</option>
+                                        <option value="CANCELLED" @selected(($poStatusFilter ?? '') === 'CANCELLED')>CANCELLED</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-success" id="po-bulk-submit" disabled>Bulk Approve</button>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm align-middle"><thead><tr><th><input type="checkbox" id="po-select-all"></th><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
@@ -703,7 +764,7 @@
                                 <select name="purchase_order_id" id="grn-po-select" class="form-select @error('purchase_order_id') is-invalid @enderror" required>
                                     <option value="">Select PO</option>
                                     @foreach($grnEligiblePos as $po)
-                                        <option value="{{ $po->id }}" data-lines='@json($procurementPoLinesJson[$po->id] ?? [])' @selected((string) old('purchase_order_id') === (string) $po->id)>
+                                        <option value="{{ $po->id }}" data-po-date="{{ $po->po_date }}" data-lines='@json($procurementPoLinesJson[$po->id] ?? [])' @selected((string) old('purchase_order_id') === (string) $po->id)>
                                             {{ $po->po_number }} — {{ $po->po_date }} — {{ $po->vendor->name ?? 'Vendor' }}
                                         </option>
                                     @endforeach
@@ -714,9 +775,21 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Receive date</label>
-                                <input type="date" name="received_date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}">
+                                <input type="date" name="received_date" id="grn-received-date" class="form-control @error('received_date') is-invalid @enderror" required value="{{ old('received_date') }}">
                                 @error('received_date')
                                     <div class="text-danger small mt-1">{{ $message }}</div>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function () {
+                                    var poSelect = document.getElementById('grn-po-select');
+                                    var dateInput = document.getElementById('grn-received-date');
+                                    if (!poSelect || !dateInput) return;
+                                    poSelect.addEventListener('change', function () {
+                                        var opt = poSelect.options[poSelect.selectedIndex];
+                                        var poDate = opt ? opt.getAttribute('data-po-date') : '';
+                                        if (poDate) { dateInput.value = poDate; }
+                                    });
+                                });
+                            </script>
                                 @enderror
                             </div>
                             <div class="col-12">
@@ -818,40 +891,65 @@
                     <div class="card-header"><span>GRN Import Preview</span><span class="text-muted small">Validate before post</span></div>
                     <div class="card-body">
                         @if($grnImportPreview)
-                            <div class="procurement-import-summary">
-                                <span class="badge text-bg-success">Valid rows: {{ $grnImportPreview['valid_count'] ?? 0 }}</span>
-                                <span class="badge text-bg-danger">Error rows: {{ $grnImportPreview['error_count'] ?? 0 }}</span>
-                                @if(!empty($grnImportPreview['po_number']))
-                                    <span class="badge text-bg-light">PO: {{ $grnImportPreview['po_number'] }}</span>
-                                @endif
-                                @if(!empty($grnImportPreview['received_date']))
-                                    <span class="badge text-bg-light">Receive Date: {{ $grnImportPreview['received_date'] }}</span>
-                                @endif
-                            </div>
-
-                            @if(!empty($grnImportPreview['valid_rows']))
-                                <div class="table-responsive mb-3">
-                                    <table class="table table-sm align-middle">
-                                        <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Pending</th><th>Receive Qty</th><th>Unit Cost</th><th>Unit</th><th>Remarks</th></tr></thead>
-                                        <tbody>
-                                            @foreach($grnImportPreview['valid_rows'] as $row)
-                                                <tr>
-                                                    <td>{{ $row['line_number'] }}</td>
-                                                    <td>{{ $row['item_sku'] }}</td>
-                                                    <td>{{ $row['item_name'] }}</td>
-                                                    <td>{{ number_format((float) $row['pending_qty'], 3) }}</td>
-                                                    <td>{{ number_format((float) $row['qty_received'], 3) }}</td>
-                                                    <td>{{ number_format((float) $row['unit_cost'], 2) }}</td>
-                                                    <td>{{ $row['unit_code'] }}</td>
-                                                    <td>{{ $row['remarks'] ?: '-' }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                            @if(isset($grnImportPreview['grn_groups']))
+                                <div class="procurement-import-summary">
+                                    <span class="badge text-bg-light">Total rows: {{ $grnImportPreview['total_rows'] ?? 0 }}</span>
+                                    <span class="badge text-bg-light">POs: {{ $grnImportPreview['po_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-light">GRN groups: {{ $grnImportPreview['group_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-success">Valid rows: {{ $grnImportPreview['valid_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-danger">Error rows: {{ $grnImportPreview['error_count'] ?? 0 }}</span>
+                                    <span class="badge text-bg-light">Total value: {{ number_format((float) ($grnImportPreview['total_value'] ?? 0), 2) }}</span>
                                 </div>
-                                <form method="POST" action="{{ route('admin.procurement.grn.import.store') }}">
+
+                                @if(!empty($grnImportPreview['grn_groups']))
+                                    @foreach($grnImportPreview['grn_groups'] as $gi => $group)
+                                        <div class="card mb-3">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <span>GRN {{ $gi + 1 }}: {{ $group['po_number'] }} — {{ $group['vendor_name'] }} — {{ $group['received_date'] }}</span>
+                                                <span class="text-muted small">{{ $group['row_count'] }} rows · Qty {{ number_format((float) $group['total_qty'], 3) }} · Value {{ number_format((float) $group['total_value'], 2) }}</span>
+                                            </div>
+                                            <div class="card-body p-2">
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm align-middle mb-0">
+                                                        <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Pending</th><th>Receive Qty</th><th>Unit Cost</th><th>Unit</th><th>Remarks</th></tr></thead>
+                                                        <tbody>
+                                                            @foreach($group['rows'] as $row)
+                                                                <tr>
+                                                                    <td>{{ $row['line_number'] }}</td>
+                                                                    <td>{{ $row['item_sku'] }}</td>
+                                                                    <td>{{ $row['item_name'] }}</td>
+                                                                    <td>{{ number_format((float) $row['pending_qty'], 3) }}</td>
+                                                                    <td>{{ number_format((float) $row['qty_received'], 3) }}</td>
+                                                                    <td>{{ number_format((float) $row['unit_cost'], 2) }}</td>
+                                                                    <td>{{ $row['unit_code'] }}</td>
+                                                                    <td>{{ $row['remarks'] ?: '-' }}</td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+
+                                    @if(empty($grnImportPreview['error_rows']))
+                                        <form method="POST" action="{{ route('admin.procurement.grn.import.store') }}">
+                                            @csrf
+                                            <button class="btn btn-success w-100">Post All GRNs ({{ $grnImportPreview['group_count'] ?? 0 }})</button>
+                                        </form>
+                                    @else
+                                        <div class="text-danger small mb-2">Fix error rows below before posting GRNs. No GRN will be posted while errors exist.</div>
+                                    @endif
+                                    <form method="POST" action="{{ route('admin.procurement.grn.import.cancel') }}" class="d-inline ms-2">
+                                        @csrf
+                                        <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
+                                    </form>
+                                @endif
+                            @else
+                                <div class="text-warning small mb-2">Preview format outdated (old session). Clear preview and re-upload the CSV.</div>
+                                <form method="POST" action="{{ route('admin.procurement.grn.import.cancel') }}" class="d-inline">
                                     @csrf
-                                    <button class="btn btn-success w-100">Post GRN from uploaded lines</button>
+                                    <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
                                 </form>
                             @endif
 
@@ -901,7 +999,10 @@
                                             <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
                                             <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
                                             <td>Posted on Create</td>
-                                            <td class="text-end"><button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}?tab=grn" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button></td>
+                                            <td class="text-end">
+                                                <button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}?tab=grn" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="grnReverse({{ $grn->id }}, '{{ $grn->grn_number }}')">Reverse</button>
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr><td colspan="10" class="text-center text-muted py-4">No GRNs found.</td></tr>
@@ -1086,6 +1187,22 @@
         <option value="{{ $i->sku }} — {{ $i->name }}{{ $i->uom ? ' ('.$i->uom.')' : '' }}{{ $i->category ? ' · '.$i->category : '' }}" data-item-id="{{ $i->id }}"></option>
     @endforeach
 </datalist>
+<form method="POST" id="grnReverseForm" action="">
+@csrf
+<input type="hidden" name="reason" id="grnReverseReason">
+</form>
+<script>
+function grnReverse(id, num){
+  var reason = window.prompt("Reverse GRN " + num + "?\n\nThis rolls back the stock posted by this GRN. Enter a reason (min 5 chars):");
+  if(reason === null) return;
+  reason = reason.trim();
+  if(reason.length < 5){ alert("Reason must be at least 5 characters."); return; }
+  var f = document.getElementById("grnReverseForm");
+  f.action = "{{ url('/admin/procurement/grn') }}/" + id + "/reverse?tab=grn";
+  document.getElementById("grnReverseReason").value = reason;
+  f.submit();
+}
+</script>
 @endsection
 
 @push('scripts')

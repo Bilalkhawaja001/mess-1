@@ -272,6 +272,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::post('/procurement/grn', [ProcurementController::class, 'storeGrn'])->name('procurement.grn.store');
         Route::post('/procurement/grn/bulk-approve', [ProcurementController::class, 'bulkApproveGrn'])->name('procurement.grn.bulk-approve');
         Route::post('/procurement/grn/{grn}/approve', [ProcurementController::class, 'approveGrn'])->name('procurement.grn.approve');
+        Route::post('/procurement/grn/{grn}/reverse', [ProcurementController::class, 'reverseGrn'])->name('procurement.grn.reverse');
         Route::get('/procurement/reports/export', [ProcurementController::class, 'exportPurchaseReports'])->name('procurement.reports.export');
         Route::get('/procurement/reports/export-selected', [ProcurementController::class, 'exportSelectedPurchaseReport'])->name('procurement.reports.export-selected');
     });

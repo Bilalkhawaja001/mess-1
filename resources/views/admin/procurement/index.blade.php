@@ -432,56 +432,103 @@
 
     @if($activeTab === 'vendors')
         <div class="procurement-tab-panel">
-            <div class="card procurement-form-card">
-                <div class="card-header"><span>Create Vendor</span><span class="text-muted small">Vendor master</span></div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-xl-5">
-                            <form method="POST" action="{{ route('admin.procurement.vendors.store') }}" class="row g-3">
+            <div style="font-family:'Inter',system-ui,sans-serif;color:#191c1e">
+
+                {{-- KPI ROW --}}
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px">
+                    <div style="background:#fff;border:1px solid #e0e3e5;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);display:flex;flex-direction:column">
+                        <span style="font-size:12px;font-weight:600;letter-spacing:.05em;color:#545f72;text-transform:uppercase;margin-bottom:8px">Total Vendors</span>
+                        <span style="font-size:20px;font-weight:600;color:#041632;margin-top:auto">{{ $vendors->count() }}</span>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e0e3e5;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);display:flex;flex-direction:column">
+                        <span style="font-size:12px;font-weight:600;letter-spacing:.05em;color:#545f72;text-transform:uppercase;margin-bottom:8px">Purchase Orders</span>
+                        <span style="font-size:20px;font-weight:600;color:#041632;margin-top:auto">{{ $pos->count() }}</span>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e0e3e5;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);display:flex;flex-direction:column">
+                        <span style="font-size:12px;font-weight:600;letter-spacing:.05em;color:#545f72;text-transform:uppercase;margin-bottom:8px">Total GRNs</span>
+                        <span style="font-size:20px;font-weight:600;color:#041632;margin-top:auto">{{ $grns->count() }}</span>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e0e3e5;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);display:flex;flex-direction:column">
+                        <span style="font-size:12px;font-weight:600;letter-spacing:.05em;color:#545f72;text-transform:uppercase;margin-bottom:8px">POs Awaiting Receipt</span>
+                        <span style="font-size:20px;font-weight:600;color:#041632;margin-top:auto">{{ $pos->whereIn('status', ['APPROVED','PARTIALLY_RECEIVED'])->count() }}</span>
+                    </div>
+                </div>
+
+                {{-- TWO-COLUMN: Add Vendor + Vendor List --}}
+                <div style="display:grid;grid-template-columns:1fr;gap:24px;align-items:start" class="proc-vendor-grid">
+                    <style>@media(min-width:992px){.proc-vendor-grid{grid-template-columns:1fr 2fr !important}}</style>
+
+                    {{-- Add Vendor --}}
+                    <div style="background:#fff;border:1px solid #e0e3e5;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);overflow:hidden">
+                        <div style="padding:20px;border-bottom:1px solid #e0e3e5;background:#f7f9fb">
+                            <h2 style="font-size:20px;font-weight:600;color:#041632;margin:0 0 4px">Add Vendor</h2>
+                            <p style="font-size:12px;color:#545f72;margin:0">Create a vendor for purchase orders</p>
+                        </div>
+                        <div style="padding:20px">
+                            <form method="POST" action="{{ route('admin.procurement.vendors.store') }}">
                                 @csrf
-                                <div class="col-12">
-                                    <label class="form-label">Vendor Name</label>
-                                    <input name="name" class="form-control @error('name') is-invalid @enderror" placeholder="Vendor name" required value="{{ old('name') }}">
+                                <div style="margin-bottom:16px">
+                                    <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.05em;color:#191c1e;text-transform:uppercase;margin-bottom:8px">Vendor Name <span style="color:#ba1a1a">*</span></label>
+                                    <input name="name" required value="{{ old('name') }}" placeholder="Enter vendor name"
+                                           style="width:100%;padding:9px 12px;border:1px solid {{ $errors->has('name') ? '#ba1a1a' : '#c5c6ce' }};border-radius:4px;font-size:14px;color:#191c1e;outline:none;box-sizing:border-box">
+                                    @error('name')<div style="color:#ba1a1a;font-size:12px;margin-top:6px">{{ $message }}</div>@enderror
                                 </div>
-                                @error('name')
-                                    <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                                @enderror
-                                <div class="col-12">
-                                    <button class="btn btn-primary w-100">Create Vendor</button>
-                                </div>
+                                <button type="submit" style="width:100%;background:#041632;color:#fff;border:none;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:10px 16px;border-radius:4px;cursor:pointer">Add Vendor</button>
                             </form>
                         </div>
-                        <div class="col-xl-7">
-                            <div class="card procurement-vendor-table-card h-100">
-                                <div class="card-header"><span>Vendor List</span><span class="text-muted small">{{ $vendors->count() }} total</span></div>
-                                <div class="card-body">
-                                    @if($vendors->isEmpty())
-                                        <div class="procurement-empty">No vendors added yet.</div>
-                                    @else
-                                        <div class="table-responsive">
-                                            <table class="table table-sm align-middle">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Name</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($vendors as $vendor)
-                                                        <tr>
-                                                            <td>{{ $vendor->name }}</td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    @endif
-                                </div>
+                    </div>
+
+                    {{-- Vendor List --}}
+                    <div style="background:#fff;border:1px solid #e0e3e5;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);overflow:hidden">
+                        <div style="padding:20px;border-bottom:1px solid #e0e3e5;background:#f7f9fb;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                            <div>
+                                <h2 style="font-size:20px;font-weight:600;color:#041632;margin:0">Vendor List</h2>
+                                <p style="font-size:12px;color:#545f72;margin:4px 0 0">Total: {{ $vendors->count() }}</p>
+                            </div>
+                            <div style="position:relative;max-width:260px;width:100%">
+                                <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#545f72;font-size:18px">search</span>
+                                <input id="vendorSearch" onkeyup="vendorFilter()" placeholder="Search vendors..."
+                                       style="width:100%;padding:8px 12px 8px 34px;border:1px solid #c5c6ce;border-radius:4px;font-size:12px;outline:none;box-sizing:border-box">
                             </div>
                         </div>
+
+                        @if($vendors->isEmpty())
+                            <div style="padding:48px 24px;text-align:center;color:#545f72">
+                                <span class="material-symbols-outlined" style="font-size:40px;color:#c5c6ce;display:block;margin-bottom:12px">storefront</span>
+                                <p style="font-size:14px;margin:0">No vendors have been added yet.</p>
+                            </div>
+                        @else
+                            <div style="overflow-x:auto">
+                                <table style="width:100%;border-collapse:collapse" id="vendorTable">
+                                    <thead>
+                                        <tr style="background:#f2f4f6;border-bottom:1px solid #e0e3e5">
+                                            <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($vendors as $vendor)
+                                            <tr style="border-bottom:1px solid #e0e3e5" onmouseover="this.style.background='#f7f9fb'" onmouseout="this.style.background='#fff'">
+                                                <td style="padding:11px 16px;font-size:13px;color:#191c1e">{{ $vendor->name }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
                     </div>
+
                 </div>
             </div>
         </div>
+        <script>
+        function vendorFilter(){
+            var q=(document.getElementById('vendorSearch').value||'').toLowerCase();
+            var rows=document.querySelectorAll('#vendorTable tbody tr');
+            rows.forEach(function(r){
+                r.style.display = r.textContent.toLowerCase().indexOf(q)>-1 ? '' : 'none';
+            });
+        }
+        </script>
     @elseif($activeTab === 'po')
         <div class="procurement-tab-panel">
             <div class="procurement-grid">

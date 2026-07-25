@@ -13,6 +13,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/password/force-change', [\App\Http\Controllers\Auth\ForcedPasswordChangeController::class, 'update'])
         ->name('password.force.update');
+
+    Route::post('/api/member/change-password', [\App\Http\Controllers\Auth\ForcedPasswordChangeController::class, 'apiUpdate'])
+        ->middleware(['throttle:10,1'])
+        ->name('api.member.change-password');
 });
 
 use App\Http\Controllers\Admin\AccountingController;
@@ -128,6 +132,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::get('/members', [MemberController::class, 'index'])->name('members.index');
         Route::post('/members', [MemberController::class, 'store'])->name('members.store');
         Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
+        Route::post('/members/{member}/reset-password', [MemberController::class, 'resetPassword'])->middleware('role:SUPER_ADMIN,ADMIN')->name('members.reset-password');
         Route::post('/members/{member}/toggle-active', [MemberController::class, 'toggleActive'])->name('members.toggle-active');
         Route::post('/members/{member}/deactivate', [MemberController::class, 'deactivate'])->name('members.deactivate');
         Route::post('/members/{member}/reactivate', [MemberController::class, 'reactivate'])->name('members.reactivate');
@@ -187,7 +192,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
 
     Route::middleware('permission:payments.view_admin')->group(function () {
         Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments-v2', [PaymentController::class, 'indexV2'])->name('payments.index.v2');
         Route::get('/payments/{payment}/proof', [PaymentController::class, 'uploadedProof'])->name('payments.proof');
+        Route::get('/payments/{payment}/detail', [PaymentController::class, 'detail'])->name('payments.detail');
     });
     Route::middleware('permission:payments.manual_record_admin')->group(function () {
         Route::get('/payments/member-bill-lookup', [PaymentController::class, 'memberBillLookup'])->name('payments.member-bill-lookup');
@@ -260,6 +267,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::get('/procurement/grn/template', [ProcurementController::class, 'downloadGrnTemplate'])->name('procurement.grn.template');
         Route::post('/procurement/grn/import/preview', [ProcurementController::class, 'previewGrnImport'])->name('procurement.grn.import.preview');
         Route::post('/procurement/grn/import/store', [ProcurementController::class, 'storeGrnImport'])->name('procurement.grn.import.store');
+        Route::post('/procurement/po/import/cancel', [ProcurementController::class, 'cancelPoImportPreview'])->name('procurement.po.import.cancel');
+        Route::post('/procurement/grn/import/cancel', [ProcurementController::class, 'cancelGrnImportPreview'])->name('procurement.grn.import.cancel');
         Route::post('/procurement/grn', [ProcurementController::class, 'storeGrn'])->name('procurement.grn.store');
         Route::post('/procurement/grn/bulk-approve', [ProcurementController::class, 'bulkApproveGrn'])->name('procurement.grn.bulk-approve');
         Route::post('/procurement/grn/{grn}/approve', [ProcurementController::class, 'approveGrn'])->name('procurement.grn.approve');
@@ -309,6 +318,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
 
     Route::middleware('permission:guest.manage')->group(function () {
         Route::get('/guests', [GuestController::class, 'index'])->name('guests.index');
+        Route::get('/guests/print', [GuestController::class, 'printReport'])->name('guests.print');
         Route::post('/guests', [GuestController::class, 'storeGuest'])->name('guests.store');
         Route::post('/guests/{guest}/edit', [GuestController::class, 'updateGuest'])->name('guests.edit.legacy');
         Route::post('/guests/{guest}/delete', [GuestController::class, 'deleteGuest'])->name('guests.delete.legacy');
@@ -432,3 +442,11 @@ Route::post('/jazzcash/payments/{payment}/status-inquiry', [\App\Http\Controller
 Route::get('/data-deletion', function () {
     return view('data-deletion');
 })->name('data-deletion');
+// OPENCLAW UI PREVIEW ROUTES - FRESH5
+Route::prefix('admin/ui-preview')->name('admin.ui-preview.')->group(function () {
+    Route::view('/login', 'admin.ui-preview.login')->name('login');
+    Route::view('/dashboard', 'admin.ui-preview.dashboard')->name('dashboard');
+    Route::view('/members', 'admin.ui-preview.members')->name('members');
+    Route::view('/members/create', 'admin.ui-preview.member-form')->name('members.create');
+    Route::view('/members/profile', 'admin.ui-preview.member-profile')->name('members.profile');
+});

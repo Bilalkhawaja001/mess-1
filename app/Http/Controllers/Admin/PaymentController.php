@@ -304,7 +304,7 @@ class PaymentController extends Controller
             $bill = Billing::query()
                 ->where('member_id', $member->id)
                 ->whereDoesntHave('payments', function ($query) {
-                    $query->whereIn('status', [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED]);
+                    $query->whereIn('status', Payment::PAID_STATUSES);
                 })
                 ->orderByDesc('month_cycle')
                 ->orderByDesc('id')
@@ -319,7 +319,7 @@ class PaymentController extends Controller
             }
 
             $billed = \App\Models\Billing::where('member_id', $member->id)->sum('net_payable');
-            $paid = \App\Models\Payment::whereHas('bill', function($q) use ($member){ $q->where('member_id', $member->id); })->whereIn('status', [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED])->sum('amount');
+            $paid = \App\Models\Payment::whereHas('bill', function($q) use ($member){ $q->where('member_id', $member->id); })->whereIn('status', Payment::PAID_STATUSES)->sum('amount');
             $outstanding = round((float)$billed - (float)$paid, 2);
             return [
                 'member_id' => $member->id,
@@ -347,6 +347,49 @@ class PaymentController extends Controller
             "name" => $first["member_name"] ?? null,
             "bill_id" => $first["bill_id"] ?? null,
             "outstanding" => $first["outstanding"] ?? null,
+        ]);
+    }
+
+    public function detail(Payment $payment): JsonResponse
+    {
+        $payment->load(["member", "bill", "methodRecord"]);
+        $bill = $payment->bill;
+        $billed = $bill ? (float) $bill->net_payable : 0.0;
+        $paid = $bill
+            ? (float) Payment::where("bill_id", $bill->id)
+                ->whereIn("status", Payment::PAID_STATUSES)
+                ->sum("amount")
+            : 0.0;
+        $timeline = $payment->auditLogs()->with("user")->limit(50)->get()->map(function ($log) {
+            return [
+                "action" => str_replace(["payment.", "_"], ["", " "], $log->action),
+                "actor" => $log->user->name ?? "System",
+                "reason" => $log->reason,
+                "at" => optional($log->created_at)->format("d M Y, H:i"),
+            ];
+        })->values();
+        return response()->json([
+            "ok" => true,
+            "payment" => [
+                "id" => $payment->id,
+                "date" => optional($payment->payment_date)->format("d M Y"),
+                "amount" => number_format((float) $payment->amount, 2),
+                "method" => $payment->methodRecord->name ?? $payment->method,
+                "reference" => $payment->payment_ref ?: $payment->reference_no ?: "—",
+                "status" => str_replace("_", " ", $payment->status),
+                "status_raw" => $payment->status,
+            ],
+            "member" => [
+                "code" => $payment->member->member_code ?? "—",
+                "name" => $payment->member->name ?? "",
+            ],
+            "bill" => [
+                "id" => $bill->id ?? null,
+                "billed" => number_format($billed, 2),
+                "paid" => number_format($paid, 2),
+                "remaining" => number_format(round($billed - $paid, 2), 2),
+            ],
+            "timeline" => $timeline,
         ]);
     }
 

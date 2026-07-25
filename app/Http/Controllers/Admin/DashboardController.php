@@ -129,7 +129,7 @@ class DashboardController extends Controller
 
     private function collectedForCycle(string $monthCycle): float
     {
-        $paidStatuses = [Payment::STATUS_SUCCESS, Payment::STATUS_RECONCILED, Payment::STATUS_APPROVED];
+        $paidStatuses = Payment::PAID_STATUSES;
 
         return (float) Payment::query()
             ->join('billings', 'billings.id', '=', 'payments.bill_id')

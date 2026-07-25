@@ -27,6 +27,14 @@ class Payment extends Model
     public const STATUS_RECONCILIATION_PENDING = 'RECONCILIATION_PENDING';
     public const STATUS_RECONCILED = 'RECONCILED';
 
+    /** Statuses that count as money received (single source of truth). */
+    public const PAID_STATUSES = [
+        self::STATUS_APPROVED,
+        self::STATUS_SUCCESS,
+        self::STATUS_RECONCILIATION_PENDING,
+        self::STATUS_RECONCILED,
+    ];
+
     public const DUPLICATE_GUARD_VERSION = 'phase2c_app_v1';
 
     protected $fillable = [
@@ -92,6 +100,14 @@ class Payment extends Model
     public function reconciliations(): HasMany
     {
         return $this->hasMany(PaymentReconciliation::class);
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(\App\Models\AuditLog::class, "entity_id")
+            ->where("entity_type", static::class)
+            ->orderByDesc("created_at")
+            ->orderByDesc("id");
     }
 
     

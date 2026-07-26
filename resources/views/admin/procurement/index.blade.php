@@ -163,6 +163,16 @@
         gap: 12px;
         align-items: end;
     }
+    #poModal .procurement-line-grid {
+        grid-template-columns: minmax(0, 1fr) 88px 108px !important;
+        gap: 10px;
+        align-items: start !important;
+    }
+    #poModal .procurement-line-grid > div { display: flex; flex-direction: column; }
+    #poModal .procurement-line-grid .form-label { min-height: 18px; margin-bottom: 6px; }
+    #poModal .procurement-mini-result { margin-top: 4px; min-height: 14px; }
+    #poModal .po-line-card { padding: 12px; }
+    #poModal .procurement-mini-result { font-size: 11px; }
 
     .procurement-line-grid .form-label,
     .procurement-form-card .form-label {
@@ -531,45 +541,71 @@
         </script>
     @elseif($activeTab === 'po')
         <div class="procurement-tab-panel">
-            <div class="procurement-grid">
-                <div class="card procurement-form-card">
-                    <div class="card-header"><span>Create PO</span><span class="text-muted small">Order lines</span></div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ route('admin.procurement.po.store') }}?tab=po" class="row g-3" id="po-form">@csrf
-                            <div class="col-12">
-                                <label class="form-label">Vendor</label>
-                                <select name="vendor_id" class="form-select @error('vendor_id') is-invalid @enderror" required>
-                                    <option value="">Select vendor</option>
-                                    @foreach($vendors as $v)
-                                        <option value="{{ $v->id }}" @selected((string) old('vendor_id') === (string) $v->id)>{{ $v->name }}</option>
-                                    @endforeach
-                                </select>
+            <div style="font-family:'Inter',system-ui,sans-serif">
+
+            {{-- Action bar: New PO button --}}
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">
+                <button type="button" onclick="poModalOpen()"
+                        style="height:36px;padding:0 18px;background:#041632;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+                    <span class="material-symbols-outlined" style="font-size:18px">add</span> New PO
+                </button>
+            </div>
+
+            {{-- CREATE PO MODAL (centered popup) --}}
+            <div id="poModal" onclick="if(event.target===this)poModalClose()"
+                 style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1050;align-items:flex-start;justify-content:center;padding:170px 16px 40px;overflow-y:auto">
+                <div style="background:#fff;width:720px;max-width:100%;border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.2);display:flex;flex-direction:column;max-height:calc(100vh - 80px);font-family:'Inter',sans-serif">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid #e0e3e5;background:#f7f9fb;border-radius:10px 10px 0 0">
+                        <h2 style="font-size:16px;font-weight:600;color:#041632;margin:0">Create Purchase Order</h2>
+                        <button type="button" onclick="poModalClose()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#545f72;line-height:1">&times;</button>
+                    </div>
+                    <div style="flex:1;overflow-y:auto;padding:22px">
+                        <form method="POST" action="{{ route('admin.procurement.po.store') }}?tab=po" id="po-form">@csrf
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+                                <div>
+                                    <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#545f72;margin-bottom:6px">Vendor <span style="color:#ba1a1a">*</span></label>
+                                    <select name="vendor_id" required
+                                            style="width:100%;height:36px;padding:0 10px;border:1px solid {{ $errors->has('vendor_id') ? '#ba1a1a' : '#c5c6ce' }};border-radius:4px;font-size:13px;background:#fff;box-sizing:border-box">
+                                        <option value="">Select vendor</option>
+                                        @foreach($vendors as $v)
+                                            <option value="{{ $v->id }}" @selected((string) old('vendor_id') === (string) $v->id)>{{ $v->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('vendor_id')<div style="color:#ba1a1a;font-size:12px;margin-top:4px">{{ $message }}</div>@enderror
+                                </div>
+                                <div>
+                                    <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#545f72;margin-bottom:6px">PO Date <span style="color:#ba1a1a">*</span></label>
+                                    <input type="date" name="po_date" required value="{{ old('po_date') }}"
+                                           style="width:100%;height:36px;padding:0 10px;border:1px solid {{ $errors->has('po_date') ? '#ba1a1a' : '#c5c6ce' }};border-radius:4px;font-size:13px;box-sizing:border-box">
+                                    @error('po_date')<div style="color:#ba1a1a;font-size:12px;margin-top:4px">{{ $message }}</div>@enderror
+                                </div>
                             </div>
-                            @error('vendor_id')
-                                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                            @enderror
-                            <div class="col-12">
-                                <div class="procurement-group-label">PO lines</div>
-                                <div class="po-lines" id="po-lines"></div>
-                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-po-line">Add Line</button>
+
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px solid #e0e3e5;margin-bottom:12px">
+                                <span style="font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#545f72">PO Lines</span>
+                                <button type="button" id="add-po-line"
+                                        style="border:none;background:none;color:#041632;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+                                    + Add Line
+                                </button>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">PO Date</label>
-                                <input type="date" name="po_date" class="form-control @error('po_date') is-invalid @enderror" required value="{{ old('po_date') }}">
-                            </div>
-                            @error('po_date')
-                                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                            @enderror
-                            @error('lines')
-                                <div class="col-12"><div class="text-danger small">{{ $message }}</div></div>
-                            @enderror
-                            <div class="col-12 d-flex justify-content-end">
-                                <button class="btn btn-primary px-4" id="po-submit-btn">Create PO</button>
-                            </div>
+                            <div class="po-lines" id="po-lines"></div>
+                            @error('lines')<div style="color:#ba1a1a;font-size:12px;margin-top:8px">{{ $message }}</div>@enderror
                         </form>
                     </div>
+                    <div style="padding:16px 22px;border-top:1px solid #e0e3e5;background:#f7f9fb;display:flex;justify-content:flex-end;gap:10px;border-radius:0 0 10px 10px">
+                        <button type="button" onclick="poModalClose()" style="height:36px;padding:0 16px;background:#fff;border:1px solid #c5c6ce;border-radius:4px;font-size:13px;cursor:pointer">Cancel</button>
+                        <button type="submit" form="po-form" id="po-submit-btn" style="height:36px;padding:0 18px;background:#041632;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer">Create PO</button>
+                    </div>
                 </div>
+            </div>
 
+            <script>
+            function poModalOpen(){document.getElementById('poModal').style.display='flex';}
+            function poModalClose(){document.getElementById('poModal').style.display='none';}
+            @if($errors->any() && request('tab')==='po')poModalOpen();@endif
+            </script>
+
+            <div class="procurement-grid" style="margin-top:0">
                 <div class="card procurement-form-card bulk-po-upload">
                     <div class="card-header"><span>Bulk PO Upload</span><span class="text-muted small">CSV workflow</span></div>
                     <div class="card-body">
@@ -678,80 +714,112 @@
                 </div>
             </div>
 
-            <div class="card procurement-table-card">
-                <div class="card-header"><span>Purchase Orders</span><span class="text-muted small">Draft &amp; approved</span></div>
-                <div class="card-body">
+            <div style="font-family:'Inter',system-ui,sans-serif;color:#191c1e;margin-top:24px">
+                <div style="background:#fff;border:1px solid #e0e3e5;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);overflow:hidden">
                     <form method="POST" action="{{ route('admin.procurement.po.bulk-approve') }}?tab=po" id="po-bulk-form">
-                            @csrf
-                            <div class="bulk-action-bar">
-                                <div><span id="po-selected-count">0</span> PO(s) selected</div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <select class="form-select form-select-sm" style="width:auto" onchange="window.location='{{ route('admin.procurement.index') }}?tab=po&po_status='+this.value">
-                                        <option value="" @selected(($poStatusFilter ?? '') === '')>All statuses</option>
-                                        <option value="DRAFT" @selected(($poStatusFilter ?? '') === 'DRAFT')>DRAFT</option>
-                                        <option value="APPROVED" @selected(($poStatusFilter ?? '') === 'APPROVED')>APPROVED</option>
-                                        <option value="PARTIALLY_RECEIVED" @selected(($poStatusFilter ?? '') === 'PARTIALLY_RECEIVED')>PARTIALLY_RECEIVED</option>
-                                        <option value="RECEIVED" @selected(($poStatusFilter ?? '') === 'RECEIVED')>RECEIVED</option>
-                                        <option value="CANCELLED" @selected(($poStatusFilter ?? '') === 'CANCELLED')>CANCELLED</option>
-                                    </select>
-                                    <button type="submit" class="btn btn-sm btn-outline-success" id="po-bulk-submit" disabled>Bulk Approve</button>
-                                </div>
+                        @csrf
+
+                        {{-- Toolbar --}}
+                        <div style="padding:16px 20px;border-bottom:1px solid #e0e3e5;background:#f7f9fb;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                            <div style="display:flex;align-items:center;gap:12px">
+                                <h2 style="font-size:20px;font-weight:600;color:#041632;margin:0">PO Register</h2>
+                                <span style="font-size:12px;color:#545f72"><span id="po-selected-count">0</span> selected</span>
                             </div>
-                            <div class="table-responsive">
-                                <table class="table table-sm align-middle"><thead><tr><th><input type="checkbox" id="po-select-all"></th><th>PO Number</th><th>Date</th><th>Vendor</th><th>Total Lines</th><th>Total Qty</th><th>Total Amount</th><th>Received Qty</th><th>Pending Qty</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-                                    @forelse($pos as $po)
-                                        @php $poSelectable = in_array($po->status, ['DRAFT', 'ISSUED'], true); @endphp
-                                        <tr>
-                                            <td>
+                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                                <select onchange="window.location='{{ route('admin.procurement.index') }}?tab=po&po_status='+this.value"
+                                        style="height:34px;padding:0 12px;border:1px solid #c5c6ce;border-radius:4px;font-size:13px;background:#fff;color:#191c1e;cursor:pointer">
+                                    <option value="" @selected(($poStatusFilter ?? '') === '')>All statuses</option>
+                                    <option value="DRAFT" @selected(($poStatusFilter ?? '') === 'DRAFT')>Draft</option>
+                                    <option value="APPROVED" @selected(($poStatusFilter ?? '') === 'APPROVED')>Approved</option>
+                                    <option value="PARTIALLY_RECEIVED" @selected(($poStatusFilter ?? '') === 'PARTIALLY_RECEIVED')>Partially Received</option>
+                                    <option value="RECEIVED" @selected(($poStatusFilter ?? '') === 'RECEIVED')>Received</option>
+                                    <option value="CANCELLED" @selected(($poStatusFilter ?? '') === 'CANCELLED')>Cancelled</option>
+                                </select>
+                                <button type="submit" id="po-bulk-submit" disabled
+                                        style="height:34px;padding:0 16px;border:1px solid #041632;background:#fff;color:#041632;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;border-radius:4px;cursor:pointer;opacity:.5">Bulk Approve</button>
+                            </div>
+                        </div>
+
+                        {{-- Table --}}
+                        <div style="overflow-x:auto">
+                            <table style="width:100%;border-collapse:collapse;min-width:1080px">
+                                <thead>
+                                    <tr style="background:#f2f4f6;border-bottom:1px solid #e0e3e5">
+                                        <th style="width:44px;padding:11px 16px;text-align:center"><input type="checkbox" id="po-select-all"></th>
+                                        <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">PO Number</th>
+                                        <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">Date</th>
+                                        <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">Vendor</th>
+                                        <th style="padding:11px 16px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">Lines</th>
+                                        <th style="padding:11px 16px;text-align:right;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">Total Qty</th>
+                                        <th style="padding:11px 16px;text-align:right;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">PO Value</th>
+                                        <th style="padding:11px 16px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">Receipt Progress</th>
+                                        <th style="padding:11px 16px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.05em;color:#44474d;text-transform:uppercase">Status</th>
+                                        <th style="padding:11px 16px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @forelse($pos as $po)
+                                    @php
+                                        $poSelectable = in_array($po->status, ['DRAFT', 'ISSUED'], true);
+                                        $ordered = (float) ($po->total_qty ?? 0);
+                                        $received = (float) ($po->received_qty ?? 0);
+                                        $pct = $ordered > 0 ? min(100, round(($received / $ordered) * 100)) : 0;
+                                        $statusMap = [
+                                            'DRAFT'              => ['#64748b','#f1f5f9'],
+                                            'ISSUED'             => ['#1d4ed8','#dbeafe'],
+                                            'APPROVED'           => ['#1d4ed8','#dbeafe'],
+                                            'PARTIALLY_RECEIVED' => ['#b45309','#fef3c7'],
+                                            'RECEIVED'           => ['#15803d','#dcfce7'],
+                                            'CANCELLED'          => ['#57534e','#f5f5f4'],
+                                        ];
+                                        $sc = $statusMap[$po->status] ?? ['#57534e','#f5f5f4'];
+                                        $barColor = $pct >= 100 ? '#15803d' : ($pct > 0 ? '#b45309' : '#c5c6ce');
+                                    @endphp
+                                    <tr style="border-bottom:1px solid #e0e3e5" onmouseover="this.style.background='#f7f9fb';this.querySelector('.po-actions').style.opacity=1" onmouseout="this.style.background='#fff';this.querySelector('.po-actions').style.opacity=0">
+                                        <td style="padding:11px 16px;text-align:center">
+                                            @if($poSelectable)<input type="checkbox" class="po-row-check" name="po_ids[]" value="{{ $po->id }}">@endif
+                                        </td>
+                                        <td style="padding:11px 16px;font-size:13px;font-weight:500;color:#041632">{{ $po->po_number }}</td>
+                                        <td style="padding:11px 16px;font-size:13px;color:#191c1e;white-space:nowrap">{{ $po->po_date }}</td>
+                                        <td style="padding:11px 16px;font-size:13px;color:#191c1e">
+                                            <div>{{ $po->vendor->name ?? '-' }}</div>
+                                            <div style="font-size:11px;color:#8a8d93;margin-top:2px">
+                                                @foreach($po->lines->take(2) as $line){{ $line->item?->sku }}@if(!$loop->last), @endif @endforeach
+                                            </div>
+                                        </td>
+                                        <td style="padding:11px 16px;text-align:center;font-size:13px;color:#545f72">{{ $po->total_lines }}</td>
+                                        <td style="padding:11px 16px;text-align:right;font-size:13px;color:#191c1e;font-variant-numeric:tabular-nums">{{ number_format($ordered, 3) }}</td>
+                                        <td style="padding:11px 16px;text-align:right;font-size:13px;font-weight:500;color:#191c1e;font-variant-numeric:tabular-nums">{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
+                                        <td style="padding:11px 16px">
+                                            <div style="width:130px">
+                                                <div style="display:flex;justify-content:space-between;font-size:10px;color:#8a8d93;margin-bottom:3px;font-variant-numeric:tabular-nums"><span>{{ number_format($received, 0) }}</span><span>{{ number_format($ordered, 0) }}</span></div>
+                                                <div style="width:100%;height:6px;background:#e0e3e5;border-radius:9999px;overflow:hidden"><div style="height:100%;width:{{ $pct }}%;background:{{ $barColor }}"></div></div>
+                                            </div>
+                                        </td>
+                                        <td style="padding:11px 16px;text-align:center">
+                                            <span style="display:inline-block;padding:3px 9px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:{{ $sc[0] }};background:{{ $sc[1] }}">{{ str_replace('_',' ',$po->status) }}</span>
+                                        </td>
+                                        <td style="padding:11px 16px;text-align:right;white-space:nowrap">
+                                            <span class="po-actions" style="opacity:0;transition:opacity .1s;display:inline-flex;gap:6px;justify-content:flex-end">
                                                 @if($poSelectable)
-                                                    <input type="checkbox" class="po-row-check" name="po_ids[]" value="{{ $po->id }}">
+                                                    <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}?tab=po" formmethod="POST" style="border:1px solid #15803d;background:#fff;color:#15803d;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer">Approve</button>
                                                 @endif
-                                            </td>
-                                            <td>{{ $po->po_number }}</td>
-                                            <td>{{ $po->po_date }}</td>
-                                            <td>
-                                                <div>{{ $po->vendor->name ?? '-' }}</div>
-                                                <div class="po-summary-list">
-                                                    @foreach($po->lines->take(3) as $line)
-                                                        <span>{{ $line->item?->sku }} {{ $line->item?->name ? '— '.$line->item->name : '' }}</span>
-                                                    @endforeach
-                                                </div>
-                                            </td>
-                                            <td>{{ $po->total_lines }}</td>
-                                            <td>{{ number_format((float) ($po->total_qty ?? 0), 3) }}</td>
-                                            <td>{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
-                                            <td>{{ number_format((float) ($po->received_qty ?? 0), 3) }}</td>
-                                            <td>{{ number_format((float) ($po->pending_qty ?? 0), 3) }}</td>
-                                            <td>{{ $po->status }}</td>
-                                            <td class="text-end">
-                                                <div class="d-flex gap-1 justify-content-end flex-wrap">
-                                                    @if($poSelectable)
-                                                        <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}?tab=po" formmethod="POST" class="btn btn-sm btn-outline-success">Approve</button>
-                                                    @endif
-
-                                                    @if($po->goodsReceipts->isEmpty() && $po->status !== 'CANCELLED')
-                                                        <a href="{{ route('admin.procurement.index', ['tab' => 'po', 'edit_po' => $po->id]) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-
-                                                        <button type="submit"
-                                                                formaction="{{ route('admin.procurement.po.cancel',$po) }}?tab=po"
-                                                                formmethod="POST"
-                                                                class="btn btn-sm btn-outline-danger"
-                                                                onclick="return confirm('Cancel this PO? This is allowed only before GRN creation.');">
-                                                            Cancel
-                                                        </button>
-                                                    @endif
-
-                                                    @if($po->goodsReceipts->isNotEmpty())
-                                                        <span class="text-muted small">GRN Created</span>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr><td colspan="11" class="text-center text-muted py-4">No purchase orders found.</td></tr>
-                                    @endforelse
-                                </tbody></table>
-                            </div>
+                                                @if($po->goodsReceipts->isEmpty() && $po->status !== 'CANCELLED')
+                                                    <a href="{{ route('admin.procurement.index', ['tab' => 'po', 'edit_po' => $po->id]) }}" style="border:1px solid #041632;background:#fff;color:#041632;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;text-decoration:none">Edit</a>
+                                                    <button type="submit" formaction="{{ route('admin.procurement.po.cancel',$po) }}?tab=po" formmethod="POST" onclick="return confirm('Cancel this PO? This is allowed only before GRN creation.');" style="border:1px solid #ba1a1a;background:#fff;color:#ba1a1a;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer">Cancel</button>
+                                                @endif
+                                                @if($po->goodsReceipts->isNotEmpty())
+                                                    <span style="font-size:11px;color:#8a8d93">GRN Created</span>
+                                                @endif
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="10" style="padding:48px 24px;text-align:center;color:#545f72;font-size:14px">No purchase orders found.</td></tr>
+                                @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </form>
 
                     @if(isset($editPo) && $editPo)

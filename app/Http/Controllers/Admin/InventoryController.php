@@ -285,7 +285,9 @@ class InventoryController extends Controller
             ? StockCount::query()->with(['lines.item', 'createdBy', 'postedBy'])->find($selectedStockCountId)
             : $stockCountHistory->first();
 
+        $nextSku = $this->generateNextSku();
         return view('admin.inventory.index', compact(
+            'nextSku',
             'items',
             'ledger',
             'balances',
@@ -486,6 +488,20 @@ class InventoryController extends Controller
             ->with('success', 'Stock count marked as POSTED. No stock transaction was created.');
     }
 
+    private function generateNextSku(): string
+    {
+        $last = \App\Models\Item::query()
+            ->whereRaw("sku REGEXP '^ITM-[0-9]+$'")
+            ->orderByRaw('CAST(SUBSTRING(sku, 5) AS UNSIGNED) DESC')
+            ->value('sku');
+        $n = $last ? (int) substr($last, 4) : 0;
+        do {
+            $n++;
+            $candidate = 'ITM-' . str_pad((string) $n, 3, '0', STR_PAD_LEFT);
+        } while (\App\Models\Item::query()->where('sku', $candidate)->exists());
+        return $candidate;
+    }
+
     public function storeItem(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -502,10 +518,13 @@ class InventoryController extends Controller
         $sku = trim((string) ($data['item_code'] ?? $data['sku'] ?? ''));
         $name = trim((string) ($data['item_name'] ?? $data['name'] ?? ''));
 
-        if ($sku === '' || $name === '') {
+        if ($name === '') {
             return back()->withErrors([
-                'item_code' => 'ItemCode and ItemName are required.',
+                'item_name' => 'ItemName is required.',
             ])->withInput();
+        }
+        if ($sku === '') {
+            $sku = $this->generateNextSku();
         }
 
         Item::query()->create([

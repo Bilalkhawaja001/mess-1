@@ -324,7 +324,7 @@
                                 @csrf
                                 <div class="col-md-6">
                                     <label class="form-label">ItemCode</label>
-                                    <input type="text" name="item_code" class="form-control" value="{{ old('item_code') }}" required>
+                                    <input type="text" name="item_code" class="form-control" value="{{ old('item_code', $nextSku ?? '') }}" placeholder="Auto (leave blank)">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">ItemName</label>

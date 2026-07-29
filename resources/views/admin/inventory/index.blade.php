@@ -954,6 +954,27 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="vendorReturnSourceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select Stock Source</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle">
+            <thead class="table-light"><tr>
+              <th>Date</th><th>GRN / Vendor</th><th>Item</th><th class="text-end">Returnable</th><th></th>
+            </tr></thead>
+            <tbody id="vendorReturnSourceModalBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 @endsection
 
 @php
@@ -1240,6 +1261,46 @@
         if (returnSourceSelect) returnSourceSelect.addEventListener('change', syncVendorReturnSource);
         if (returnSourceDateFilter) returnSourceDateFilter.addEventListener('change', renderVendorReturnSources);
         if (returnSourceSearch) returnSourceSearch.addEventListener('input', renderVendorReturnSources);
+        const vendorReturnSourceSearchBtn = document.querySelector('.vendor-return-source-search-btn');
+        if (vendorReturnSourceSearchBtn) vendorReturnSourceSearchBtn.addEventListener('click', openVendorReturnSourceModal);
+        if (returnSourceSearch) returnSourceSearch.addEventListener('keyup', function(e){ if (e.key === 'Enter') { e.preventDefault(); openVendorReturnSourceModal(); } });
+
+        function openVendorReturnSourceModal(){
+            const dateValue = (returnSourceDateFilter && returnSourceDateFilter.value) || '';
+            const searchValue = ((returnSourceSearch && returnSourceSearch.value) || '').toLowerCase().trim();
+            const body = document.getElementById('vendorReturnSourceModalBody');
+            const matches = returnSources.filter(function(src){
+                const d = String(src.received_date || '').substring(0,10);
+                const hay = [src.grn_number, src.vendor_name, src.item_sku, src.item_name, src.uom].join(' ').toLowerCase();
+                return (!dateValue || d === dateValue) && (!searchValue || hay.includes(searchValue));
+            });
+            if (!matches.length){
+                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No matching stock source found.</td></tr>';
+            } else {
+                body.innerHTML = matches.map(function(src){
+                    const v = String(src.goods_receipt_line_id || src.goods_receipt_id);
+                    const d = String(src.received_date || '').substring(0,10);
+                    return '<tr>'+
+                      '<td>'+d+'</td>'+
+                      '<td>'+(src.grn_number||'')+'<div class="text-muted small">'+(src.vendor_name||'')+'</div></td>'+
+                      '<td>'+(src.item_sku||'')+' — '+(src.item_name||'')+'</td>'+
+                      '<td class="text-end">'+Number(src.returnable_qty||0).toFixed(3)+' '+(src.uom||'')+'</td>'+
+                      '<td class="text-end"><button type="button" class="btn btn-sm btn-primary" data-modal-select="'+v+'">Select</button></td>'+
+                      '</tr>';
+                }).join('');
+            }
+            var modalEl = document.getElementById('vendorReturnSourceModal');
+            if (modalEl.parentNode !== document.body) document.body.appendChild(modalEl);
+            var m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            body.querySelectorAll('[data-modal-select]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    const val = this.getAttribute('data-modal-select');
+                    if (returnSourceSelect){ returnSourceSelect.value = val; returnSourceSelect.dispatchEvent(new Event('change')); }
+                    m.hide();
+                });
+            });
+            m.show();
+        }
         if (returnSourceClearFilter) returnSourceClearFilter.addEventListener('click', () => {
             if (returnSourceDateFilter) returnSourceDateFilter.value = '';
             if (returnSourceSearch) returnSourceSearch.value = '';

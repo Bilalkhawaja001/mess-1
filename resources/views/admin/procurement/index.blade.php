@@ -874,6 +874,94 @@
                 <div class="card procurement-form-card">
                     <div class="card-header"><span>Create GRN</span><span class="text-muted small">Receive into stock</span></div>
                     <div class="card-body">
+                        <div class="mb-3" id="grn-po-cards-wrap">
+                          <div class="procurement-group-label">Pending Purchase Orders</div>
+                          <div class="procurement-note mb-2">Click a PO to receive its items.</div>
+                          <div class="table-responsive" id="grn-po-cards">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                              <thead class="table-light"><tr>
+                                <th>PO Number</th><th>Date</th><th>Vendor</th><th class="text-end">Items</th><th></th>
+                              </tr></thead>
+                              <tbody>
+                                @forelse($grnEligiblePos as $po)
+                                  <tr class="grn-po-card" style="cursor:pointer" data-po-id="{{ $po->id }}" data-po-date="{{ $po->po_date }}">
+                                    <td class="fw-semibold">{{ $po->po_number }}</td>
+                                    <td>{{ $po->po_date }}</td>
+                                    <td>{{ $po->vendor->name ?? 'Vendor' }}</td>
+                                    <td class="text-end">{{ $po->lines->count() }}</td>
+                                    <td class="text-end"><button type="button" class="btn btn-sm btn-primary grn-po-open">Receive</button></td>
+                                  </tr>
+                                @empty
+                                  <tr><td colspan="5" class="text-muted small">No pending POs.</td></tr>
+                                @endforelse
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div class="modal fade" id="grnReceiveModal" tabindex="-1" aria-hidden="true">
+                          <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                            <div class="modal-content">
+                              <div class="modal-header">
+                                <h5 class="modal-title" id="grnReceiveModalTitle">Receive Items</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                              </div>
+                              <div class="modal-body" id="grnReceiveModalBody"></div>
+                            </div>
+                          </div>
+                        </div>
+
+<script>
+(function(){
+  function initGrnPopup(){
+    var form = document.getElementById('grn-form');
+    var poSelect = document.getElementById('grn-po-select');
+    var modalEl = document.getElementById('grnReceiveModal');
+    var modalBody = document.getElementById('grnReceiveModalBody');
+    if (!form || !poSelect || !modalEl || !modalBody) return;
+    var formHome = form.parentNode; // remember original location
+    var modalInstance = null;
+
+    document.querySelectorAll('.grn-po-card').forEach(function(card){
+      card.addEventListener('click', function(){
+        var poId = this.getAttribute('data-po-id');
+        poSelect.value = poId;
+        poSelect.dispatchEvent(new Event('change')); // existing JS renders lines
+        var poDate = this.getAttribute('data-po-date');
+        var dateInput = document.getElementById('grn-received-date');
+        if (poDate && dateInput) dateInput.value = poDate;
+
+        // add Select-All if not present
+        if (!document.getElementById('grn-select-all-wrap')){
+          var wrap = document.createElement('div');
+          wrap.id = 'grn-select-all-wrap';
+          wrap.className = 'mb-2';
+          wrap.innerHTML = '<label class="d-inline-flex align-items-center gap-2"><input type="checkbox" id="grn-select-all"> <b>Select All Items</b></label>';
+          form.insertBefore(wrap, form.firstChild);
+          wrap.querySelector('#grn-select-all').addEventListener('change', function(){
+            var on = this.checked;
+            form.querySelectorAll('.grn-row-selected').forEach(function(cb){ cb.checked = on; });
+          });
+        }
+
+        // move whole form into modal (intact) and show
+        modalBody.appendChild(form);
+        if (modalEl.parentNode !== document.body) document.body.appendChild(modalEl);
+        modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.show();
+      });
+    });
+
+    // when modal closes, move form back home (so nothing is lost)
+    modalEl.addEventListener('hidden.bs.modal', function(){
+      if (form && formHome) formHome.appendChild(form);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initGrnPopup);
+  else initGrnPopup();
+})();
+</script>
+
                         <form method="POST" action="{{ route('admin.procurement.grn.store') }}?tab=grn" class="row g-3" id="grn-form">@csrf
                             <div class="col-12">
                                 <label class="form-label">Purchase Order</label>

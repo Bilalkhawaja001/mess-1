@@ -109,6 +109,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
 
     Route::get('/admin-mess-bill', [\App\Http\Controllers\Admin\AdminMessBillController::class, 'index'])
         ->name('admin-mess-bill.index');
+    Route::get('/cost-allocation-preview', [\App\Http\Controllers\Admin\CostAllocationPreviewController::class, 'index'])
+        ->name('cost-allocation-preview.index');
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/hubs/operations', [HubController::class, 'operations'])->name('hubs.operations');

@@ -1447,6 +1447,12 @@ class ProcurementController extends Controller
             ->orderBy('items.sku')
             ->get();
 
+        $dateRows = $netBase()
+            ->selectRaw("goods_receipts.received_date, SUM($netCostSql) as total_cost, SUM($netQtySql) as total_qty, COUNT(DISTINCT goods_receipts.id) as grn_count, COUNT(DISTINCT purchase_orders.id) as po_count")
+            ->groupBy('goods_receipts.received_date')
+            ->orderByDesc('goods_receipts.received_date')
+            ->get();
+
         $grnDetails = $netBase()
             ->whereRaw("$netQtySql > 0")
             ->selectRaw("
@@ -1480,6 +1486,7 @@ class ProcurementController extends Controller
             'vendorRows' => $vendorRows,
             'itemRows' => $itemRows,
             'grnDetails' => $grnDetails,
+            'dateRows' => $dateRows,
         ];
     }
 

@@ -353,7 +353,7 @@
 
 @php
     $activeTab = request('tab', 'po');
-    if (! in_array($activeTab, ['vendors', 'po', 'grn', 'reports'], true)) {
+    if (! in_array($activeTab, ['vendors', 'po', 'grn', 'reports', 'datewise'], true)) {
         $activeTab = 'po';
     }
 
@@ -437,6 +437,7 @@
             <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="procurement-tab-link {{ $activeTab === 'po' ? 'active' : '' }}">Purchase Orders</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}" class="procurement-tab-link {{ $activeTab === 'grn' ? 'active' : '' }}">GRNs / Receiving</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'reports']) }}" class="procurement-tab-link {{ $activeTab === 'reports' ? 'active' : '' }}">Purchase Reports</a>
+            <a href="{{ route('admin.procurement.index', ['tab' => 'datewise']) }}" class="procurement-tab-link {{ $activeTab === 'datewise' ? 'active' : '' }}">Date wise Purchase</a>
         </div>
     </div>
 
@@ -1128,7 +1129,7 @@
                 </div>
             </div>
         </div>
-    @else
+    @elseif($activeTab === 'reports')
         <div class="procurement-tab-panel">
             <div class="card procurement-form-card">
                 <div class="card-header"><span>Purchase Reports</span><span class="text-muted small">GRN-based purchasing analysis</span></div>
@@ -1295,6 +1296,121 @@
             </div>
 
     @endif
+
+    @if($activeTab === 'datewise')
+    <div class="procurement-tab-panel" id="datewise-panel">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Date wise Purchase</span>
+                <span class="text-muted small">Total purchasing grouped by date {{ $reportSearch ? '(filtered: '.$reportSearch.')' : '' }}</span>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ route('admin.procurement.index') }}" class="row g-2 mb-3">
+                    <input type="hidden" name="tab" value="datewise">
+                    <div class="col-md-3"><label class="form-label small mb-1">From</label>
+                        <input type="date" name="report_from" value="{{ $reportFromDate }}" class="form-control form-control-sm"></div>
+                    <div class="col-md-3"><label class="form-label small mb-1">To</label>
+                        <input type="date" name="report_to" value="{{ $reportToDate }}" class="form-control form-control-sm"></div>
+                    <div class="col-md-4"><label class="form-label small mb-1">Item / Vendor</label>
+                        <input type="text" name="report_search" value="{{ $reportSearch }}" placeholder="item, code, category or vendor" class="form-control form-control-sm"></div>
+                    <div class="col-md-2 d-flex align-items-end"><button type="submit" class="btn btn-primary btn-sm w-100">Apply</button></div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-end">Qty</th>
+                                <th class="text-end">GRNs</th>
+                                <th class="text-end">POs</th>
+                                <th class="text-end">Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php $grandTotal = 0; @endphp
+                            @forelse(($purchaseReportData['dateRows'] ?? []) as $dr)
+                                @php $grandTotal += (float) $dr->total_cost; @endphp
+                                <tr>
+                                    <td>{{ \Carbon\Carbon::parse($dr->received_date)->format('d-M-Y') }}</td>
+                                    <td class="text-end">{{ number_format((float) $dr->total_qty, 2) }}</td>
+                                    <td class="text-end">{{ $dr->grn_count }}</td>
+                                    <td class="text-end">{{ $dr->po_count }}</td>
+                                    <td class="text-end">
+                                        <a href="#" class="datewise-amount fw-semibold text-decoration-none" data-date="{{ $dr->received_date }}">
+                                            {{ number_format((float) $dr->total_cost, 2) }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="text-center text-muted">No purchases in this range.</td></tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="4" class="text-end">Grand Total</th>
+                                <th class="text-end">{{ number_format($grandTotal, 2) }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="datewiseModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="datewiseModalTitle">Purchase Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead class="table-light"><tr>
+                  <th>Item</th><th>Vendor</th><th>GRN</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Amount</th>
+                </tr></thead>
+                <tbody id="datewiseModalBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    (function(){
+      var DETAILS = @json($purchaseReportData['grnDetails'] ?? []);
+      var modalEl = document.getElementById('datewiseModal');
+      if (!modalEl) return;
+      var modal = null;
+      document.querySelectorAll('.datewise-amount').forEach(function(a){
+        a.addEventListener('click', function(e){
+          e.preventDefault();
+          var d = this.getAttribute('data-date');
+          var rows = DETAILS.filter(function(r){ return String(r.received_date).slice(0,10) === d; });
+          var body = document.getElementById('datewiseModalBody');
+          document.getElementById('datewiseModalTitle').textContent = 'Purchases on ' + d;
+          if (!rows.length) { body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No line details (may exceed detail limit).</td></tr>'; }
+          else {
+            body.innerHTML = rows.map(function(r){
+              return '<tr><td>'+ (r.item_name||'') +' <span class="text-muted">('+ (r.item_code||'') +')</span></td>'+
+                     '<td>'+ (r.vendor_name||'') +'</td>'+
+                     '<td>'+ (r.grn_number||'') +'</td>'+
+                     '<td class="text-end">'+ Number(r.net_qty).toFixed(2) +'</td>'+
+                     '<td class="text-end">'+ Number(r.unit_cost).toFixed(2) +'</td>'+
+                     '<td class="text-end">'+ Number(r.total_cost).toFixed(2) +'</td></tr>';
+            }).join('');
+          }
+          if (modalEl.parentNode !== document.body) { document.body.appendChild(modalEl); }
+          if (!modal) { modal = new bootstrap.Modal(modalEl); }
+          modal.show();
+        });
+      });
+    })();
+    </script>
+    @endif
+
 </div>
 
 <datalist id="procurement-items-list">

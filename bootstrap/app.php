@@ -23,12 +23,23 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
+            'data_entry_scope' => \App\Http\Middleware\DataEntryScope::class,
             'must_change_password' => \App\Http\Middleware\RequirePasswordChange::class,
             'app_feature' => \App\Http\Middleware\EnsureAppFeatureEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response, \Throwable $e, \Illuminate\Http\Request $request) {
+            if ($response->getStatusCode() === 429) {
+                $message = 'Too many attempts, please wait 1 minute and try again.';
+
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $message], 429);
+                }
+
+                return back()->with('error', $message);
+            }
+
             if ($response->getStatusCode() !== 419) {
                 return $response;
             }

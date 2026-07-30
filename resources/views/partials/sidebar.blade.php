@@ -1,5 +1,8 @@
 @php
     $isMember = auth()->check() && auth()->user()->isMemberRole();
+    $isDataEntry = auth()->check() && optional(auth()->user()->role)->code === 'DATA_ENTRY';
+    $roleCode = auth()->check() ? optional(auth()->user()->role)->code : null;
+    $isAdminCore = in_array($roleCode, ['SUPER_ADMIN', 'ADMIN'], true);
     $path = request()->path();
     $opsOpen = request()->routeIs('admin.members.*') || request()->routeIs('admin.attendance.*') || request()->routeIs('admin.attendance-monthly.*') || request()->routeIs('admin.complaints.*') || request()->routeIs('admin.guests.*') || request()->routeIs('admin.extras.*') || request()->routeIs('admin.hubs.operations');
     $invOpen = request()->routeIs('admin.inventory.*') || request()->routeIs('admin.procurement.*') || request()->routeIs('admin.hubs.inventory');
@@ -40,12 +43,24 @@
                     </nav>
                 </div>
             @else
+                @if($isDataEntry)
+                    <div class="sb-group sidebar-group">
+                        <div class="sb-label sidebar-label">Data Entry</div>
+                        <nav class="nav flex-column gap-1">
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.index') }}" title="Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar-check sidebar-icon"></i></span><span>Attendance</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance-monthly.*') ? 'active' : '' }}" href="{{ route('admin.attendance-monthly.index') }}" title="Monthly Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar3 sidebar-icon"></i></span><span>Monthly Attendance</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}" title="Users"><span class="sidebar-icon-wrap"><i class="bi bi-people sidebar-icon"></i></span><span>Users</span></a>
+                        </nav>
+                    </div>
+                @else
+                @if($isAdminCore)
                 <div class="sb-group sidebar-group">
                     <div class="sb-label sidebar-label">Dashboard</div>
                     <nav class="nav flex-column gap-1">
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}" title="Dashboard"><span class="sidebar-icon-wrap"><i class="bi bi-grid-1x2 sidebar-icon"></i></span><span>Dashboard</span></a>
                     </nav>
                 </div>
+                @endif
 
                 <div class="sb-group sidebar-group">
                     <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-operations" aria-expanded="{{ $opsOpen ? 'true' : 'false' }}" aria-controls="sidebar-operations">Members & Operations <i class="bi {{ $opsOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
@@ -57,7 +72,9 @@
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.index') }}" title="Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar-check sidebar-icon"></i></span><span>Attendance</span></a>
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.attendance-monthly.*') ? 'active' : '' }}" href="{{ route('admin.attendance-monthly.index') }}" title="Monthly Attendance"><span class="sidebar-icon-wrap"><i class="bi bi-calendar3 sidebar-icon"></i></span><span>Monthly Attendance</span></a>
                         @endif
+                        @if(auth()->user()->hasPermission('complaint.view_all'))
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.member-profile-change-requests.*') ? 'active' : '' }}" href="{{ route('admin.member-profile-change-requests.index') }}" title="Profile Change Requests"><span class="sidebar-icon-wrap"><i class="bi bi-person-gear sidebar-icon"></i></span><span>Profile Change Requests</span></a>
+                        @endif
                           @if(auth()->user()->hasPermission('complaint.view_all'))
                               <a class="nav-link sidebar-link {{ request()->routeIs('admin.complaints.*') ? 'active' : '' }}" href="{{ route('admin.complaints.index') }}" title="Complaints / Suggestions"><span class="sidebar-icon-wrap"><i class="bi bi-chat-left-text sidebar-icon"></i></span><span>Complaints / Suggestions</span></a>
                           @endif
@@ -67,7 +84,9 @@
                         @if(auth()->user()->hasPermission('member.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.extras.*') ? 'active' : '' }}" href="{{ route('admin.extras.index') }}" title="Extras"><span class="sidebar-icon-wrap"><i class="bi bi-plus-square sidebar-icon"></i></span><span>Extras</span></a>
                         @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.operations') ? 'active' : '' }}" href="{{ route('admin.hubs.operations') }}" title="Operations Hub"><span class="sidebar-icon-wrap"><i class="bi bi-columns-gap sidebar-icon"></i></span><span>Operations Hub</span></a>
+                        @endif
                     </nav>
                 </div>
 
@@ -80,7 +99,9 @@
                         @if(auth()->user()->hasPermission('menu.view'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.menu.*') ? 'active' : '' }}" href="{{ route('admin.menu.index') }}" title="Menu"><span class="sidebar-icon-wrap"><i class="bi bi-card-list sidebar-icon"></i></span><span>Menu</span></a>
                         @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.meals') ? 'active' : '' }}" href="{{ route('admin.hubs.meals') }}" title="Meals Hub"><span class="sidebar-icon-wrap"><i class="bi bi-grid-3x3-gap sidebar-icon"></i></span><span>Meals Hub</span></a>
+                        @endif
                     </nav>
                 </div>
 
@@ -93,17 +114,27 @@
                         @if(auth()->user()->hasPermission('procurement.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.procurement.*') ? 'active' : '' }}" href="{{ route('admin.procurement.index') }}" title="Procurement"><span class="sidebar-icon-wrap"><i class="bi bi-truck sidebar-icon"></i></span><span>Procurement</span></a>
                         @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.inventory') ? 'active' : '' }}" href="{{ route('admin.hubs.inventory') }}" title="Inventory Hub"><span class="sidebar-icon-wrap"><i class="bi bi-boxes sidebar-icon"></i></span><span>Inventory Hub</span></a>
+                        @endif
                     </nav>
                 </div>
 
                 <div class="sb-group sidebar-group">
                     <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-finance" aria-expanded="{{ $financeOpen ? 'true' : 'false' }}" aria-controls="sidebar-finance">Billing & Finance <i class="bi {{ $financeOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
                     <nav class="nav flex-column gap-1 collapse {{ $financeOpen ? 'show' : '' }}" id="sidebar-finance">
+                        @if($isAdminCore || auth()->user()->hasPermission('billing.generate') || auth()->user()->hasPermission('billing.correct'))
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.billing.*') ? 'active' : '' }}" href="{{ route('admin.billing.index') }}" title="Billing"><span class="sidebar-icon-wrap"><i class="bi bi-receipt sidebar-icon"></i></span><span>Billing</span></a>
+                        @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.bill-publish.*') ? 'active' : '' }}" href="{{ route('admin.bill-publish.index') }}" title="Bill Publish"><span class="sidebar-icon-wrap"><i class="bi bi-send-check sidebar-icon"></i></span><span>Bill Publish</span></a>
+                        @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.mess-costing.*') ? 'active' : '' }}" href="{{ route('admin.mess-costing.index') }}" title="Mess Costing"><span class="sidebar-icon-wrap"><i class="bi bi-calculator sidebar-icon"></i></span><span>Mess Costing</span></a>
+                        @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.admin-mess-bill.*') ? 'active' : '' }}" href="{{ route('admin.admin-mess-bill.index') }}" title="Admin Mess Bill"><span class="sidebar-icon-wrap"><i class="bi bi-file-earmark-text sidebar-icon"></i></span><span>Admin Mess Bill</span></a>
+                        @endif
                         @if(auth()->user()->hasPermission('payments.view_admin'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}" title="Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>Payments</span></a>
                         @endif
@@ -135,7 +166,9 @@
                         @if(auth()->user()->hasPermission('report.export'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.exports.*') ? 'active' : '' }}" href="{{ route('admin.exports.index') }}" title="Export Center"><span class="sidebar-icon-wrap"><i class="bi bi-download sidebar-icon"></i></span><span>Export Center</span></a>
                         @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.reports') ? 'active' : '' }}" href="{{ route('admin.hubs.reports') }}" title="Reports Hub"><span class="sidebar-icon-wrap"><i class="bi bi-bar-chart-steps sidebar-icon"></i></span><span>Reports Hub</span></a>
+                        @endif
                     </nav>
                 </div>
 
@@ -151,12 +184,15 @@
                         @if(auth()->user()->hasPermission('audit.view'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.audit-log.*') ? 'active' : '' }}" href="{{ route('admin.audit-log.index') }}" title="Audit Log"><span class="sidebar-icon-wrap"><i class="bi bi-journal-check sidebar-icon"></i></span><span>Audit Log</span></a>
                         @endif
+                        @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}" href="{{ route('admin.announcements.index') }}" title="Announcements"><span class="sidebar-icon-wrap"><i class="bi bi-megaphone sidebar-icon"></i></span><span>Announcements</span></a>
+                        @endif
                         @if(auth()->user()->hasPermission('settings.dangerous'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}" title="Settings"><span class="sidebar-icon-wrap"><i class="bi bi-sliders sidebar-icon"></i></span><span>Settings</span></a>
                         @endif
                     </nav>
                 </div>
+                @endif
             @endif
         </div>
 

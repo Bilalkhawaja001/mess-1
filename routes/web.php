@@ -13,10 +13,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/password/force-change', [\App\Http\Controllers\Auth\ForcedPasswordChangeController::class, 'update'])
         ->name('password.force.update');
-
-    Route::post('/api/member/change-password', [\App\Http\Controllers\Auth\ForcedPasswordChangeController::class, 'apiUpdate'])
-        ->middleware(['throttle:10,1'])
-        ->name('api.member.change-password');
 });
 
 use App\Http\Controllers\Admin\AccountingController;
@@ -82,21 +78,28 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware(['auth'])-
 
 Route::get('/', function () {
     if (! auth()->check()) return redirect()->route('login');
-    return auth()->user()->isMemberRole() ? redirect()->route('member.dashboard') : redirect()->route('admin.dashboard');
+    $user = auth()->user();
+    if ($user->isMemberRole()) {
+        return redirect()->route('member.dashboard');
+    }
+    if (optional($user->role)->code === 'DATA_ENTRY') {
+        return redirect()->route('admin.attendance.index');
+    }
+    return redirect()->route('admin.dashboard');
 });
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::get('/api/app-settings', [ApiAppSettingsController::class, 'show'])->name('api.app-settings');
 Route::get('/ready', fn () => response()->json(['ready' => true]));
 
-Route::middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'])->group(function () {
+Route::middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,AUDITOR'])->group(function () {
     Route::get('/api/menus', [KitchenController::class, 'apiMenus'])->name('api.menus');
     Route::get('/api/guest-rate', [GuestController::class, 'guestRate'])->name('api.guest-rate');
     Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.legacy');
     Route::view('/prototype/sidebar', 'prototypes.sidebar')->name('prototype.sidebar');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password', 'data_entry_scope'])->group(function () {
     Route::get('/bill-publish', [\App\Http\Controllers\Admin\BillPublishController::class, 'index'])
         ->name('bill-publish.index');
     Route::post('/bill-publish', [\App\Http\Controllers\Admin\BillPublishController::class, 'store'])

@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\MemberEmailOtp;
 
 class MemberApiController extends Controller
 {
@@ -857,6 +859,199 @@ class MemberApiController extends Controller
     private function apiMoney(mixed $value): string
     {
         return number_format((float) $value, 2, '.', '');
+    }
+
+    /**
+     * Send a 6-digit email OTP to verify a member's email.
+     * Auth: member token (X-Member-Token). Body: { email }
+     */
+    public function requestEmailOtp(Request $request): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $payload = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:120'],
+        ]);
+        $email = strtolower(trim((string) $payload['email']));
+
+        // Email must not belong to a DIFFERENT member.
+        $takenBy = DB::table('users')
+            ->where('email', $email)
+            ->where('member_id', '!=', $row->member_id)
+            ->exists();
+        if ($takenBy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ye email pehle se registered hai.',
+            ], 422);
+        }
+
+        $now = now();
+        $windowStart = $now->copy()->subMinutes(10);
+
+        // Resend cap: max 3 in the last 10 minutes for this member.
+        $recentCount = DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->where('created_at', '>=', $windowStart)
+            ->count();
+        if ($recentCount >= 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bohot zyada koshishein. 10 minute baad dobara try karein.',
+            ], 429);
+        }
+
+        // Cooldown: 60s since last send.
+        $lastSent = DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->orderByDesc('id')
+            ->value('last_sent_at');
+        if ($lastSent && $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent)) < 60) {
+            $wait = 60 - $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent));
+            return response()->json([
+                'success' => false,
+                'message' => 'Thodi der baad dobara code bhej sakte hain.',
+                'resend_available_in' => $wait,
+            ], 429);
+        }
+
+        // Invalidate previous open OTPs for this member.
+        DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->where('status', 'SENT')
+            ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        DB::table('member_registration_otps')->insert([
+            'member_id'     => $row->member_id,
+            'email'         => $email,
+            'mobile_number' => null,
+            'otp_hash'      => hash('sha256', $otp),
+            'expires_at'    => $now->copy()->addMinutes(10),
+            'attempts'      => 0,
+            'resend_count'  => $recentCount,
+            'last_sent_at'  => $now,
+            'verified_at'   => null,
+            'status'        => 'SENT',
+            'ip_address'    => $request->ip(),
+            'user_agent'    => substr((string) $request->userAgent(), 0, 255),
+            'created_at'    => $now,
+            'updated_at'    => $now,
+        ]);
+
+        try {
+            Mail::to($email)->send(new MemberEmailOtp($otp, (string) ($row->name ?? ''), 10));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email bhejne me masla hua. Thodi der baad try karein.',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Verification code aap ki email par bhej diya gaya hai.',
+            'resend_available_in' => 60,
+        ]);
+    }
+
+    /**
+     * Verify a 6-digit email OTP and, on success, save the email to the user.
+     * Auth: member token (X-Member-Token). Body: { email, otp }
+     */
+    public function verifyEmailOtp(Request $request): JsonResponse
+    {
+        $row = $this->memberFromToken($request);
+        if (! $row) {
+            return $this->unauthenticated();
+        }
+
+        $payload = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:120'],
+            'otp'   => ['required', 'string'],
+        ]);
+        $email = strtolower(trim((string) $payload['email']));
+        $otp   = trim((string) $payload['otp']);
+
+        $now = now();
+
+        $record = DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->where('email', $email)
+            ->where('status', 'SENT')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Koi active code nahi mila. Naya code maangein.',
+            ], 422);
+        }
+
+        if (\Illuminate\Support\Carbon::parse($record->expires_at)->isPast()) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Code expire ho gaya. Naya code maangein.',
+            ], 422);
+        }
+
+        if ((int) $record->attempts >= 5) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Bohot ghalat koshishein. Naya code maangein.',
+            ], 429);
+        }
+
+        DB::table('member_registration_otps')
+            ->where('id', $record->id)
+            ->increment('attempts', 1, ['updated_at' => $now]);
+
+        if (! hash_equals((string) $record->otp_hash, hash('sha256', $otp))) {
+            $left = max(0, 5 - ((int) $record->attempts + 1));
+            return response()->json([
+                'success' => false,
+                'message' => 'Ghalat code. Dobara koshish karein.',
+                'attempts_left' => $left,
+            ], 422);
+        }
+
+        // Double-check email is not taken by another member (race safety).
+        $takenBy = DB::table('users')
+            ->where('email', $email)
+            ->where('member_id', '!=', $row->member_id)
+            ->exists();
+        if ($takenBy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ye email pehle se registered hai.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($record, $email, $row, $now) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->update(['status' => 'VERIFIED', 'verified_at' => $now, 'updated_at' => $now]);
+
+            DB::table('users')
+                ->where('id', $row->user_id)
+                ->update(['email' => $email, 'updated_at' => $now]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Email verify ho gayi.',
+        ]);
     }
 
     private function memberFromToken(Request $request): ?object

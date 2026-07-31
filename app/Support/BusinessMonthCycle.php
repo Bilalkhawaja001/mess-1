@@ -9,7 +9,7 @@ class BusinessMonthCycle
 {
     public static function resolve(string $monthCycle): array
     {
-        $month = Carbon::createFromFormat('Y-m', $monthCycle);
+        $month = Carbon::createFromFormat('!Y-m', $monthCycle);
         if (! $month || $month->format('Y-m') !== $monthCycle) {
             throw new InvalidArgumentException("Invalid month_cycle [{$monthCycle}]. Expected YYYY-MM.");
         }

@@ -3,13 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ResetMemberPasswordRequest;
 use App\Http\Requests\Members\StoreMemberRequest;
 use App\Http\Requests\Members\UpdateMemberRequest;
 use App\Models\Member;
 use App\Models\Mess;
 use App\Models\User;
+use App\Models\Role;
+use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -48,7 +54,7 @@ class MemberController extends Controller
 
     public function store(StoreMemberRequest $request): RedirectResponse
     {
-        Member::query()->create([
+        $member = Member::query()->create([
             'user_id' => $request->input('user_id') ?: null,
             'member_code' => $request->string('member_code')->toString(),
             'name' => $request->string('name')->toString(),
@@ -60,7 +66,31 @@ class MemberController extends Controller
             'is_active' => (bool) $request->boolean('is_active', true),
         ]);
 
-        return redirect()->route('admin.members.index')->with('success', 'Member created.');
+        $redirect = redirect()->route('admin.members.index')->with('success', 'Member created.');
+
+        // Auto-create a portal account with a temporary password (shown once).
+        if ($member->is_active && ! $member->user_id) {
+            $memberRole = Role::query()->where('code', 'MEMBER')->first();
+            if ($memberRole) {
+                $plainPassword = 'Mess-'.random_int(1000, 9999);
+                $user = User::query()->create([
+                    'role_id' => $memberRole->id,
+                    'member_id' => $member->id,
+                    'username' => $member->member_code,
+                    'name' => $member->name,
+                    'email' => strtolower($member->member_code).'@member.local',
+                    'password' => Hash::make($plainPassword),
+                    'is_active' => true,
+                    'must_change_password' => true,
+                ]);
+                $member->update(['user_id' => $user->id, 'portal_enabled' => true]);
+                $redirect->with('generated_password', $plainPassword)
+                         ->with('generated_for', $member->name)
+                         ->with('generated_username', $member->member_code);
+            }
+        }
+
+        return $redirect;
     }
 
     public function update(UpdateMemberRequest $request, Member $member): RedirectResponse
@@ -92,6 +122,60 @@ class MemberController extends Controller
         $member->save();
 
         return redirect()->route('admin.members.index')->with('success', 'Member status updated.');
+    }
+
+
+    public function resetPassword(ResetMemberPasswordRequest $request, Member $member): RedirectResponse
+    {
+        $admin = $request->user();
+        $targetUser = $member->user;
+
+        if (! $targetUser) {
+            return back()->with('error', 'No portal user is linked with this member.');
+        }
+
+        $dedupeKey = sprintf('member-password-reset:%d:%d:%s', $admin->id, $member->id, sha1((string) $request->string('new_password')));
+        if (! Cache::add($dedupeKey, true, now()->addMinute())) {
+            return back()->with('success', 'Member password reset already submitted. Member must change password on next login.');
+        }
+
+        try {
+            DB::transaction(function () use ($request, $member, $targetUser, $admin): void {
+                $targetUser->forceFill([
+                    'password' => Hash::make((string) $request->string('new_password')),
+                    'must_change_password' => true,
+                ])->save();
+
+                DB::table('member_password_reset_audits')->insert([
+                    'admin_user_id' => $admin->id,
+                    'target_member_id' => $member->id,
+                    'action' => 'password_reset',
+                    'created_at' => now(),
+                ]);
+
+                DB::table('audit_logs')->insert([
+                    'user_id' => $admin->id,
+                    'action' => 'password_reset',
+                    'entity_type' => Member::class,
+                    'entity_id' => $member->id,
+                    'route' => $request->path(),
+                    'ip_address' => $request->ip(),
+                    'after_state' => json_encode([
+                        'admin_user_id' => $admin->id,
+                        'target_member_id' => $member->id,
+                        'must_change_password' => true,
+                        'timestamp' => now()->toIso8601String(),
+                    ]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Cache::forget($dedupeKey);
+            throw $e;
+        }
+
+        return back()->with('success', 'Member password reset. Member must change password on next login.');
     }
 
     public function deactivate(Member $member): RedirectResponse

@@ -16,8 +16,8 @@ class CreateMemberAccountRequest extends FormRequest
     {
         return [
             'member_id' => ['required', 'exists:members,id'],
-            'email' => ['required', 'email:rfc,dns', 'max:120', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(10)->mixedCase()->letters()->numbers()->symbols()],
+            'email' => ['nullable', 'email:rfc,dns', 'max:120', 'unique:users,email'],
+            'password' => ['nullable', 'confirmed', Password::min(10)->mixedCase()->letters()->numbers()->symbols()],
             'force_password_change' => ['nullable', 'boolean'],
             'mark_mobile_verified' => ['nullable', 'boolean'],
         ];

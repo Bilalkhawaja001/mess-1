@@ -97,6 +97,15 @@
 @endpush
 
 @section('content')
+@if(session('generated_password'))
+<div class="alert alert-success shadow-sm" role="alert">
+    <strong>Account ban gaya - {{ session('generated_for') }}</strong><br>
+    Username: <code>{{ session('generated_username') }}</code><br>
+    Temporary Password: <code style="font-size:1.1rem;">{{ session('generated_password') }}</code>
+    <button type="button" class="btn btn-sm btn-outline-dark ms-2" onclick="navigator.clipboard.writeText('{{ session('generated_password') }}')">Copy</button>
+    <div class="small text-muted mt-1">Ye password sirf ab dikhega. Note kar lein - member pehli login par khud badlega.</div>
+</div>
+@endif
 <div class="mb-2 d-flex gap-2 flex-wrap">
     <a href="{{ route('admin.member-accounts.index') }}" class="btn btn-sm btn-outline-dark">Manage Member Portal Accounts</a>
     <a href="{{ route('admin.members.sample-csv') }}" class="btn btn-sm btn-outline-secondary">Download Sample CSV</a>

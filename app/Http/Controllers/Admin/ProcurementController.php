@@ -24,7 +24,7 @@ class ProcurementController extends Controller
 {
     public function index(Request $request)
     {
-        $vendors = Vendor::all();
+        $vendors = Vendor::where('is_active', true)->orderBy('name')->get();
         $items = Item::query()
             ->where('is_active', true)
             ->with('units')

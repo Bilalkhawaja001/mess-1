@@ -89,7 +89,7 @@ class PaymentTransactionService
                 if ($markSuccess) {
                     $bill = $this->duplicateGuard->lockBill((int) $payment->bill_id, (int) $payment->member_id);
                     $monthCycle = (string) $bill->month_cycle;
-                    $this->duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id);
+                    $this->duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id, (float) $payment->amount);
                     $this->duplicateGuard->applyGuardAttributes($payment, Payment::STATUS_SUCCESS, $monthCycle)->save();
                 }
 

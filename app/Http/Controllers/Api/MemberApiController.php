@@ -637,7 +637,7 @@ class MemberApiController extends Controller
                 $lockedBill = $duplicateGuard->lockBill((int) $bill->id, (int) $row->member_id);
                 $monthCycle = (string) $lockedBill->month_cycle;
 
-                $duplicateGuard->assertNoActiveDuplicate((int) $row->member_id, $monthCycle);
+                $duplicateGuard->assertNoActiveDuplicate((int) $row->member_id, $monthCycle, null, (float) $payload['amount']);
 
                 $path = $uploadedFile->store('member-payment-screenshots/'.now()->format('Y/m'), 'local');
 

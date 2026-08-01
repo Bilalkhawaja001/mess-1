@@ -207,6 +207,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
     });
     Route::middleware('permission:payments.override_status_admin')->group(function () {
         Route::post('/payments/{payment}/edit', [PaymentController::class, 'edit'])->name('payments.edit');
+        Route::post('/payments/{payment}/reverse', [PaymentController::class, 'reverse'])->name('payments.reverse');
     });
     Route::middleware('permission:payments.verify_admin')->group(function () {
         Route::post('/payments/{payment}/approve', [PaymentController::class, 'approve'])->name('payments.approve');

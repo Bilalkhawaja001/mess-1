@@ -73,7 +73,7 @@ class JazzCashController extends Controller
                 if ($status === Payment::STATUS_SUCCESS) {
                     $bill = $duplicateGuard->lockBill((int) $payment->bill_id, (int) $payment->member_id);
                     $monthCycle = (string) $bill->month_cycle;
-                    $duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id);
+                    $duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id, (float) $payment->amount);
                     $duplicateGuard->applyGuardAttributes($payment, Payment::STATUS_SUCCESS, $monthCycle);
                 }
 
@@ -184,7 +184,7 @@ class JazzCashController extends Controller
                 if ($status === Payment::STATUS_SUCCESS) {
                     $bill = $duplicateGuard->lockBill((int) $payment->bill_id, (int) $payment->member_id);
                     $monthCycle = (string) $bill->month_cycle;
-                    $duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id);
+                    $duplicateGuard->assertNoActiveDuplicate((int) $payment->member_id, $monthCycle, (int) $payment->id, (float) $payment->amount);
                     $duplicateGuard->applyGuardAttributes($payment, Payment::STATUS_SUCCESS, $monthCycle);
                 }
 

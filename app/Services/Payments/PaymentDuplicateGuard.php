@@ -9,17 +9,11 @@ use RuntimeException;
 
 class DuplicateActivePaymentException extends RuntimeException
 {
-    /**
-     * @param  array<int>  $paymentIds
-     */
     public function __construct(private readonly array $paymentIds)
     {
-        parent::__construct('Active payment already exists for this member/month. Existing Payment ID: '.$this->firstPaymentId());
+        parent::__construct('Active payment already exists for this member/month with the same amount. Existing Payment ID: '.$this->firstPaymentId());
     }
 
-    /**
-     * @return array<int>
-     */
     public function paymentIds(): array
     {
         return $this->paymentIds;
@@ -33,7 +27,7 @@ class DuplicateActivePaymentException extends RuntimeException
 
 class PaymentDuplicateGuard
 {
-    public const UNIQUE_INDEX_NAME = 'uq_payments_active_month_guard_key_v2';
+    public const UNIQUE_INDEX_NAME = 'uq_payments_active_month_guard_key_v3';
 
     public const ACTIVE_STATUSES = [
         Payment::STATUS_PENDING,
@@ -56,7 +50,7 @@ class PaymentDuplicateGuard
     /**
      * @return array<int>
      */
-    public function conflictingPaymentIds(int $memberId, string $monthCycle, ?int $excludePaymentId = null, bool $lockForUpdate = true): array
+    public function conflictingPaymentIds(int $memberId, string $monthCycle, ?int $excludePaymentId = null, bool $lockForUpdate = true, ?float $amount = null): array
     {
         $query = Payment::query()
             ->join('billings', 'payments.bill_id', '=', 'billings.id')
@@ -65,6 +59,10 @@ class PaymentDuplicateGuard
             ->whereIn('payments.status', self::ACTIVE_STATUSES)
             ->orderBy('payments.id')
             ->select('payments.id');
+
+        if ($amount !== null) {
+            $query->where('payments.amount', $amount);
+        }
 
         if ($excludePaymentId !== null) {
             $query->where('payments.id', '<>', $excludePaymentId);
@@ -80,9 +78,9 @@ class PaymentDuplicateGuard
             ->all();
     }
 
-    public function assertNoActiveDuplicate(int $memberId, string $monthCycle, ?int $excludePaymentId = null): void
+    public function assertNoActiveDuplicate(int $memberId, string $monthCycle, ?int $excludePaymentId = null, ?float $amount = null): void
     {
-        $conflicts = $this->conflictingPaymentIds($memberId, $monthCycle, $excludePaymentId, true);
+        $conflicts = $this->conflictingPaymentIds($memberId, $monthCycle, $excludePaymentId, true, $amount);
 
         if ($conflicts !== []) {
             throw new DuplicateActivePaymentException($conflicts);
@@ -95,15 +93,8 @@ class PaymentDuplicateGuard
      */
     public function withGuardAttributes(array $attributes, string $monthCycle): array
     {
-        $status = (string) ($attributes['status'] ?? '');
-
         $attributes['month_cycle'] = $monthCycle;
         $attributes['duplicate_guard_version'] = Payment::DUPLICATE_GUARD_VERSION;
-
-        if (in_array($status, self::ACTIVE_STATUSES, true)) {
-            $guardKey = self::guardKey((int) $attributes['member_id'], $monthCycle);
-        } else {
-        }
 
         return $attributes;
     }
@@ -112,11 +103,6 @@ class PaymentDuplicateGuard
     {
         $payment->month_cycle = $monthCycle;
         $payment->duplicate_guard_version = Payment::DUPLICATE_GUARD_VERSION;
-
-        if (in_array($status, self::ACTIVE_STATUSES, true)) {
-            $guardKey = self::guardKey((int) $payment->member_id, $monthCycle);
-        } else {
-        }
 
         return $payment;
     }

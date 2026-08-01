@@ -231,6 +231,14 @@
                   <button type="submit" style="border:none;background:none;color:#15803D;font-weight:600;font-size:12px;cursor:pointer">Approve</button>
                 </form>
               @endif
+              @if(in_array($r->status, ['APPROVED','RECONCILED','SUCCESS']))
+                <form method="POST" action="{{ route('admin.payments.reverse', $r) }}" style="display:inline"
+                      onsubmit="var rsn=prompt('Reverse payment of {{ number_format($r->amount,2) }} for {{ $r->member->member_code ?? '' }}?\n\nEnter reason (min 5 chars):'); if(rsn===null){return false;} if(rsn.trim().length<5){alert('Reason must be at least 5 characters.');return false;} this.reason.value=rsn; return true;">
+                  @csrf
+                  <input type="hidden" name="reason" value="">
+                  <button type="submit" style="border:none;background:none;color:#B91C1C;font-weight:600;font-size:12px;cursor:pointer;margin-left:10px">Reverse</button>
+                </form>
+              @endif
             </td>
           </tr>
         @empty

@@ -208,6 +208,7 @@ class StatementController extends Controller
                 'total_amount' => $bill->net_payable ?? (((float) $row->debit) > 0 ? $row->debit : (((float) $row->credit) * -1)),
                 'ref_type' => $refType,
                 'ref_id' => $row->ref_id,
+                'payment_status' => $payment->status ?? null,
                 'debit' => (float) $row->debit,
                 'credit' => (float) $row->credit,
                 'running_balance' => (float) $row->balance_after,

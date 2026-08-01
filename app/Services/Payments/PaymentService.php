@@ -28,7 +28,7 @@ class PaymentService
             $bill = $this->duplicateGuard->lockBill($billId, $memberId);
             $monthCycle = (string) $bill->month_cycle;
 
-            $this->duplicateGuard->assertNoActiveDuplicate($memberId, $monthCycle);
+            $this->duplicateGuard->assertNoActiveDuplicate($memberId, $monthCycle, null, $amount);
 
             $method = PaymentMethod::query()->findOrFail($methodId);
             $payment = Payment::query()->create($this->duplicateGuard->withGuardAttributes([

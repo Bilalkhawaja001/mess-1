@@ -158,7 +158,7 @@ class PaymentController extends Controller
         $filteredTotal = (float) $paymentRows->sum('amount');
         $activeTab = (string) $request->input('tab', 'awaiting');
 
-        return view('admin.payments.index', [
+        return view('admin.payments.index-v2', [
             'awaitingCount' => $awaitingCount,
             'awaitingAmount' => $awaitingAmount,
             'oldestAwaitingDays' => $oldestAwaitingDays,
@@ -204,7 +204,7 @@ class PaymentController extends Controller
                 $bill = $duplicateGuard->lockBill($billId, $memberId);
                 $monthCycle = (string) $bill->month_cycle;
 
-                $duplicateGuard->assertNoActiveDuplicate($memberId, $monthCycle);
+                $duplicateGuard->assertNoActiveDuplicate($memberId, $monthCycle, null, $amount);
 
                 $method = PaymentMethod::query()
                     ->whereKey($methodId)
@@ -436,7 +436,7 @@ class PaymentController extends Controller
                 $bill = $duplicateGuard->lockBill((int) $lockedPayment->bill_id, (int) $lockedPayment->member_id);
                 $monthCycle = (string) $bill->month_cycle;
 
-                $duplicateGuard->assertNoActiveDuplicate((int) $lockedPayment->member_id, $monthCycle, (int) $lockedPayment->id);
+                $duplicateGuard->assertNoActiveDuplicate((int) $lockedPayment->member_id, $monthCycle, (int) $lockedPayment->id, (float) $lockedPayment->amount);
                 $duplicateGuard->applyGuardAttributes($lockedPayment, Payment::STATUS_SUCCESS, $monthCycle)->save();
 
                 $lockedTxn = PaymentTransaction::query()->whereKey($txn->id)->lockForUpdate()->firstOrFail();
@@ -519,7 +519,7 @@ class PaymentController extends Controller
                 $bill = $duplicateGuard->lockBill((int) $lockedPayment->bill_id, (int) $lockedPayment->member_id);
                 $monthCycle = (string) $bill->month_cycle;
 
-                $duplicateGuard->assertNoActiveDuplicate((int) $lockedPayment->member_id, $monthCycle, (int) $lockedPayment->id);
+                $duplicateGuard->assertNoActiveDuplicate((int) $lockedPayment->member_id, $monthCycle, (int) $lockedPayment->id, (float) $lockedPayment->amount);
                 $duplicateGuard->applyGuardAttributes($lockedPayment, Payment::STATUS_RECONCILED, $monthCycle);
 
                 $existingLedger = MemberLedger::query()
@@ -659,4 +659,68 @@ class PaymentController extends Controller
 
         return back()->with('success', 'Reconciliation updated.');
     }
+
+    public function reverse(Payment $payment, PaymentDuplicateGuard $duplicateGuard): RedirectResponse
+    {
+        $data = request()->validate([
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+
+        if ($payment->status === Payment::STATUS_REVERSED) {
+            return back()->with('error', 'This payment is already reversed.');
+        }
+
+        $userId = (int) Auth::id();
+
+        try {
+            DB::transaction(function () use ($payment, $data, $userId) {
+                $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+                if ($lockedPayment->status === Payment::STATUS_REVERSED) {
+                    throw new \RuntimeException('This payment is already reversed.');
+                }
+
+                $alreadyReversed = MemberLedger::query()
+                    ->where('member_id', $lockedPayment->member_id)
+                    ->where('ref_type', 'PAYMENT_REVERSAL')
+                    ->where('ref_id', $lockedPayment->id)
+                    ->lockForUpdate()
+                    ->exists();
+                if ($alreadyReversed) {
+                    throw new \RuntimeException('A reversal entry already exists for this payment.');
+                }
+
+                $amount = (float) $lockedPayment->amount;
+
+                $lastBal = (float) (MemberLedger::query()
+                    ->where('member_id', $lockedPayment->member_id)
+                    ->orderByDesc('entry_date')
+                    ->orderByDesc('id')
+                    ->value('balance_after') ?? 0);
+
+                MemberLedger::query()->create([
+                    'member_id' => $lockedPayment->member_id,
+                    'entry_date' => now()->toDateString(),
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'ref_type' => 'PAYMENT_REVERSAL',
+                    'ref_id' => $lockedPayment->id,
+                    'balance_after' => round($lastBal + $amount, 2),
+                    'reason_code' => 'PAYMENT_REVERSAL',
+                    'posted_by_user_id' => $userId,
+                ]);
+
+                $lockedPayment->status = Payment::STATUS_REVERSED;
+                $lockedPayment->notes = trim((string) $lockedPayment->notes)
+                    . ' | REVERSED by user #' . $userId . ' on ' . now()->toDateTimeString()
+                    . '. Reason: ' . $data['reason'];
+                $lockedPayment->save();
+            });
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Reverse failed: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Payment reversed. You can now enter the correct payment.');
+    }
+
 }

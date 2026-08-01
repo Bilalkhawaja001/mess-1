@@ -1,439 +1,190 @@
 @extends('layouts.app')
-
 @section('content')
-{{-- PAYMENT_DATE_STATEMENT_20260615 --}}
-<div class="container-fluid py-2 compact-statement-page">
-    <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.statement.index') }}" class="statement-filter-grid">
-                {{-- MESS_STATEMENT_MEMBER_LOOKUP_PATCH_V1 --}}
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">Member Lookup</label>
-                    <input
-                        type="text"
-                        name="member_lookup"
-                        value="{{ $memberLookup ?? '' }}"
-                        class="form-control"
-                        list="statementMemberLookupList"
-                        placeholder="Member ID / Name / Department / Mobile"
-                        autocomplete="off"
-                    >
-                    <datalist id="statementMemberLookupList">
-                        @foreach(($memberLookupSuggestions ?? $members) as $m)
-                            <option value="{{ $m->member_code }} - {{ $m->name }}">
-                                {{ $m->department_name ?? '' }} @if(!empty($m->mobile_number)) | {{ $m->mobile_number }} @endif
-                            </option>
-                        @endforeach
-                    </datalist>
-                    @if(($memberLookupNoResults ?? false))
-                        <div class="text-danger small mt-1">No matching member found.</div>
-                    @endif
-                </div>
-
-<div class="col-md-2">
-                    <label class="form-label fw-semibold">Single Month</label>
-                    <input type="month" name="single_month" value="{{ $singleMonth }}" class="form-control">
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">From Month</label>
-                    <input type="month" name="from_month" value="{{ $fromMonth }}" class="form-control">
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">To Month</label>
-                    <input type="month" name="to_month" value="{{ $toMonth }}" class="form-control">
-                </div>
-
-                <div class="col-md-3 d-flex gap-2 flex-wrap">
-                    <button class="btn btn-secondary flex-fill" type="submit">View</button>
-                    <button class="btn btn-success flex-fill" type="submit" name="export" value="csv">Excel</button>
-                    <a class="btn btn-outline-secondary flex-fill" href="{{ route('admin.statement.index') }}">Clear</a>
-                </div>
-
-                <div class="col-md-2">
-                    <button type="button" onclick="printStatementOnly()" class="btn btn-primary w-100">Print Statement</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="statement-print mx-auto bg-white border rounded shadow-sm p-2" style="max-width: 1080px;">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-            <div>
-                <h3 class="mb-1 fw-bold">Mess Statement</h3>
-                <div class="text-muted">Member Account Statement</div>
-            </div>
-            <div class="text-muted small">Generated: {{ now()->format('Y-m-d') }}</div>
-        </div>
-
-        <hr>
-
-        <div class="row small fw-semibold mb-2">
-            <div class="col-md-2">Member ID:</div>
-            <div class="col-md-4 fw-normal">{{ $member->member_code ?? '-' }}</div>
-            <div class="col-md-2">Name:</div>
-            <div class="col-md-4 fw-normal">{{ $member->name ?? '-' }}</div>
-        </div>
-
-        <div class="row small fw-semibold mb-2">
-            <div class="col-md-2">Department:</div>
-            <div class="col-md-4 fw-normal">{{ $member->department_name ?? '-' }}</div>
-            <div class="col-md-2">Mess:</div>
-            <div class="col-md-4 fw-normal">{{ $messName }}</div>
-        </div>
-
-        <div class="row small fw-semibold mb-2">
-            <div class="col-md-2">Join Date:</div>
-            <div class="col-md-4 fw-normal">{{ $member->join_date ?? '-' }}</div>
-            <div class="col-md-2">Leave Date:</div>
-            <div class="col-md-4 fw-normal">{{ $member->leave_date ?? '-' }}</div>
-        </div>
-
-        <div class="row small fw-semibold mb-3">
-            <div class="col-md-2">Statement Month:</div>
-            <div class="col-md-10 fw-normal">{{ $fromMonth }} to {{ $toMonth }}</div>
-        </div>
-
-        <div class="row g-2 mb-3">
-            <div class="col-md-3">
-                <div class="border rounded p-2">
-                    <div class="text-muted">Opening Balance</div>
-                    <div class="h5 mb-0 fw-bold">{{ number_format($openingBalance, 2) }}</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="border rounded p-2">
-                    <div class="text-muted">Total Debit</div>
-                    <div class="h5 mb-0 fw-bold">{{ number_format($totalDebit, 2) }}</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="border rounded p-2">
-                    <div class="text-muted">Total Credit</div>
-                    <div class="h5 mb-0 fw-bold">{{ number_format($totalCredit, 2) }}</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="border rounded p-2">
-                    <div class="text-muted">Closing Balance</div>
-                    <div class="h5 mb-0 fw-bold">{{ number_format($closingBalance, 2) }}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="table-responsive">
-
-<table class="table table-sm table-bordered align-middle statement-table-compact">
-                <thead class="table-light">
-                    <tr>
-                        <th>Month</th>
-                        <th>Pay Date</th>
-                        <th>Days</th>
-                        <th>Rate/Day</th>
-                        <th>Amount</th>
-                        <th>Ref Type</th>
-                        <th>Ref ID</th>
-                        <th>Debit</th>
-                        <th>Credit</th>
-                        <th>Balance</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($rows as $row)
-                        <tr>
-                            <td>{{ $row->month }}</td>
-                            <td>{{ $row->payment_date ?? '' }}</td>
-                            <td>{{ $row->days }}</td>
-                            <td>{{ $row->rate_per_day !== '' ? number_format((float) $row->rate_per_day, 2) : '' }}</td>
-                            <td>{{ number_format((float) $row->total_amount, 2) }}</td>
-                            <td>{{ $row->ref_type }}</td>
-                            <td>{{ $row->ref_id }}</td>
-                            <td>{{ number_format((float) $row->debit, 2) }}</td>
-                            <td>{{ number_format((float) $row->credit, 2) }}</td>
-                            <td>{{ number_format((float) $row->running_balance, 2) }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="text-center text-muted py-4">No statement rows found.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div class="text-center text-muted small mt-3">
-            This is a system-generated statement and does not require any signature or stamp.
-        </div>
-    </div>
-</div>
-
-
-
+{{-- STATEMENT_REDESIGN_V2_20260801 --}}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
-/* STATEMENT_SCREEN_AND_PRINT_CLEAN_20260615 */
+.stm-wrap{--bg:#FAF9F7;--ink:#1A1815;--ink2:#6B6560;--ink3:#9C9691;--line:#E9E5E0;--line2:#F2EFEB;--card:#FFFFFF;--accent:#8B5E34;--green:#166534;--red:#B4231F;--hover:#FBF9F6;background:var(--bg);font-family:'Inter',system-ui,sans-serif;color:var(--ink);padding:20px 0 48px;-webkit-font-smoothing:antialiased}
+.stm-wrap *{box-sizing:border-box}
+.stm-wrap .stm-shell{max-width:100%;margin:0;padding:0 32px;display:flex;flex-direction:column;gap:18px}
+.stm-wrap .stm-num{font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
 
-/* Screen compact layout */
-.compact-statement-page .card-body {
-    padding: 0.65rem 0.85rem;
-}
+/* toolbar */
+.stm-wrap .stm-bar{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+.stm-wrap .stm-field{display:flex;flex-direction:column;gap:6px}
+.stm-wrap .stm-field.grow{flex:1;min-width:220px}
+.stm-wrap .stm-lbl{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.stm-wrap .stm-in{height:38px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13.5px;color:var(--ink);outline:none;transition:border-color .15s}
+.stm-wrap .stm-in:focus{border-color:var(--accent)}
+.stm-wrap .stm-in[type=month]{min-width:150px}
+.stm-wrap .stm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.stm-wrap .stm-btn{height:38px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s;text-decoration:none}
+.stm-wrap .stm-btn-primary{background:var(--ink);color:#fff}
+.stm-wrap .stm-btn-primary:hover{background:#000}
+.stm-wrap .stm-btn-green{background:var(--green);color:#fff}
+.stm-wrap .stm-btn-green:hover{filter:brightness(.92)}
+.stm-wrap .stm-btn-ghost{background:#fff;color:var(--ink2);border-color:var(--line)}
+.stm-wrap .stm-btn-ghost:hover{background:var(--hover)}
 
-.statement-print {
-    font-size: 12px;
-    line-height: 1.25;
-}
+/* statement sheet */
+.stm-wrap .stm-sheet{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stm-wrap .stm-accent{height:3px;background:linear-gradient(90deg,var(--accent),#C89B6A)}
+.stm-wrap .stm-body{padding:32px 36px}
+.stm-wrap .stm-head{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.stm-wrap .stm-title{font-size:21px;font-weight:700;letter-spacing:-.01em;margin:0}
+.stm-wrap .stm-sub{font-size:12.5px;color:var(--ink2);margin-top:3px}
+.stm-wrap .stm-gen{font-size:11.5px;color:var(--ink3)}
 
-.statement-print h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.15rem !important;
-}
+/* member grid */
+.stm-wrap .stm-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 28px;padding:24px 0;border-bottom:1px solid var(--line)}
+.stm-wrap .stm-meta .k{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.stm-wrap .stm-meta .v{font-size:14px;font-weight:500;color:var(--ink)}
 
-.statement-print hr {
-    margin: 0.45rem 0;
-}
+/* kpi strip */
+.stm-wrap .stm-kpis{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:24px 0}
+.stm-wrap .stm-kpi{padding:16px 18px;border-right:1px solid var(--line)}
+.stm-wrap .stm-kpi:last-child{border-right:none;background:#FBFAF8}
+.stm-wrap .stm-kpi .k{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px}
+.stm-wrap .stm-kpi .val{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.stm-wrap .stm-kpi.neg .val{color:var(--red)}
 
-.statement-print .mb-3 {
-    margin-bottom: 0.55rem !important;
-}
+/* table */
+.stm-wrap .stm-tbl-wrap{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stm-wrap table.stm-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.stm-wrap .stm-tbl thead th{background:#FBFAF8;padding:11px 14px;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);text-align:left;border-bottom:1px solid var(--line)}
+.stm-wrap .stm-tbl thead th.r{text-align:right}
+.stm-wrap .stm-tbl tbody td{padding:11px 14px;border-bottom:1px solid var(--line2);color:var(--ink);vertical-align:middle}
+.stm-wrap .stm-tbl tbody td.r{text-align:right}
+.stm-wrap .stm-tbl tbody tr:last-child td{border-bottom:none}
+.stm-wrap .stm-tbl tbody tr:hover td{background:var(--hover)}
+.stm-wrap .stm-muted{color:var(--ink3)}
+.stm-wrap .stm-pill{display:inline-block;padding:2px 9px;border-radius:100px;font-size:11px;font-weight:600;background:#F2EFEB;color:var(--ink2)}
+.stm-wrap .stm-pill.pay{background:#EAF3EC;color:var(--green)}
+.stm-wrap .stm-rev{border:none;background:none;color:var(--red);font-size:11px;font-weight:600;cursor:pointer;padding:0;margin-left:8px;text-decoration:underline;text-underline-offset:2px}
+.stm-wrap .stm-empty{padding:48px;text-align:center;color:var(--ink3);font-size:13.5px}
 
-.statement-print .mb-2 {
-    margin-bottom: 0.35rem !important;
-}
+.stm-wrap .stm-foot{text-align:center;padding-top:20px;margin-top:24px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink3)}
+@media(max-width:820px){.stm-wrap .stm-meta{grid-template-columns:repeat(2,1fr)}.stm-wrap .stm-kpis{grid-template-columns:repeat(2,1fr)}.stm-wrap .stm-kpi:nth-child(2){border-right:none}.stm-wrap .stm-body{padding:22px}}
 
-.statement-print .p-2 {
-    padding: 0.35rem !important;
-}
-
-.statement-print .h5 {
-    font-size: 0.95rem;
-}
-
-.statement-table-compact {
-    font-size: 11px;
-    margin-bottom: 0;
-    width: 100%;
-}
-
-.statement-table-compact th,
-.statement-table-compact td {
-    padding: 0.18rem 0.28rem !important;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-
-.statement-table-compact th {
-    font-size: 10.5px;
-    font-weight: 700;
-}
-
-/* Print: same as screen, A4 portrait, no duplicate/conflicting rules */
-@media print {
-    @page {
-        size: A4 portrait;
-        margin: 5mm;
-    }
-
-    html,
-    body {
-        background: #ffffff !important;
-        width: 210mm !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-    }
-
-    body {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    nav,
-    header,
-    footer,
-    aside,
-    form,
-    .sidebar,
-    .navbar,
-    .topbar,
-    .btn,
-    .compact-statement-page > .card {
-        display: none !important;
-    }
-
-    main,
-    .content,
-    .content-wrapper,
-    .main-content,
-    .page-content,
-    .app-content,
-    .container,
-    .container-fluid,
-    .compact-statement-page {
-        width: 200mm !important;
-        max-width: 200mm !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-        overflow: visible !important;
-    }
-
-    .statement-print {
-        display: block !important;
-        position: static !important;
-        width: 200mm !important;
-        max-width: 200mm !important;
-        margin: 0 auto !important;
-        padding: 3mm !important;
-        box-sizing: border-box !important;
-        border: 1px solid #d8dee8 !important;
-        border-radius: 3px !important;
-        box-shadow: none !important;
-        background: #ffffff !important;
-        color: #111827 !important;
-        font-size: 7.7px !important;
-        line-height: 1.18 !important;
-    }
-
-    .statement-print h3 {
-        font-size: 13px !important;
-        line-height: 1.15 !important;
-        margin: 0 0 4px 0 !important;
-        font-weight: 700 !important;
-    }
-
-    .statement-print .text-muted {
-        color: #53657f !important;
-    }
-
-    .statement-print hr {
-        margin: 5px 0 !important;
-        border-color: #b9c3d0 !important;
-    }
-
-    .statement-print .row {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-    }
-
-    .statement-print .col-md-2 {
-        flex: 0 0 16.666666% !important;
-        max-width: 16.666666% !important;
-        width: 16.666666% !important;
-    }
-
-    .statement-print .col-md-3 {
-        flex: 0 0 25% !important;
-        max-width: 25% !important;
-        width: 25% !important;
-    }
-
-    .statement-print .col-md-4 {
-        flex: 0 0 33.333333% !important;
-        max-width: 33.333333% !important;
-        width: 33.333333% !important;
-    }
-
-    .statement-print .col-md-10 {
-        flex: 0 0 83.333333% !important;
-        max-width: 83.333333% !important;
-        width: 83.333333% !important;
-    }
-
-    .statement-print .mb-3 {
-        margin-bottom: 5px !important;
-    }
-
-    .statement-print .mb-2 {
-        margin-bottom: 3px !important;
-    }
-
-    .statement-print .g-2 {
-        --bs-gutter-x: 4px !important;
-        --bs-gutter-y: 4px !important;
-    }
-
-    .statement-print .border.rounded.p-2 {
-        padding: 3px 5px !important;
-        border: 1px solid #d8dee8 !important;
-        border-radius: 3px !important;
-    }
-
-    .statement-print .h5 {
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        margin: 0 !important;
-    }
-
-    .statement-print .table-responsive {
-        width: 100% !important;
-        overflow: visible !important;
-    }
-
-    .statement-table-compact {
-        width: 100% !important;
-        table-layout: fixed !important;
-        border-collapse: collapse !important;
-        font-size: 7.3px !important;
-        margin: 0 !important;
-    }
-
-    .statement-table-compact th,
-    .statement-table-compact td {
-        padding: 2.1px 2.3px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: clip !important;
-        vertical-align: middle !important;
-        border: 1px solid #cfd6df !important;
-    }
-
-    .statement-table-compact th {
-        font-size: 7.1px !important;
-        font-weight: 700 !important;
-        color: #53657f !important;
-        background: #f3f6f9 !important;
-        letter-spacing: 0.15px !important;
-    }
-
-    .statement-table-compact th:nth-child(1),
-    .statement-table-compact td:nth-child(1) { width: 8.5% !important; }
-
-    .statement-table-compact th:nth-child(2),
-    .statement-table-compact td:nth-child(2) { width: 12% !important; }
-
-    .statement-table-compact th:nth-child(3),
-    .statement-table-compact td:nth-child(3) { width: 5.5% !important; }
-
-    .statement-table-compact th:nth-child(4),
-    .statement-table-compact td:nth-child(4) { width: 9.5% !important; }
-
-    .statement-table-compact th:nth-child(5),
-    .statement-table-compact td:nth-child(5) { width: 11.5% !important; }
-
-    .statement-table-compact th:nth-child(6),
-    .statement-table-compact td:nth-child(6) { width: 15% !important; }
-
-    .statement-table-compact th:nth-child(7),
-    .statement-table-compact td:nth-child(7) { width: 7% !important; }
-
-    .statement-table-compact th:nth-child(8),
-    .statement-table-compact td:nth-child(8) { width: 9% !important; }
-
-    .statement-table-compact th:nth-child(9),
-    .statement-table-compact td:nth-child(9) { width: 10% !important; }
-
-    .statement-table-compact th:nth-child(10),
-    .statement-table-compact td:nth-child(10) { width: 12% !important; }
-
-    .text-center.text-muted.small.mt-3 {
-        margin-top: 6px !important;
-        font-size: 6.5px !important;
-    }
-}
+/* FILTER_BALANCE_20260801 */
+.stm-wrap .stm-field.grow{flex:0 0 260px;min-width:260px;max-width:260px}
+.stm-wrap .stm-actions{gap:10px}
+.stm-wrap .stm-actions .stm-btn{height:38px;padding:0 22px;font-size:13.5px;min-width:96px;justify-content:center}
+/* FILTER_BALANCE_20260801 */
+.stm-wrap .stm-field.grow{flex:0 0 260px;min-width:260px;max-width:260px}
+.stm-wrap .stm-actions{gap:10px}
+.stm-wrap .stm-actions .stm-btn{height:38px;padding:0 22px;font-size:13.5px;min-width:96px;justify-content:center}
+/* COMPACT_TUNE_20260801 */
+.stm-wrap{padding:12px 0 28px}
+.stm-wrap .stm-shell{gap:12px}
+.stm-wrap .stm-bar{padding:12px 14px;gap:12px}
+.stm-wrap .stm-in{height:34px;font-size:13px}
+.stm-wrap .stm-btn{height:34px;padding:0 13px;font-size:12.5px}
+.stm-wrap .stm-body{padding:20px 24px}
+.stm-wrap .stm-head{padding-bottom:14px}
+.stm-wrap .stm-title{font-size:18px}
+.stm-wrap .stm-meta{gap:12px 24px;padding:16px 0}
+.stm-wrap .stm-meta .v{font-size:13px}
+.stm-wrap .stm-kpis{margin:16px 0}
+.stm-wrap .stm-kpi{padding:11px 14px}
+.stm-wrap .stm-kpi .val{font-size:17px}
+.stm-wrap .stm-kpi .k{margin-bottom:5px}
+.stm-wrap .stm-tbl thead th{padding:8px 12px}
+.stm-wrap .stm-tbl tbody td{padding:7px 12px;font-size:12.5px}
+.stm-wrap .stm-foot{padding-top:14px;margin-top:16px}
 </style>
 
+<div class="stm-wrap compact-statement-page">
+  <div class="stm-shell">
+
+    {{-- Toolbar --}}
+    <form method="GET" action="{{ route('admin.statement.index') }}" class="stm-bar statement-filter-grid">
+      <div class="stm-field grow">
+        <label class="stm-lbl" for="member_lookup">Member Lookup</label>
+        <input class="stm-in" id="member_lookup" name="member_lookup" list="statementMemberLookupList" placeholder="Member ID / Name / Department / Mobile" autocomplete="off" type="text" value="{{ $memberLookup ?? '' }}"/>
+        <datalist id="statementMemberLookupList">
+          @foreach(($memberLookupSuggestions ?? $members) as $m)
+            <option value="{{ $m->member_code }} - {{ $m->name }}">{{ $m->department_name ?? '' }} @if(!empty($m->mobile_number)) | {{ $m->mobile_number }} @endif</option>
+          @endforeach
+        </datalist>
+        @if(($memberLookupNoResults ?? false))<span class="stm-lbl" style="color:var(--red)">No matching member found.</span>@endif
+      </div>
+      <div class="stm-field"><label class="stm-lbl" for="single_month">Single Month</label><input class="stm-in" id="single_month" name="single_month" type="month" value="{{ $singleMonth }}"/></div>
+      <div class="stm-field"><label class="stm-lbl" for="from_month">From Month</label><input class="stm-in" id="from_month" name="from_month" type="month" value="{{ $fromMonth }}"/></div>
+      <div class="stm-field"><label class="stm-lbl" for="to_month">To Month</label><input class="stm-in" id="to_month" name="to_month" type="month" value="{{ $toMonth }}"/></div>
+      <div class="stm-actions">
+        <button class="stm-btn stm-btn-primary" type="submit">View</button>
+        <button class="stm-btn stm-btn-green" name="export" value="csv" type="submit">Excel</button>
+        <a class="stm-btn stm-btn-ghost" href="{{ route('admin.statement.index') }}">Clear</a>
+        <button class="stm-btn stm-btn-primary" onclick="printStatementOnly()" type="button">Print</button>
+      </div>
+    </form>
+
+    {{-- Statement Sheet --}}
+    <div class="stm-sheet statement-print">
+      <div class="stm-accent"></div>
+      <div class="stm-body">
+
+        <div class="stm-head">
+          <div>
+            <h1 class="stm-title">Mess Statement</h1>
+            <div class="stm-sub">Member Account Statement</div>
+          </div>
+          <div class="stm-gen">Generated: {{ now()->format('Y-m-d') }}</div>
+        </div>
+
+        <div class="stm-meta">
+          <div><div class="k">Member ID</div><div class="v">{{ $member->member_code ?? '-' }}</div></div>
+          <div><div class="k">Name</div><div class="v">{{ $member->name ?? '-' }}</div></div>
+          <div><div class="k">Department</div><div class="v">{{ $member->department_name ?? '-' }}</div></div>
+          <div><div class="k">Mess</div><div class="v">{{ $messName }}</div></div>
+          <div><div class="k">Join Date</div><div class="v">{{ $member->join_date ?? '-' }}</div></div>
+          <div><div class="k">Leave Date</div><div class="v">{{ $member->leave_date ?? '-' }}</div></div>
+          <div style="grid-column:1/-1"><div class="k">Statement Period</div><div class="v">{{ $fromMonth }} &nbsp;to&nbsp; {{ $toMonth }}</div></div>
+        </div>
+
+        <div class="stm-kpis">
+          <div class="stm-kpi"><div class="k">Opening Balance</div><div class="val stm-num">{{ number_format($openingBalance, 2) }}</div></div>
+          <div class="stm-kpi"><div class="k">Total Debit</div><div class="val stm-num">{{ number_format($totalDebit, 2) }}</div></div>
+          <div class="stm-kpi"><div class="k">Total Credit</div><div class="val stm-num">{{ number_format($totalCredit, 2) }}</div></div>
+          <div class="stm-kpi {{ $closingBalance < 0 ? 'neg' : '' }}"><div class="k">Closing Balance</div><div class="val stm-num">{{ number_format($closingBalance, 2) }}</div></div>
+        </div>
+
+        <div class="stm-tbl-wrap">
+          <table class="stm-tbl statement-table-compact">
+            <thead>
+              <tr>
+                <th>Month</th><th>Pay Date</th><th class="r">Days</th><th class="r">Rate/Day</th>
+                <th class="r">Amount</th><th>Ref Type</th><th>Ref ID</th>
+                <th class="r">Debit</th><th class="r">Credit</th><th class="r">Balance</th>
+              </tr>
+            </thead>
+            <tbody class="stm-num">
+              @forelse($rows as $row)
+              <tr>
+                <td>{{ $row->month }}</td>
+                <td class="stm-muted">{{ $row->payment_date !== '' ? $row->payment_date : '—' }}</td>
+                <td class="r">{{ $row->days !== '' ? $row->days : '—' }}</td>
+                <td class="r">{{ $row->rate_per_day !== '' ? number_format((float) $row->rate_per_day, 2) : '—' }}</td>
+                <td class="r">{{ number_format((float) $row->total_amount, 2) }}</td>
+                <td><span class="stm-pill {{ $row->ref_type === 'PAYMENT' ? 'pay' : '' }}">{{ $row->ref_type }}</span></td>
+                <td>{{ $row->ref_id }}@if($row->ref_type === 'PAYMENT' && in_array($row->payment_status, ['APPROVED','RECONCILED','SUCCESS']))<form method="POST" action="{{ route('admin.payments.reverse', $row->ref_id) }}" style="display:inline" onsubmit="var rsn=prompt('Reverse payment #{{ $row->ref_id }} (amount {{ number_format((float) $row->credit, 2) }})?\n\nEnter reason (min 5 chars):'); if(rsn===null){return false;} if(rsn.trim().length<5){alert('Reason must be at least 5 characters.');return false;} this.reason.value=rsn; return true;">@csrf<input type="hidden" name="reason" value=""><button type="submit" class="stm-rev">Reverse</button></form>@endif</td>
+                <td class="r">{{ (float) $row->debit > 0 ? number_format((float) $row->debit, 2) : '—' }}</td>
+                <td class="r">{{ (float) $row->credit > 0 ? number_format((float) $row->credit, 2) : '—' }}</td>
+                <td class="r">{{ number_format((float) $row->running_balance, 2) }}</td>
+              </tr>
+              @empty
+              <tr><td colspan="10" class="stm-empty">No statement rows found.</td></tr>
+              @endforelse
+            </tbody>
+          </table>
+        </div>
+
+        <div class="stm-foot">This is a system-generated statement and does not require any signature or stamp.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <script>
 /* SAFE_STATEMENT_PRINT_WINDOW_20260615 */
@@ -581,108 +332,4 @@ window.onload = function () {
     printWindow.document.close();
 }
 </script>
-
-{{-- MESS_STATEMENT_MEMBER_LOOKUP_UI_V1 --}}
-<style>
-.compact-statement-page > .card {
-    max-width: 1424px;
-    margin-left: auto;
-    margin-right: auto;
-    border-radius: 16px;
-}
-
-.statement-filter-grid {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 10px 12px;
-    align-items: end;
-}
-
-.statement-filter-grid > [class*="col-"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-
-.statement-filter-grid > :nth-child(1) { grid-column: span 4; order: 1; }
-.statement-filter-grid > :nth-child(2) { grid-column: span 2; order: 2; }
-.statement-filter-grid > :nth-child(3) { grid-column: span 2; order: 3; }
-.statement-filter-grid > :nth-child(4) { grid-column: span 2; order: 4; }
-.statement-filter-grid > :nth-child(6) { grid-column: span 2; order: 5; }
-.statement-filter-grid > :nth-child(5) { grid-column: span 4; order: 6; }
-
-.statement-filter-grid .form-label {
-    font-size: 12px;
-    margin-bottom: 4px;
-    color: #334155;
-}
-
-.statement-filter-grid .form-control,
-.statement-filter-grid .form-select {
-    height: 38px;
-    min-height: 38px;
-    font-size: 14px;
-    border-radius: 10px;
-}
-
-.statement-filter-grid .text-danger.small {
-    font-size: 12px;
-    margin-top: 4px;
-}
-
-.statement-filter-grid .btn {
-    height: 38px;
-    min-height: 38px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.statement-filter-grid > :nth-child(5) {
-    display: flex !important;
-    gap: 8px !important;
-    flex-wrap: nowrap !important;
-}
-
-.statement-filter-grid > :nth-child(5) .btn {
-    min-width: 96px;
-}
-
-.statement-filter-grid > :nth-child(6) .btn {
-    width: 100%;
-}
-
-.statement-print {
-    margin-top: 12px !important;
-}
-
-@media (max-width: 1199.98px) {
-    .statement-filter-grid > :nth-child(1) { grid-column: span 6; }
-    .statement-filter-grid > :nth-child(2),
-    .statement-filter-grid > :nth-child(3),
-    .statement-filter-grid > :nth-child(4) { grid-column: span 2; }
-    .statement-filter-grid > :nth-child(5),
-    .statement-filter-grid > :nth-child(6) { grid-column: span 6; }
-}
-
-@media (max-width: 767.98px) {
-    .statement-filter-grid > * {
-        grid-column: 1 / -1 !important;
-    }
-
-    .statement-filter-grid > :nth-child(5) {
-        flex-wrap: wrap !important;
-    }
-
-    .statement-filter-grid > :nth-child(5) .btn {
-        flex: 1 1 120px;
-    }
-}
-</style>
-{{-- /MESS_STATEMENT_MEMBER_LOOKUP_UI_V1 --}}
-
 @endsection

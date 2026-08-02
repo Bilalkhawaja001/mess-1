@@ -432,5 +432,11 @@ document.addEventListener("keydown",function(e){
     }, 350);
   });
 })();
+
+/* Move payment modal to body to prevent container clipping/freeze */
+(function(){
+  var m=document.getElementById('pv2Modal');
+  if(m && m.parentNode!==document.body){ document.body.appendChild(m); }
+})();
 </script>
 @endsection

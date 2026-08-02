@@ -25,7 +25,15 @@ class MonthlyAttendanceController extends Controller
         $start = $cycle['cycle_start_date'];
         $end = $cycle['cycle_end_date'];
 
-        $members = Member::query()->where('is_active', true)->orderBy('member_code')->get();
+        $members = Member::query()
+            ->where(function ($q) use ($start) {
+                $q->where('is_active', true)
+                  ->orWhereDate('leave_date', '>=', $start);
+            })
+            ->where(function ($q) use ($end) {
+                $q->whereNull('join_date')->orWhereDate('join_date', '<=', $end);
+            })
+            ->orderBy('member_code')->get();
         $snap = MonthlyAttendance::query()->where('month_cycle', $monthCycle)->get()->keyBy('member_id');
         $monthCards = $this->buildMonthCards($monthCycle);
 

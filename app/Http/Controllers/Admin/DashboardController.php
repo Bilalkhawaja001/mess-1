@@ -23,16 +23,27 @@ class DashboardController extends Controller
     {
         $availableCycles = $this->availableCycles();
         $dashboardMonthCycle = trim((string) $request->query('dashboard_month_cycle', $availableCycles[0] ?? BusinessMonthCycle::defaultDashboardMonthCycle()));
-        if (! preg_match('/^\d{4}-\d{2}$/', $dashboardMonthCycle)) {
+        if ($dashboardMonthCycle !== 'all' && ! preg_match('/^\d{4}-\d{2}$/', $dashboardMonthCycle)) {
             $dashboardMonthCycle = $availableCycles[0] ?? BusinessMonthCycle::defaultDashboardMonthCycle();
         }
 
-        $cycle = BusinessMonthCycle::resolve($dashboardMonthCycle);
+        $isOverall = ($dashboardMonthCycle === 'all');
+        $cycle = $isOverall ? null : BusinessMonthCycle::resolve($dashboardMonthCycle);
         $previousMonthCycle = $this->previousCycle($dashboardMonthCycle, $availableCycles);
 
         $billable = $this->billableForCycle($dashboardMonthCycle);
         $collected = $this->collectedForCycle($dashboardMonthCycle);
-        $outstanding = round($billable - $collected, 2);
+        if ($isOverall) {
+            // Overall: use ledger due (sum of positive member balances) for authentic recovery figure.
+            $memberBalances = \App\Models\MemberLedger::query()
+                ->selectRaw('member_id, SUM(debit) - SUM(credit) as bal')
+                ->groupBy('member_id')
+                ->havingRaw('SUM(debit) - SUM(credit) > 0.0001')
+                ->pluck('bal');
+            $outstanding = round((float) $memberBalances->sum(), 2);
+        } else {
+            $outstanding = round($billable - $collected, 2);
+        }
         $recoveryRatio = $billable > 0 ? min(100, ($collected / $billable) * 100) : 0;
 
         $previousBillable = $previousMonthCycle ? $this->billableForCycle($previousMonthCycle) : 0.0;
@@ -43,16 +54,16 @@ class DashboardController extends Controller
         $pendingStatuses = [Payment::STATUS_PENDING, Payment::STATUS_INITIATED, Payment::STATUS_RECONCILIATION_PENDING];
         $pendingPayments = Payment::query()
             ->join('billings', 'billings.id', '=', 'payments.bill_id')
-            ->where('billings.month_cycle', $dashboardMonthCycle)
+            ->when(! $isOverall, fn ($q) => $q->where('billings.month_cycle', $dashboardMonthCycle))
             ->whereIn('payments.status', $pendingStatuses)
             ->count();
         $pendingAmount = (float) Payment::query()
             ->join('billings', 'billings.id', '=', 'payments.bill_id')
-            ->where('billings.month_cycle', $dashboardMonthCycle)
+            ->when(! $isOverall, fn ($q) => $q->where('billings.month_cycle', $dashboardMonthCycle))
             ->whereIn('payments.status', $pendingStatuses)
             ->sum('payments.amount');
 
-        $dashboardCategoryCards = $this->buildDashboardCategoryCards($dashboardMonthCycle);
+        $dashboardCategoryCards = $isOverall ? [] : $this->buildDashboardCategoryCards($dashboardMonthCycle);
         $categoryTotal = array_sum(array_map(fn ($row) => (float) ($row['total_expenses'] ?? 0), $dashboardCategoryCards));
 
         $trendRows = $this->buildExpenseTrendRows();
@@ -62,13 +73,13 @@ class DashboardController extends Controller
             ? round((($selectedCycleTotalExpense - $previousCycleTotalExpense) / $previousCycleTotalExpense) * 100, 1)
             : null;
 
-        $cycleRecord = BillingCycle::query()->where('month_cycle', $dashboardMonthCycle)->first();
+        $cycleRecord = $isOverall ? null : BillingCycle::query()->where('month_cycle', $dashboardMonthCycle)->first();
         $lowStock = $this->lowStockSnapshot();
         $health = $this->buildHealthSnapshot($recoveryRatio, $pendingAmount, $billable, $cycleRecord, $lowStock);
         $alerts = $this->buildAlerts($dashboardMonthCycle, $outstanding, $pendingPayments, $pendingAmount, $lowStock, $expenseDeltaPercent, $cycleRecord);
 
         $activeMembers = Member::query()->where('is_active', true)->count();
-        $billableMembers = Billing::query()->where('month_cycle', $dashboardMonthCycle)->distinct('member_id')->count('member_id');
+        $billableMembers = Billing::query()->when(! $isOverall, fn ($q) => $q->where('month_cycle', $dashboardMonthCycle))->distinct('member_id')->count('member_id');
         $avgBillPerMember = $billableMembers > 0 ? $billable / $billableMembers : 0;
 
         $stats = [
@@ -90,7 +101,7 @@ class DashboardController extends Controller
             'recovery_delta' => $recoveryDelta,
             'available_cycles' => $availableCycles,
             'dashboard_month_cycle' => $dashboardMonthCycle,
-            'cycle_range_label' => $cycle['cycle_start']->format('d M Y') . ' to ' . $cycle['cycle_end']->format('d M Y'),
+            'cycle_range_label' => $isOverall ? 'All Cycles (Overall)' : ($cycle['cycle_start']->format('d M Y') . ' to ' . $cycle['cycle_end']->format('d M Y')),
             'cycle_record' => $cycleRecord,
             'dashboard_category_cards' => $dashboardCategoryCards,
             'category_total' => $categoryTotal,
@@ -124,7 +135,10 @@ class DashboardController extends Controller
 
     private function billableForCycle(string $monthCycle): float
     {
-        return (float) Billing::query()->where('month_cycle', $monthCycle)->sum('net_payable');
+        return (float) Billing::query()
+            ->when($monthCycle !== 'all', fn ($q) => $q->where('month_cycle', $monthCycle))
+            ->when($monthCycle === 'all', fn ($q) => $q->where('month_cycle', '>=', '2026-04'))
+            ->sum('net_payable');
     }
 
     private function collectedForCycle(string $monthCycle): float
@@ -133,7 +147,8 @@ class DashboardController extends Controller
 
         return (float) Payment::query()
             ->join('billings', 'billings.id', '=', 'payments.bill_id')
-            ->where('billings.month_cycle', $monthCycle)
+            ->when($monthCycle !== 'all', fn ($q) => $q->where('billings.month_cycle', $monthCycle))
+            ->when($monthCycle === 'all', fn ($q) => $q->where('billings.month_cycle', '>=', '2026-04'))
             ->whereIn('payments.status', $paidStatuses)
             ->sum(DB::raw('GREATEST(payments.amount - COALESCE(payments.refunded_amount, 0) - COALESCE(payments.reversed_amount, 0), 0)'));
     }
@@ -181,6 +196,10 @@ class DashboardController extends Controller
     private function expenseTotalForCycle(string $monthCycle): float
     {
         $billingsTotal = $this->billableForCycle($monthCycle);
+        if ($monthCycle === 'all') {
+            $guestTotal = (float) GuestMeal::query()->whereNotNull('approved_at')->whereDate('meal_date', '>=', '2026-03-26')->sum('amount');
+            return round($billingsTotal + $guestTotal, 2);
+        }
         $cycle = BusinessMonthCycle::resolve($monthCycle);
         $guestTotal = (float) GuestMeal::query()
             ->whereNotNull('approved_at')

@@ -164,8 +164,21 @@
 <div class="card shadow-sm members-page-card">
     <div class="card-header">Members List</div>
     <div class="card-body">
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link {{ ($status ?? 'active') !== 'inactive' ? 'active' : '' }}" href="{{ route('admin.members.index', ['status' => 'active', 'q' => $q]) }}">
+                    Active <span class="badge bg-success">{{ $activeCount ?? 0 }}</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ ($status ?? '') === 'inactive' ? 'active' : '' }}" href="{{ route('admin.members.index', ['status' => 'inactive', 'q' => $q]) }}">
+                    Inactive <span class="badge bg-secondary">{{ $inactiveCount ?? 0 }}</span>
+                </a>
+            </li>
+        </ul>
         <form method="GET" action="{{ route('admin.members.index') }}" class="row g-2 align-items-end mb-3">
-            <div class="col-md-5">
+            <input type="hidden" name="status" value="{{ $status ?? 'active' }}">
+                        <div class="col-md-5">
                 <label class="form-label">Search Member</label>
                 <input type="text" name="q" value="{{ $q ?? '' }}" class="form-control" placeholder="Search by member code, name, department, or mobile">
             </div>

@@ -24,9 +24,14 @@ class MemberController extends Controller
     public function index(Request $request): View
     {
         $q = trim((string) $request->input('q', ''));
+        $status = $request->input('status', 'active');
+        $activeCount = Member::query()->where('is_active', true)->count();
+        $inactiveCount = Member::query()->where('is_active', false)->count();
 
         $rows = Member::query()
             ->with(['user', 'mess'])
+            ->when($status === 'inactive', fn ($query) => $query->where('is_active', false))
+            ->when($status !== 'inactive', fn ($query) => $query->where('is_active', true))
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($inner) use ($q) {
                     $inner->where('member_code', 'like', "%{$q}%")
@@ -49,7 +54,7 @@ class MemberController extends Controller
             ],
         ]);
 
-        return view('admin.members.index', compact('rows', 'users', 'messes', 'removalMeta', 'q'));
+        return view('admin.members.index', compact('rows', 'users', 'messes', 'removalMeta', 'q', 'status', 'activeCount', 'inactiveCount'));
     }
 
     public function store(StoreMemberRequest $request): RedirectResponse

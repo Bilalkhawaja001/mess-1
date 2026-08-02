@@ -55,8 +55,13 @@
             <span class="whitecmd-icon blue"><i class="bi bi-calendar3"></i></span>
             <div>
                 <small>Cycle</small>
-                <strong>{{ $cycleLabel }}</strong>
-                <em>Active Cycle</em>
+                <strong>{{ $stats['dashboard_month_cycle'] === 'all' ? 'Overall' : $cycleLabel }}</strong>
+                <select onchange="window.location.href='{{ route('admin.dashboard') }}?dashboard_month_cycle='+this.value" style="margin-top:4px;font-size:12px;padding:2px 6px;border-radius:6px;border:1px solid #ccc;">
+                    <option value="all" {{ $stats['dashboard_month_cycle'] === 'all' ? 'selected' : '' }}>Overall (All Cycles)</option>
+                    @foreach(($stats['available_cycles'] ?? []) as $cyc)
+                        <option value="{{ $cyc }}" {{ $stats['dashboard_month_cycle'] === $cyc ? 'selected' : '' }}>{{ $cyc }}</option>
+                    @endforeach
+                </select>
             </div>
             <b style="--bar:#2f7cff"></b>
         </article>

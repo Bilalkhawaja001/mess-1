@@ -90,7 +90,7 @@ class ForcedPasswordChangeController extends Controller
         }
 
         $user->forceFill([
-            'password' => Hash::make((string) $payload['new_password']),
+            'password' => (string) $payload['new_password'],
             'must_change_password' => false,
             'password_changed_at' => now(),
         ])->save();

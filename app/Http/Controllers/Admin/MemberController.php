@@ -84,7 +84,7 @@ class MemberController extends Controller
                     'username' => $member->member_code,
                     'name' => $member->name,
                     'email' => strtolower($member->member_code).'@member.local',
-                    'password' => Hash::make($plainPassword),
+                    'password' => $plainPassword,
                     'is_active' => true,
                     'must_change_password' => true,
                 ]);
@@ -147,7 +147,7 @@ class MemberController extends Controller
         try {
             DB::transaction(function () use ($request, $member, $targetUser, $admin): void {
                 $targetUser->forceFill([
-                    'password' => Hash::make((string) $request->string('new_password')),
+                    'password' => (string) $request->string('new_password'),
                     'must_change_password' => true,
                 ])->save();
 

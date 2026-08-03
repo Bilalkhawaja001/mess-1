@@ -423,6 +423,52 @@ class GuestController extends Controller
             ->with('success', "Approved {$count} guest meal(s) for selected date range.");
     }
 
+    public function printReport(Request $request)
+    {
+        $fromDate = trim((string) $request->query("from_date", ""));
+        $toDate = trim((string) $request->query("to_date", ""));
+
+        $reportQuery = GuestMeal::query()
+            ->with(["guest"])
+            ->orderBy("meal_date")
+            ->orderBy("guest_id")
+            ->orderBy("meal_type")
+            ->orderBy("id");
+
+        if ($fromDate !== "") {
+            $reportQuery->whereDate("meal_date", ">=", $fromDate);
+        }
+        if ($toDate !== "") {
+            $reportQuery->whereDate("meal_date", "<=", $toDate);
+        }
+
+        $rows = $reportQuery->limit(1000)->get()->map(function (GuestMeal $meal) {
+            [$rate, $amount, $rateMissing, $rateError] = $this->dynamicRatePayload($meal);
+            $meal->rate_display = $meal->approved_at
+                ? (float) ($meal->rate_applied ?: $meal->rate ?: $rate)
+                : $rate;
+            $meal->amount_display = $meal->approved_at
+                ? (float) ($meal->amount ?: $amount)
+                : $amount;
+            $meal->rate_missing = $rateMissing;
+            return $meal;
+        });
+
+        $grandTotal = round((float) $rows->sum(function (GuestMeal $meal) {
+            return $meal->rate_missing ? 0 : (float) ($meal->amount_display ?? 0);
+        }), 2);
+        $qtyTotal = round((float) $rows->sum(fn (GuestMeal $meal) => (float) ($meal->quantity ?? 0)), 2);
+
+        return view("admin.guests.print", [
+            "rows" => $rows,
+            "fromDate" => $fromDate,
+            "toDate" => $toDate,
+            "grandTotal" => $grandTotal,
+            "qtyTotal" => $qtyTotal,
+            "rowsPerPage" => 13,
+        ]);
+    }
+
     public function exportMeals(Request $request): StreamedResponse
     {
         $from = trim((string) $request->query('from', ''));

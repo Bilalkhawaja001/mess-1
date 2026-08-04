@@ -31,10 +31,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response, \Throwable $e, \Illuminate\Http\Request $request) {
             if ($response->getStatusCode() === 429) {
-                $message = 'Too many attempts, please wait 1 minute and try again.';
+                $message = 'Too many attempts. Please wait a minute and try again.';
 
-                if ($request->expectsJson()) {
-                    return response()->json(['message' => $message], 429);
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => $message,
+                        'retry_after' => 60,
+                    ], 429);
                 }
 
                 return back()->with('error', $message);

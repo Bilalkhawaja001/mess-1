@@ -88,7 +88,7 @@ class MemberApiController extends Controller
         if (! $row || ! Hash::check((string) $payload['password'], (string) $row->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials',
+                'message' => 'Incorrect password. Please try again.',
             ], 401);
         }
 
@@ -1043,15 +1043,285 @@ class MemberApiController extends Controller
                 ->where('id', $record->id)
                 ->update(['status' => 'VERIFIED', 'verified_at' => $now, 'updated_at' => $now]);
 
+            $userUpdate = [
+                'email' => $email,
+                'updated_at' => $now,
+            ];
+            if ($this->usersHaveEmailVerifiedAt()) {
+                $userUpdate['email_verified_at'] = $now;
+            }
+
             DB::table('users')
                 ->where('id', $row->user_id)
-                ->update(['email' => $email, 'updated_at' => $now]);
+                ->update($userUpdate);
         });
 
         return response()->json([
             'success' => true,
             'message' => 'Email verify ho gayi.',
         ]);
+    }
+
+    /**
+     * Public forgot-password: send reset OTP only when email is deliverable + verified.
+     * Body: { identifier } (member code / email / username / mobile)
+     */
+    public function forgotPasswordRequest(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'identifier' => ['required', 'string', 'max:120'],
+        ]);
+
+        $row = $this->findMemberUserByIdentifier(trim((string) $payload['identifier']));
+        if (! $row || ! $this->isPasswordResetEligible($row)) {
+            return $this->passwordResetNotEligible();
+        }
+
+        $email = strtolower(trim((string) $row->email));
+        $now = now();
+        $windowStart = $now->copy()->subMinutes(10);
+
+        $recentCount = DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->where('created_at', '>=', $windowStart)
+            ->count();
+        if ($recentCount >= 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many attempts. Please wait a minute and try again.',
+                'retry_after' => 600,
+                'resend_available_in' => 600,
+            ], 429);
+        }
+
+        $lastSent = DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->orderByDesc('id')
+            ->value('last_sent_at');
+        if ($lastSent && $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent)) < 60) {
+            $wait = 60 - $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent));
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many attempts. Please wait a minute and try again.',
+                'retry_after' => $wait,
+                'resend_available_in' => $wait,
+            ], 429);
+        }
+
+        DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->where('status', 'SENT')
+            ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        DB::table('member_registration_otps')->insert([
+            'member_id' => $row->member_id,
+            'email' => $email,
+            'mobile_number' => null,
+            'otp_hash' => hash('sha256', $otp),
+            'expires_at' => $now->copy()->addMinutes(10),
+            'attempts' => 0,
+            'resend_count' => $recentCount,
+            'last_sent_at' => $now,
+            'verified_at' => null,
+            'status' => 'SENT',
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        try {
+            Mail::to($email)->send(new MemberEmailOtp($otp, (string) ($row->name ?? ''), 10));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong. Please try again later.',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'eligible' => true,
+            'message' => 'Reset code sent to your email.',
+            'resend_available_in' => 60,
+        ]);
+    }
+
+    /**
+     * Public forgot-password: verify OTP and set a new password.
+     * Body: { identifier, otp, password, password_confirmation }
+     */
+    public function forgotPasswordReset(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'identifier' => ['required', 'string', 'max:120'],
+            'otp' => ['required', 'string', 'max:12'],
+            'password' => ['required', 'string', 'min:6', 'max:255', 'confirmed'],
+        ]);
+
+        $row = $this->findMemberUserByIdentifier(trim((string) $payload['identifier']));
+        if (! $row || ! $this->isPasswordResetEligible($row)) {
+            return $this->passwordResetNotEligible();
+        }
+
+        $email = strtolower(trim((string) $row->email));
+        $otp = trim((string) $payload['otp']);
+        $now = now();
+
+        $record = DB::table('member_registration_otps')
+            ->where('member_id', $row->member_id)
+            ->where('email', $email)
+            ->where('status', 'SENT')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active code found. Please request a new code.',
+            ], 422);
+        }
+
+        if (\Illuminate\Support\Carbon::parse($record->expires_at)->isPast()) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Code expired. Please request a new code.',
+            ], 422);
+        }
+
+        if ((int) $record->attempts >= 5) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many attempts. Please wait a minute and try again.',
+                'retry_after' => 60,
+            ], 429);
+        }
+
+        DB::table('member_registration_otps')
+            ->where('id', $record->id)
+            ->increment('attempts', 1, ['updated_at' => $now]);
+
+        if (! hash_equals((string) $record->otp_hash, hash('sha256', $otp))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect code. Please try again.',
+            ], 422);
+        }
+
+        if (Hash::check((string) $payload['password'], (string) $row->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'New password must be different from current password.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($record, $row, $payload, $now) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->update(['status' => 'VERIFIED', 'verified_at' => $now, 'updated_at' => $now]);
+
+            DB::table('users')
+                ->where('id', $row->user_id)
+                ->update([
+                    'password' => Hash::make((string) $payload['password']),
+                    'must_change_password' => 0,
+                    'password_changed_at' => $now,
+                    'remember_token' => null,
+                    'updated_at' => $now,
+                ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password updated. Please sign in.',
+        ]);
+    }
+
+    private function findMemberUserByIdentifier(string $login): ?object
+    {
+        if ($login === '') {
+            return null;
+        }
+
+        return DB::table('users')
+            ->join('members', 'members.id', '=', 'users.member_id')
+            ->leftJoin('messes', 'messes.id', '=', 'members.mess_id')
+            ->where(function ($q) use ($login) {
+                $q->where('users.username', $login)
+                    ->orWhere('users.email', $login)
+                    ->orWhere('members.member_code', $login)
+                    ->orWhere('members.mobile_number', $login);
+            })
+            ->select(array_values(array_filter([
+                'users.id as user_id',
+                'users.email',
+                'users.password',
+                $this->usersHaveEmailVerifiedAt() ? 'users.email_verified_at' : null,
+                'users.must_change_password',
+                'users.is_active as user_is_active',
+                'users.member_id as user_member_id',
+                'members.id as member_id',
+                'members.member_code',
+                'members.name',
+                'members.mobile_number',
+                'members.mess_id',
+                'members.department_name',
+                'members.is_active as member_is_active',
+                'messes.name as mess_name',
+            ])))
+            ->first();
+    }
+
+    private function isPasswordResetEligible(object $row): bool
+    {
+        if (! (bool) ($row->user_is_active ?? false) || ! (bool) ($row->member_is_active ?? false)) {
+            return false;
+        }
+
+        $email = trim((string) ($row->email ?? ''));
+        if ($email === '' || str_ends_with(strtolower($email), '@member.local')) {
+            return false;
+        }
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return false;
+        }
+
+        // Only enforce verified flag when the column exists in this database.
+        if ($this->usersHaveEmailVerifiedAt() && empty($row->email_verified_at)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function usersHaveEmailVerifiedAt(): bool
+    {
+        static $hasColumn = null;
+        if ($hasColumn === null) {
+            $hasColumn = \Illuminate\Support\Facades\Schema::hasColumn('users', 'email_verified_at');
+        }
+
+        return (bool) $hasColumn;
+    }
+
+    private function passwordResetNotEligible(): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'eligible' => false,
+            'message' => 'Your email is not verified or not in our system. Please contact the administrator.',
+        ], 422);
     }
 
     private function memberFromToken(Request $request): ?object

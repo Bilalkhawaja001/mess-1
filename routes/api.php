@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\MemberApiController;
 
 Route::prefix('member')->group(function () {
     Route::post('/login', [MemberApiController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/forgot-password/request', [MemberApiController::class, 'forgotPasswordRequest'])->middleware('throttle:3,1');
+    Route::post('/forgot-password/reset', [MemberApiController::class, 'forgotPasswordReset'])->middleware('throttle:5,1');
 
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/profile', [MemberApiController::class, 'profile']);

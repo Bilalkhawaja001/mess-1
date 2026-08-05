@@ -225,7 +225,7 @@
             </td>
             <td style="padding:9px 16px;border-bottom:1px solid #F0EEEC;vertical-align:middle;text-align:right" onclick="event.stopPropagation()">
               @if(in_array($r->status, ['PENDING','RECONCILIATION_PENDING']))
-                <form method="POST" action="{{ route('admin.payments.approve', $r) }}" style="display:inline" class="approve-mini"
+                <form method="POST" action="{{ $r->status === 'RECONCILIATION_PENDING' ? route('admin.payments.approve-uploaded-proof', $r) : route('admin.payments.approve', $r) }}" style="display:inline" class="approve-mini"
                       onsubmit="return confirm('Approve payment of {{ number_format($r->amount,2) }} for {{ $r->member->member_code ?? '' }}?')">
                   @csrf
                   <button type="submit" style="border:none;background:none;color:#15803D;font-weight:600;font-size:12px;cursor:pointer">Approve</button>

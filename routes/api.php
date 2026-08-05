@@ -4,13 +4,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MemberApiController;
 
 Route::prefix('member')->group(function () {
-    Route::post('/login', [MemberApiController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/login', [MemberApiController::class, 'login'])->middleware('throttle:120,1');
     Route::post('/forgot-password/request', [MemberApiController::class, 'forgotPasswordRequest'])->middleware('throttle:3,1');
-    Route::post('/forgot-password/reset', [MemberApiController::class, 'forgotPasswordReset'])->middleware('throttle:5,1');
+    Route::post('/forgot-password/reset', [MemberApiController::class, 'forgotPasswordReset'])->middleware('throttle:120,1');
 
-    Route::middleware('throttle:60,1')->group(function () {
+    Route::middleware('throttle:600,1')->group(function () {
         Route::get('/profile', [MemberApiController::class, 'profile']);
-        Route::post('/change-password', [MemberApiController::class, 'changePassword'])->middleware('throttle:5,1');
+        Route::post('/change-password', [MemberApiController::class, 'changePassword'])->middleware('throttle:120,1');
         Route::post('/email/request-otp', [MemberApiController::class, 'requestEmailOtp'])->middleware('throttle:6,1');
         Route::post('/email/verify-otp', [MemberApiController::class, 'verifyEmailOtp'])->middleware('throttle:10,1');
         Route::post('/profile/change-requests', [MemberApiController::class, 'storeProfileChangeRequest'])->middleware('throttle:10,1');

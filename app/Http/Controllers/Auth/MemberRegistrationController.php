@@ -60,7 +60,7 @@ class MemberRegistrationController extends Controller
 
         return view('auth.member-registration.verify', [
             'maskedMobile' => $this->otpService->maskMobile($otp->mobile_number),
-            'cooldownSeconds' => max(0, (int) config('member_registration.otp.resend_cooldown_seconds', 60) - now()->diffInSeconds($otp->last_sent_at)),
+            'cooldownSeconds' => max(0, (int) config('member_registration.otp.resend_cooldown_seconds', 60) - $otp->last_sent_at->diffInSeconds(now())),
         ]);
     }
 
@@ -93,7 +93,7 @@ class MemberRegistrationController extends Controller
         }
 
         $cooldown = (int) config('member_registration.otp.resend_cooldown_seconds', 60);
-        if (now()->diffInSeconds($otp->last_sent_at) < $cooldown) {
+        if ($otp->last_sent_at->diffInSeconds(now()) < $cooldown) {
             return back()->with('error', 'Please wait before requesting another OTP.');
         }
 

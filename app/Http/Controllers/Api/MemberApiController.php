@@ -909,8 +909,8 @@ class MemberApiController extends Controller
             ->where('member_id', $row->member_id)
             ->orderByDesc('id')
             ->value('last_sent_at');
-        if ($lastSent && $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent)) < 60) {
-            $wait = 60 - $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent));
+        if ($lastSent && \Illuminate\Support\Carbon::parse($lastSent)->diffInSeconds($now) < 60) {
+            $wait = 60 - \Illuminate\Support\Carbon::parse($lastSent)->diffInSeconds($now);
             return response()->json([
                 'success' => false,
                 'message' => 'Thodi der baad dobara code bhej sakte hain.',
@@ -1098,8 +1098,8 @@ class MemberApiController extends Controller
             ->where('member_id', $row->member_id)
             ->orderByDesc('id')
             ->value('last_sent_at');
-        if ($lastSent && $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent)) < 60) {
-            $wait = 60 - $now->diffInSeconds(\Illuminate\Support\Carbon::parse($lastSent));
+        if ($lastSent && \Illuminate\Support\Carbon::parse($lastSent)->diffInSeconds($now) < 60) {
+            $wait = 60 - \Illuminate\Support\Carbon::parse($lastSent)->diffInSeconds($now);
 
             return response()->json([
                 'success' => false,

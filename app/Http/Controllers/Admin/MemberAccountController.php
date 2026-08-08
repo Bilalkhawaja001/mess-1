@@ -54,7 +54,7 @@ class MemberAccountController extends Controller
             'username' => $member->member_code,
             'name' => $member->name,
             'email' => $email,
-            'password' => \Illuminate\Support\Facades\Hash::make($plainPassword),
+            'password' => $plainPassword,
             'is_active' => true,
             'must_change_password' => $forceChange,
         ]);
@@ -114,7 +114,7 @@ class MemberAccountController extends Controller
             return back()->with('error', 'No account linked with this member.');
         }
 
-        $tempPassword = Str::password(12);
+        $tempPassword = 'Mess-'.random_int(1000, 9999);
         $member->user->update([
             'password' => $tempPassword,
             'is_active' => true,

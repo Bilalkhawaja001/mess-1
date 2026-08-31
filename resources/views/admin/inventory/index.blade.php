@@ -381,6 +381,7 @@
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Items</h5>
                             <span class="badge bg-secondary">{{ $items->count() }} items</span>
+                            <a href="{{ route('admin.inventory.items.export') }}" class="btn btn-sm btn-outline-primary">Export Items List</a>
                         </div>
                         <div class="card-body table-responsive">
                             <table class="table table-sm table-striped align-middle">

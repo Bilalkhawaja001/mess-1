@@ -92,6 +92,56 @@ Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::get('/api/app-settings', [ApiAppSettingsController::class, 'show'])->name('api.app-settings');
 Route::get('/ready', fn () => response()->json(['ready' => true]));
 
+Route::get('/api/whatsapp/webhook', function (\Illuminate\Http\Request $request) {
+    $mode = $request->query('hub_mode') ?? $request->query('hub.mode');
+    $token = $request->query('hub_verify_token') ?? $request->query('hub.verify_token');
+    $challenge = $request->query('hub_challenge') ?? $request->query('hub.challenge');
+    $configuredToken = (string) config('services.whatsapp.verify_token');
+
+    if (
+        $mode === 'subscribe' &&
+        $configuredToken !== '' &&
+        hash_equals($configuredToken, (string) $token)
+    ) {
+        return response((string) $challenge, 200)
+            ->header('Content-Type', 'text/plain');
+    }
+
+    abort(403, 'Invalid verification token.');
+})->name('whatsapp.webhook.verify');
+
+Route::post('/api/whatsapp/webhook', function (\Illuminate\Http\Request $request) {
+    $appSecret = (string) config('services.whatsapp.app_secret');
+    $providedSignature = (string) $request->header('X-Hub-Signature-256', '');
+
+    if ($appSecret === '' || $providedSignature === '') {
+        abort(403, 'Missing webhook signature.');
+    }
+
+    $expectedSignature = 'sha256='.hash_hmac(
+        'sha256',
+        $request->getContent(),
+        $appSecret
+    );
+
+    if (!hash_equals($expectedSignature, $providedSignature)) {
+        abort(403, 'Invalid webhook signature.');
+    }
+
+    $payload = $request->json()->all();
+
+    \Illuminate\Support\Facades\Log::info('WhatsApp webhook accepted', [
+        'object' => $payload['object'] ?? null,
+        'entry_count' => is_array($payload['entry'] ?? null)
+            ? count($payload['entry'])
+            : 0,
+    ]);
+
+    return response()->json(['status' => 'received']);
+})->withoutMiddleware([
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+])->name('whatsapp.webhook.receive');
+
 Route::middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN,AUDITOR'])->group(function () {
     Route::get('/api/menus', [KitchenController::class, 'apiMenus'])->name('api.menus');
     Route::get('/api/guest-rate', [GuestController::class, 'guestRate'])->name('api.guest-rate');
@@ -249,6 +299,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::post('/inventory/vendor-returns', [InventoryController::class, 'storeVendorReturn'])->name('inventory.vendor-returns.store');
         Route::post('/inventory/items/import', [InventoryController::class, 'importItems'])->name('inventory.items.import');
         Route::get('/inventory/stock-ledger/export', [InventoryController::class, 'exportStockLedger'])->name('inventory.stock-ledger.export');
+        Route::get('/inventory/items/export', [InventoryController::class, 'exportItems'])->name('inventory.items.export');
         Route::post('/inventory/stock-counts', [InventoryController::class, 'storeStockCount'])->name('inventory.stock-counts.store');
         Route::get('/inventory/stock-counts/{stockCount}', [InventoryController::class, 'showStockCount'])->name('inventory.stock-counts.show');
         Route::post('/inventory/stock-counts/{stockCount}/post', [InventoryController::class, 'postStockCount'])->name('inventory.stock-counts.post');

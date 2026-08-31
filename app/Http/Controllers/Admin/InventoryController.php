@@ -952,4 +952,32 @@ class InventoryController extends Controller
     {
         return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'y'], true);
     }
+
+    public function exportItems()
+    {
+        $rows = $this->inventoryService->stockBalances();
+
+        $csv = "\xEF\xBB\xBF";
+        $csv .= "Item ID,SKU,Item Name,Category,UOM,Current Stock,Reorder Level,Status\n";
+
+        foreach ($rows as $row) {
+            $item = $row['item'];
+            $line = [
+                $item->id,
+                $item->sku,
+                $item->name,
+                $item->category ?? '',
+                $item->uom,
+                number_format((float) $row['balance'], 3, '.', ''),
+                number_format((float) $item->reorder_level, 3, '.', ''),
+                $item->is_active ? 'Active' : 'Inactive',
+            ];
+            $csv .= implode(',', array_map(fn ($v) => '"' . str_replace('"', '""', (string) $v) . '"', $line)) . "\n";
+        }
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="inventory-items-' . now()->format('Y-m-d') . '.csv"',
+        ]);
+    }
 }

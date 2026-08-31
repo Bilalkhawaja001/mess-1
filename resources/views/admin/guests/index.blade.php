@@ -187,9 +187,9 @@
             <div class="col-lg-4 col-md-6 col-12">
                 <label class="form-label">Guest</label>
                 <select name="guest_id" class="form-select guest-control js-guest-meal-search" required>
-                    <option value="">Select guest</option>
+                    <option value=""></option>
                     @foreach($guests as $guest)
-                        <option value="{{ $guest->id }}">{{ $guest->name ?? "Guest" }} ? {{ $guest->came_from ?? "-" }} ? {{ $guest->guest_code ?? "" }}</option>
+                        <option value="{{ $guest->id }}">{{ $guest->name ?? "Guest" }} · {{ $guest->came_from ?? "-" }} · {{ $guest->guest_code ?? "" }}</option>
                     @endforeach
                 </select>
             </div>
@@ -910,6 +910,7 @@ document.addEventListener('DOMContentLoaded', function () {
             allowEmptyOption: true,
             maxOptions: 1000,
             searchField: ['text'],
+            dropdownParent: 'body',
             placeholder: 'Search guest by name, company/came from, or code'
         });
     });

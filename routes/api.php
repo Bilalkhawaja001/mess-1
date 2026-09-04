@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MemberApiController;
+use App\Http\Controllers\Api\Member\AlfaPaymentController;
 
 Route::prefix('member')->group(function () {
     Route::post('/login', [MemberApiController::class, 'login'])->middleware('throttle:120,1');
@@ -23,6 +24,10 @@ Route::prefix('member')->group(function () {
         Route::get('/menu/today', [MemberApiController::class, 'todayMenu']);
         Route::get('/payments', [MemberApiController::class, 'payments']);
         Route::post('/payments/upload', [MemberApiController::class, 'uploadPayment'])->middleware('throttle:60,1');
+        Route::get('/payments/options', [AlfaPaymentController::class, 'options']);
+        Route::post('/payments/preview', [AlfaPaymentController::class, 'preview'])->middleware('throttle:60,1');
+        Route::post('/payments/create', [AlfaPaymentController::class, 'create'])->middleware('throttle:30,1');
+        Route::get('/payments/{transaction}/status', [AlfaPaymentController::class, 'status']);
         Route::get('/complaints', [MemberApiController::class, 'complaints']);
         Route::post('/complaints', [MemberApiController::class, 'createComplaint'])->middleware('throttle:60,1');
     });

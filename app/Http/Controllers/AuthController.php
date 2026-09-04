@@ -28,6 +28,10 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        if (config('turnstile.enabled') && ! $this->verifyTurnstile($request)) {
+            return back()->withInput()->withErrors(['turnstile' => 'Verification failed. Please try again.']);
+        }
+
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()->withInput()->with('error', 'Invalid credentials.');
         }
@@ -37,6 +41,10 @@ class AuthController extends Controller
 
         if ($user->isMemberRole()) {
             return redirect()->route('member.dashboard');
+        }
+
+        if (optional($user->role)->code === 'DATA_ENTRY') {
+            return redirect()->route('admin.attendance.index');
         }
 
         return redirect()->route('admin.dashboard');
@@ -90,5 +98,27 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login')->with('success', 'Logged out.');
+    }
+
+    private function verifyTurnstile(Request $request): bool
+    {
+        $token = (string) $request->input('cf-turnstile-response', '');
+        if ($token === '') {
+            return false;
+        }
+        try {
+            $resp = \Illuminate\Support\Facades\Http::asForm()->timeout(10)->post(
+                config('turnstile.verify_url'),
+                [
+                    'secret'   => config('turnstile.secret_key'),
+                    'response' => $token,
+                    'remoteip' => $request->ip(),
+                ]
+            );
+            return (bool) ($resp->json('success') ?? false);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Turnstile verify error: '.$e->getMessage());
+            return false;
+        }
     }
 }

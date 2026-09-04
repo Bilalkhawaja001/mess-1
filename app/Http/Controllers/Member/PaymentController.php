@@ -10,6 +10,7 @@ use App\Services\Payments\PaymentAttemptService;
 use App\Services\Payments\PaymentTransactionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -50,7 +51,7 @@ class PaymentController extends Controller
     {
         $payload = $request->validate([
             'bill_id' => ['required', 'integer', 'exists:billings,id'],
-            'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
+            'payment_method_id' => ['required', 'integer', Rule::exists('payment_methods', 'id')->where('is_active', 1)],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'reference_no' => ['nullable', 'string', 'max:100'],
             'idempotency_key' => ['nullable', 'string', 'max:120'],

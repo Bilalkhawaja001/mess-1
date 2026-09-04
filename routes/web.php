@@ -492,9 +492,9 @@ Route::prefix('member')->name('member.')->middleware(['auth', 'force_password_ch
     });
 });
 
-Route::match(['get','post'], '/jazzcash/return', [\App\Http\Controllers\JazzCashController::class, 'return'])->name('jazzcash.return');
-Route::post('/jazzcash/ipn', [\App\Http\Controllers\JazzCashController::class, 'ipn'])->name('jazzcash.ipn');
-Route::post('/jazzcash/payments/{payment}/status-inquiry', [\App\Http\Controllers\JazzCashController::class, 'statusInquiry'])->middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN'])->name('jazzcash.status-inquiry');
+// [JAZZCASH DISABLED 2026-09-04] Route::match(['get','post'], '/jazzcash/return', [\App\Http\Controllers\JazzCashController::class, 'return'])->name('jazzcash.return');
+// [JAZZCASH DISABLED 2026-09-04] Route::post('/jazzcash/ipn', [\App\Http\Controllers\JazzCashController::class, 'ipn'])->name('jazzcash.ipn');
+// [JAZZCASH DISABLED 2026-09-04] Route::post('/jazzcash/payments/{payment}/status-inquiry', [\App\Http\Controllers\JazzCashController::class, 'statusInquiry'])->middleware(['auth', 'force_password_change', 'active', 'role:SUPER_ADMIN,ADMIN'])->name('jazzcash.status-inquiry');
 
 
 Route::get('/data-deletion', function () {
@@ -508,3 +508,14 @@ Route::prefix('admin/ui-preview')->name('admin.ui-preview.')->group(function () 
     Route::view('/members/create', 'admin.ui-preview.member-form')->name('members.create');
     Route::view('/members/profile', 'admin.ui-preview.member-profile')->name('members.profile');
 });
+
+Route::view('/terms-and-conditions', 'terms-and-conditions')
+    ->name('terms.conditions');
+
+
+// Alfa / Public Website Compliance Pages
+Route::view('/refund-and-cancellation-policy', 'refund-and-cancellation-policy')
+    ->name('refund-cancellation');
+
+Route::view('/business-information', 'business-information')
+    ->name('business-information');

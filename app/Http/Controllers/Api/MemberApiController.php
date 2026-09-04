@@ -856,7 +856,7 @@ class MemberApiController extends Controller
         ], 201);
     }
 
-    private function apiMoney(mixed $value): string
+    protected function apiMoney(mixed $value): string
     {
         return number_format((float) $value, 2, '.', '');
     }
@@ -1324,7 +1324,7 @@ class MemberApiController extends Controller
         ], 422);
     }
 
-    private function memberFromToken(Request $request): ?object
+    protected function memberFromToken(Request $request): ?object
     {
         $token = $this->extractToken($request);
 
@@ -1387,7 +1387,7 @@ class MemberApiController extends Controller
         return trim((string) ($request->input('token') ?? $request->query('token') ?? ''));
     }
 
-    private function unauthenticated(): JsonResponse
+    protected function unauthenticated(): JsonResponse
     {
         return response()->json([
             'success' => false,

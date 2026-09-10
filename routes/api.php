@@ -45,5 +45,10 @@ Route::prefix('kitchen')->group(function () {
         Route::get('/purchase-orders', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'index']);
         Route::post('/purchase-orders', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'store'])->middleware('throttle:60,1');
         Route::get('/purchase-orders/{id}', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'show'])->whereNumber('id');
+
+        Route::get('/grn/eligible-pos', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'eligiblePos']);
+        Route::get('/grn', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'index']);
+        Route::post('/grn', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'store'])->middleware('throttle:60,1');
+        Route::get('/grn/{id}', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'show'])->whereNumber('id');
     });
 });

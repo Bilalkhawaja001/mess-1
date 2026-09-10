@@ -13,7 +13,7 @@ class KitchenGrn extends Model
     protected $table = 'kitchen_grns';
 
     protected $fillable = [
-        'temp_number', 'kitchen_staff_id', 'purchase_order_id', 'received_date', 'remarks',
+        'temp_number', 'kitchen_staff_id', 'kitchen_po_id', 'purchase_order_id', 'received_date', 'remarks',
         'status', 'reject_reason', 'reviewed_by_user_id', 'reviewed_at', 'goods_receipt_id',
     ];
 
@@ -30,6 +30,11 @@ class KitchenGrn extends Model
     public function staff()
     {
         return $this->belongsTo(KitchenStaff::class, 'kitchen_staff_id');
+    }
+
+    public function kitchenPo()
+    {
+        return $this->belongsTo(KitchenPo::class, 'kitchen_po_id');
     }
 
     public function purchaseOrder()

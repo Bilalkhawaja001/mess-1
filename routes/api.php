@@ -54,3 +54,12 @@ Route::prefix('kitchen')->group(function () {
         Route::post('/outstanding', [\App\Http\Controllers\Api\Kitchen\KitchenOutstandingController::class, 'lookup'])->middleware('throttle:60,1');
     });
 });
+
+Route::prefix('admin-app')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\AdminApp\AdminAuthController::class, 'login'])->middleware('throttle:60,1');
+
+    Route::middleware('throttle:600,1')->group(function () {
+        Route::get('/profile', [\App\Http\Controllers\Api\AdminApp\AdminAuthController::class, 'profile']);
+        Route::post('/logout', [\App\Http\Controllers\Api\AdminApp\AdminAuthController::class, 'logout']);
+    });
+});

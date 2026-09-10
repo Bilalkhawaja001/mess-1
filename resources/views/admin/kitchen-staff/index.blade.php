@@ -4,12 +4,6 @@
 @section('page_title', 'Kitchen Staff Management')
 
 @section('content')
-@if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
-@if(session('error')) <div class="alert alert-danger">{{ session('error') }}</div> @endif
-@if($errors->any())
-    <div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
-@endif
-
 <div class="card shadow-sm mb-3">
     <div class="card-header">Create Kitchen Staff</div>
     <div class="card-body">
@@ -81,7 +75,17 @@
                     </td>
                 </tr>
 
-                <div class="modal fade" id="editStaff{{ $s->id }}" tabindex="-1">
+            @empty
+                <tr><td colspan="9" class="text-center text-muted">No kitchen staff yet.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@foreach($staff as $s)
+
+    <div class="modal fade" id="editStaff{{ $s->id }}" tabindex="-1">
                     <div class="modal-dialog">
                         <form method="POST" action="{{ route('admin.kitchen-staff.update', $s->id) }}" class="modal-content">
                             @csrf @method('PUT')
@@ -103,7 +107,7 @@
                     </div>
                 </div>
 
-                <div class="modal fade" id="pwStaff{{ $s->id }}" tabindex="-1">
+    <div class="modal fade" id="pwStaff{{ $s->id }}" tabindex="-1">
                     <div class="modal-dialog">
                         <form method="POST" action="{{ route('admin.kitchen-staff.reset-password', $s->id) }}" class="modal-content">
                             @csrf
@@ -116,11 +120,18 @@
                         </form>
                     </div>
                 </div>
-            @empty
-                <tr><td colspan="9" class="text-center text-muted">No kitchen staff yet.</td></tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
+@endforeach
+
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.modal').forEach(function (modalEl) {
+        if (modalEl.parentNode !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+    });
+});
+</script>
+@endpush

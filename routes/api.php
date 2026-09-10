@@ -39,5 +39,11 @@ Route::prefix('kitchen')->group(function () {
     Route::middleware('throttle:600,1')->group(function () {
         Route::get('/profile', [\App\Http\Controllers\Api\Kitchen\KitchenAuthController::class, 'profile']);
         Route::post('/logout', [\App\Http\Controllers\Api\Kitchen\KitchenAuthController::class, 'logout']);
+
+        Route::get('/vendors/search', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'searchVendors']);
+        Route::get('/items/search', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'searchItems']);
+        Route::get('/purchase-orders', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'index']);
+        Route::post('/purchase-orders', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'store'])->middleware('throttle:60,1');
+        Route::get('/purchase-orders/{id}', [\App\Http\Controllers\Api\Kitchen\KitchenPoController::class, 'show'])->whereNumber('id');
     });
 });

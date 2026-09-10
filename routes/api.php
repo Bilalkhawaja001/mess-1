@@ -50,5 +50,7 @@ Route::prefix('kitchen')->group(function () {
         Route::get('/grn', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'index']);
         Route::post('/grn', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'store'])->middleware('throttle:60,1');
         Route::get('/grn/{id}', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'show'])->whereNumber('id');
+
+        Route::post('/outstanding', [\App\Http\Controllers\Api\Kitchen\KitchenOutstandingController::class, 'lookup'])->middleware('throttle:60,1');
     });
 });

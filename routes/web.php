@@ -183,6 +183,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
     });
     Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->middleware('permission:users.toggle')->name('users.toggle-active');
 
+    Route::middleware('permission:procurement.manage')->group(function () {
+        Route::get('/kitchen-staff', [\App\Http\Controllers\Admin\KitchenStaffController::class, 'index'])->name('kitchen-staff.index');
+        Route::post('/kitchen-staff', [\App\Http\Controllers\Admin\KitchenStaffController::class, 'store'])->name('kitchen-staff.store');
+        Route::put('/kitchen-staff/{kitchenStaff}', [\App\Http\Controllers\Admin\KitchenStaffController::class, 'update'])->name('kitchen-staff.update');
+        Route::post('/kitchen-staff/{kitchenStaff}/reset-password', [\App\Http\Controllers\Admin\KitchenStaffController::class, 'resetPassword'])->name('kitchen-staff.reset-password');
+    });
+
     Route::middleware('permission:member.manage')->group(function () {
         Route::get('/members', [MemberController::class, 'index'])->name('members.index');
         Route::post('/members', [MemberController::class, 'store'])->name('members.store');

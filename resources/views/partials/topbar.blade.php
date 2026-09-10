@@ -352,6 +352,10 @@
                             <a href="{{ route('admin.member-accounts.index') }}">Member Accounts</a>
                         @endif
 
+                        @if($canProcurementTop)
+                            <a href="{{ route('admin.kitchen-staff.index') }}">Kitchen Staff</a>
+                        @endif
+
                         @if($canAuditTop)
                             <a href="{{ route('admin.audit-log.index') }}">Audit Log</a>
                         @endif

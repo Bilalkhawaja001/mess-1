@@ -113,6 +113,7 @@
                         @endif
                         @if(auth()->user()->hasPermission('procurement.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.procurement.*') ? 'active' : '' }}" href="{{ route('admin.procurement.index') }}" title="Procurement"><span class="sidebar-icon-wrap"><i class="bi bi-truck sidebar-icon"></i></span><span>Procurement</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.kitchen-staff.*') ? 'active' : '' }}" href="{{ route('admin.kitchen-staff.index') }}" title="Kitchen Staff"><span class="sidebar-icon-wrap"><i class="bi bi-person-badge-fill sidebar-icon"></i></span><span>Kitchen Staff</span></a>
                         @endif
                         @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.hubs.inventory') ? 'active' : '' }}" href="{{ route('admin.hubs.inventory') }}" title="Inventory Hub"><span class="sidebar-icon-wrap"><i class="bi bi-boxes sidebar-icon"></i></span><span>Inventory Hub</span></a>

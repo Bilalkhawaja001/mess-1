@@ -67,5 +67,11 @@ Route::prefix('admin-app')->group(function () {
         Route::post('/procurement/po/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'rejectPo'])->whereNumber('id');
         Route::post('/procurement/grn/{id}/approve', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'approveGrn'])->whereNumber('id');
         Route::post('/procurement/grn/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'rejectGrn'])->whereNumber('id');
+
+        Route::get('/payments/pending', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'pending']);
+        Route::get('/payments/{id}/proof', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'proof'])->whereNumber('id');
+        Route::post('/payments/{id}/approve', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'approve'])->whereNumber('id');
+        Route::post('/payments/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'reject'])->whereNumber('id');
+        Route::post('/outstanding', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'outstanding'])->middleware('throttle:120,1');
     });
 });

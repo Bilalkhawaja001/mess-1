@@ -494,9 +494,9 @@ class PaymentController extends Controller
 
         try {
             $uploadedProofService->approve($payment, (int) Auth::id());
-        } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
         } catch (DuplicateActivePaymentException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         } catch (QueryException $e) {
             if (PaymentDuplicateGuard::isGuardUniqueIndexViolation($e)) {

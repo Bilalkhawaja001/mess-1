@@ -61,5 +61,11 @@ Route::prefix('admin-app')->group(function () {
     Route::middleware('throttle:600,1')->group(function () {
         Route::get('/profile', [\App\Http\Controllers\Api\AdminApp\AdminAuthController::class, 'profile']);
         Route::post('/logout', [\App\Http\Controllers\Api\AdminApp\AdminAuthController::class, 'logout']);
+
+        Route::get('/procurement/pending', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'pending']);
+        Route::post('/procurement/po/{id}/approve', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'approvePo'])->whereNumber('id');
+        Route::post('/procurement/po/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'rejectPo'])->whereNumber('id');
+        Route::post('/procurement/grn/{id}/approve', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'approveGrn'])->whereNumber('id');
+        Route::post('/procurement/grn/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'rejectGrn'])->whereNumber('id');
     });
 });

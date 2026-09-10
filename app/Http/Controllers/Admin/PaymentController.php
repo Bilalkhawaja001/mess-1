@@ -15,6 +15,7 @@ use App\Services\PaymentEditService;
 use App\Services\Payments\DuplicateActivePaymentException;
 use App\Services\Payments\PaymentAttemptService;
 use App\Services\Payments\PaymentDuplicateGuard;
+use App\Services\Payments\UploadedProofService;
 use App\Services\Payments\PaymentReconciliationService;
 use App\Services\Payments\PaymentTransactionService;
 use Illuminate\Database\QueryException;
@@ -485,88 +486,16 @@ class PaymentController extends Controller
         return redirect()->route('admin.payments.index')->with('success', 'Payment manually verified and posted to ledger.');
     }
 
-    public function approveUploadedProof(Payment $payment, PaymentDuplicateGuard $duplicateGuard): RedirectResponse
+    public function approveUploadedProof(Payment $payment, UploadedProofService $uploadedProofService): RedirectResponse
     {
         if ($payment->status !== Payment::STATUS_RECONCILIATION_PENDING) {
             return back()->with('error', 'Only pending review uploaded payments can be approved.');
         }
 
-        $proofRow = $payment->reconciliations()->latest('id')->first();
-        $meta = $proofRow?->meta ?? [];
-
-        if (! is_array($meta)) {
-            $meta = json_decode((string) $meta, true) ?: [];
-        }
-
-        $path = (string) ($meta['screenshot_path'] ?? '');
-        $disk = (string) ($meta['screenshot_disk'] ?? 'local');
-        $expectedHash = (string) ($meta['screenshot_sha256'] ?? '');
-
-        if ($path === '' || ! in_array($disk, ['local', 'public'], true) || ! \Illuminate\Support\Facades\Storage::disk($disk)->exists($path)) {
-            return back()->with('error', 'Payment proof file is missing. Cannot approve.');
-        }
-
-        if ($expectedHash !== '') {
-            $actualHash = hash_file('sha256', \Illuminate\Support\Facades\Storage::disk($disk)->path($path));
-            if (! hash_equals($expectedHash, $actualHash)) {
-                return back()->with('error', 'Payment proof file integrity check failed. Cannot approve.');
-            }
-        }
-
         try {
-            DB::transaction(function () use ($payment, $duplicateGuard) {
-                $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
-                $bill = $duplicateGuard->lockBill((int) $lockedPayment->bill_id, (int) $lockedPayment->member_id);
-                $monthCycle = (string) $bill->month_cycle;
-
-                $duplicateGuard->assertNoActiveDuplicate((int) $lockedPayment->member_id, $monthCycle, (int) $lockedPayment->id, (float) $lockedPayment->amount);
-                $duplicateGuard->applyGuardAttributes($lockedPayment, Payment::STATUS_RECONCILED, $monthCycle);
-
-                $existingLedger = MemberLedger::query()
-                    ->where('member_id', $lockedPayment->member_id)
-                    ->where('ref_type', 'PAYMENT')
-                    ->where('ref_id', $lockedPayment->id)
-                    ->first();
-
-            if (! $existingLedger) {
-                $lastBal = (float) (MemberLedger::query()
-                    ->where('member_id', $lockedPayment->member_id)
-                    ->orderByDesc('entry_date')
-                    ->orderByDesc('id')
-                    ->value('balance_after') ?? 0);
-
-                $newBal = round($lastBal - (float) $lockedPayment->amount, 2);
-
-                MemberLedger::query()->create([
-                    'member_id' => $lockedPayment->member_id,
-                    'entry_date' => $lockedPayment->payment_date,
-                    'debit' => 0,
-                    'credit' => $lockedPayment->amount,
-                    'ref_type' => 'PAYMENT',
-                    'ref_id' => $lockedPayment->id,
-                    'balance_after' => $newBal,
-                    'reason_code' => 'ANDROID_PAYMENT_PROOF_APPROVED',
-                    'posted_by_user_id' => Auth::id(),
-                ]);
-            }
-
-            $lockedPayment->status = Payment::STATUS_RECONCILED;
-            $lockedPayment->approved_by_user_id = Auth::id();
-            $lockedPayment->approved_at = now();
-            $lockedPayment->save();
-
-            PaymentReconciliation::query()
-                ->where('payment_id', $payment->id)
-                ->update([
-                    'status' => Payment::STATUS_RECONCILED,
-                    'ledger_sync_status' => 'SYNCED',
-                    'accounting_sync_status' => 'SYNCED',
-                    'reconciled_by_user_id' => Auth::id(),
-                    'reconciled_at' => now(),
-                    'notes' => 'Android payment proof approved from admin payments screen.',
-                    'updated_at' => now(),
-                ]);
-            });
+            $uploadedProofService->approve($payment, (int) Auth::id());
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
         } catch (DuplicateActivePaymentException $e) {
             return back()->with('error', $e->getMessage());
         } catch (QueryException $e) {
@@ -613,7 +542,7 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function rejectUploadedProof(Payment $payment, Request $request): RedirectResponse
+    public function rejectUploadedProof(Payment $payment, Request $request, UploadedProofService $uploadedProofService): RedirectResponse
     {
         if ($payment->status !== Payment::STATUS_RECONCILIATION_PENDING) {
             return back()->with('error', 'Only pending review uploaded payments can be rejected.');
@@ -623,22 +552,7 @@ class PaymentController extends Controller
             'reject_reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        DB::transaction(function () use ($payment, $payload) {
-            $payment->status = Payment::STATUS_FAILED;
-            $payment->notes = trim(($payment->notes ? $payment->notes.PHP_EOL : '').'Rejected: '.($payload['reject_reason'] ?? 'Payment proof rejected by admin.'));
-            $payment->save();
-
-            PaymentReconciliation::query()
-                ->where('payment_id', $payment->id)
-                ->update([
-                    'status' => Payment::STATUS_FAILED,
-                    'ledger_sync_status' => 'REJECTED',
-                    'accounting_sync_status' => 'REJECTED',
-                    'mismatch_reason' => $payload['reject_reason'] ?? 'Rejected by admin',
-                    'notes' => 'Android payment proof rejected from admin payments screen.',
-                    'updated_at' => now(),
-                ]);
-        });
+        $uploadedProofService->reject($payment, $payload['reject_reason'] ?? null);
 
         return redirect()->route('admin.payments.index')->with('success', 'Payment proof rejected.');
     }

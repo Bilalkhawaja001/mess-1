@@ -14,6 +14,7 @@ use App\Models\PaymentTransaction;
 use App\Services\PaymentEditService;
 use App\Services\Payments\DuplicateActivePaymentException;
 use App\Services\Payments\PaymentAttemptService;
+use App\Services\Payments\ManualPaymentService;
 use App\Services\Payments\PaymentDuplicateGuard;
 use App\Services\Payments\UploadedProofService;
 use App\Services\Payments\PaymentReconciliationService;
@@ -192,71 +193,21 @@ class PaymentController extends Controller
         return view('admin.payments.index-v2', $view->getData());
     }
 
-    public function store(StorePaymentRequest $request, PaymentAttemptService $attemptService, PaymentTransactionService $transactionService, PaymentDuplicateGuard $duplicateGuard): RedirectResponse
+    public function store(StorePaymentRequest $request, ManualPaymentService $manualPaymentService): RedirectResponse
     {
-        $memberId = (int) $request->input('member_id');
-        $billId = (int) $request->input('bill_id');
-        $methodId = (int) $request->input('payment_method_id');
-        $amount = round((float) $request->input('amount'), 2);
-        $userId = (int) Auth::id();
-
         try {
-            $payment = DB::transaction(function () use ($request, $memberId, $billId, $methodId, $amount, $userId, $duplicateGuard) {
-                $bill = $duplicateGuard->lockBill($billId, $memberId);
-                $monthCycle = (string) $bill->month_cycle;
-
-                $duplicateGuard->assertNoActiveDuplicate($memberId, $monthCycle, null, $amount);
-
-                $method = PaymentMethod::query()
-                    ->whereKey($methodId)
-                    ->where('is_active', true)
-                    ->firstOrFail();
-
-                $payment = Payment::query()->create($duplicateGuard->withGuardAttributes([
-                    'member_id' => $memberId,
-                    'bill_id' => $bill->id,
-                    'payment_method_id' => $method->id,
-                    'payment_ref' => 'MANPAY-'.now()->format('YmdHis').'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT),
-                    'payment_date' => $request->input('payment_date') ?: now()->toDateString(),
-                    'amount' => $amount,
-                    'currency' => 'PKR',
-                    'method' => $method->code,
+            $payment = $manualPaymentService->post(
+                (int) $request->input('member_id'),
+                (int) $request->input('bill_id'),
+                (int) $request->input('payment_method_id'),
+                (float) $request->input('amount'),
+                (int) Auth::id(),
+                [
+                    'payment_date' => $request->input('payment_date') ?: null,
                     'reference_no' => $request->input('reference_no') ?: null,
                     'notes' => $request->input('notes') ?: null,
-                    'status' => Payment::STATUS_APPROVED,
-                    'posted_by_user_id' => $userId,
-                    'approved_by_user_id' => $userId,
-                    'approved_at' => now(),
-                ], $monthCycle));
-
-            $exists = MemberLedger::query()
-                ->where('member_id', $memberId)
-                ->where('ref_type', 'PAYMENT')
-                ->where('ref_id', $payment->id)
-                ->exists();
-
-            if (! $exists) {
-                $lastBal = (float) (MemberLedger::query()
-                    ->where('member_id', $memberId)
-                    ->orderByDesc('entry_date')
-                    ->orderByDesc('id')
-                    ->value('balance_after') ?? 0);
-
-                MemberLedger::query()->create([
-                    'member_id' => $memberId,
-                    'entry_date' => $payment->payment_date,
-                    'debit' => 0,
-                    'credit' => $amount,
-                    'ref_type' => 'PAYMENT',
-                    'ref_id' => $payment->id,
-                    'balance_after' => round($lastBal - $amount, 2),
-                    'reason_code' => 'PAYMENT_APPROVAL',
-                    'posted_by_user_id' => $userId,
-                ]);
-            }
-
-                return $payment;
-            });
+                ]
+            );
         } catch (DuplicateActivePaymentException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         } catch (QueryException $e) {

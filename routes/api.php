@@ -73,5 +73,9 @@ Route::prefix('admin-app')->group(function () {
         Route::post('/payments/{id}/approve', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'approve'])->whereNumber('id');
         Route::post('/payments/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'reject'])->whereNumber('id');
         Route::post('/outstanding', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'outstanding'])->middleware('throttle:120,1');
+
+        Route::get('/payment-methods', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'methods']);
+        Route::post('/payments/member-bills', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'memberBills'])->middleware('throttle:120,1');
+        Route::post('/payments', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'store'])->middleware('throttle:60,1');
     });
 });

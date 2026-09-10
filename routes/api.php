@@ -32,3 +32,12 @@ Route::prefix('member')->group(function () {
         Route::post('/complaints', [MemberApiController::class, 'createComplaint'])->middleware('throttle:60,1');
     });
 });
+
+Route::prefix('kitchen')->group(function () {
+    Route::post('/login', [\App\Http\Controllers\Api\Kitchen\KitchenAuthController::class, 'login'])->middleware('throttle:60,1');
+
+    Route::middleware('throttle:600,1')->group(function () {
+        Route::get('/profile', [\App\Http\Controllers\Api\Kitchen\KitchenAuthController::class, 'profile']);
+        Route::post('/logout', [\App\Http\Controllers\Api\Kitchen\KitchenAuthController::class, 'logout']);
+    });
+});

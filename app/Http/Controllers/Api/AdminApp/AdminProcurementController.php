@@ -105,9 +105,9 @@ class AdminProcurementController extends AdminAuthController
         }
 
         $data = $request->validate([
-            'rates' => ['required', 'array', 'min:1'],
-            'rates.*.item_id' => ['required', 'integer'],
-            'rates.*.unit_price' => ['required', 'numeric', 'gte:0'],
+            'rates' => ['nullable', 'array'],
+            'rates.*.item_id' => ['required_with:rates', 'integer'],
+            'rates.*.unit_price' => ['required_with:rates', 'numeric', 'gte:0'],
         ]);
 
         try {
@@ -121,12 +121,7 @@ class AdminProcurementController extends AdminAuthController
                     throw new \RuntimeException('Already '.strtolower($kpo->status), 422);
                 }
 
-                $rates = collect($data['rates'])->keyBy(fn ($r) => (int) $r['item_id']);
-                foreach ($kpo->lines as $line) {
-                    if (! $rates->has((int) $line->item_id)) {
-                        throw new \RuntimeException('Rate missing for one or more items', 422);
-                    }
-                }
+                $rates = collect($data['rates'] ?? [])->keyBy(fn ($r) => (int) $r['item_id']);
 
                 $po = PurchaseOrder::create([
                     'vendor_id' => $kpo->vendor_id,
@@ -141,7 +136,9 @@ class AdminProcurementController extends AdminAuthController
                         'purchase_order_id' => $po->id,
                         'item_id' => (int) $line->item_id,
                         'qty_ordered' => (float) $line->qty_ordered,
-                        'unit_price' => (float) $rates[(int) $line->item_id]['unit_price'],
+                        'unit_price' => $rates->has((int) $line->item_id)
+                            ? (float) $rates[(int) $line->item_id]['unit_price']
+                            : 0,
                     ]);
                     $line->forceFill(['unit_price' => $poLine->unit_price])->save();
                 }
@@ -215,9 +212,9 @@ class AdminProcurementController extends AdminAuthController
         }
 
         $data = $request->validate([
-            'costs' => ['nullable', 'array'],
-            'costs.*.item_id' => ['required_with:costs', 'integer'],
-            'costs.*.unit_cost' => ['required_with:costs', 'numeric', 'gte:0'],
+            'costs' => ['required', 'array', 'min:1'],
+            'costs.*.item_id' => ['required', 'integer'],
+            'costs.*.unit_cost' => ['required', 'numeric', 'gt:0'],
         ]);
 
         try {
@@ -264,9 +261,11 @@ class AdminProcurementController extends AdminAuthController
                         throw new \RuntimeException('Received quantity exceeds ordered quantity', 422);
                     }
 
-                    $unitCost = $overrides->has($itemId)
-                        ? (float) $overrides[$itemId]['unit_cost']
-                        : (float) $poLine->unit_price;
+                    if (! $overrides->has($itemId)) {
+                        throw new \RuntimeException('Unit cost is required for every item', 422);
+                    }
+
+                    $unitCost = (float) $overrides[$itemId]['unit_cost'];
 
                     $unit = ItemUnit::where('item_id', $itemId)
                         ->orderByDesc('is_default_for_grn')
@@ -286,6 +285,10 @@ class AdminProcurementController extends AdminAuthController
                     ]);
 
                     $line->forceFill(['unit_cost' => $unitCost])->save();
+
+                    if ((float) $poLine->unit_price <= 0) {
+                        $poLine->forceFill(['unit_price' => $unitCost])->save();
+                    }
 
                     StockTransaction::create([
                         'item_id' => $itemId,

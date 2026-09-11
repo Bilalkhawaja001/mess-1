@@ -6,6 +6,7 @@ use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptLine;
 use App\Models\ItemUnit;
 use App\Models\KitchenGrn;
+use App\Models\KitchenGrnLine;
 use App\Models\KitchenPo;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
@@ -14,6 +15,7 @@ use App\Support\DocumentNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AdminProcurementController extends AdminAuthController
 {
@@ -60,12 +62,38 @@ class AdminProcurementController extends AdminAuthController
                 'po_status' => $g->kitchenPo->status ?? null,
                 'received_date' => optional($g->received_date)->format('Y-m-d'),
                 'lines' => $g->lines->map(fn ($l) => [
+                    'line_id' => (int) $l->id,
+                    'has_image' => (bool) $l->image_path,
                     'item_id' => (int) $l->item_id,
                     'item' => $l->item->name ?? null,
                     'uom' => $l->item->uom ?? null,
                     'qty_received' => (string) $l->qty_received,
                 ]),
             ]),
+        ]);
+    }
+
+    public function grnLineImage(Request $request, int $lineId)
+    {
+        if (! $this->requirePermission($request, self::PERM)) {
+            return $this->user($request) ? $this->forbidden() : $this->unauthenticated();
+        }
+
+        $line = KitchenGrnLine::find($lineId);
+        if (! $line) {
+            return response()->json(['success' => false, 'message' => 'Not found'], 404);
+        }
+
+        $path = (string) $line->image_path;
+        $disk = (string) ($line->image_disk ?: 'local');
+
+        if ($path === '' || ! in_array($disk, ['local', 'public'], true) || ! Storage::disk($disk)->exists($path)) {
+            return response()->json(['success' => false, 'message' => 'Image not available'], 404);
+        }
+
+        return response()->file(Storage::disk($disk)->path($path), [
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

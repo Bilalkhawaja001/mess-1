@@ -8,7 +8,7 @@ class KitchenGrnLine extends Model
 {
     protected $table = 'kitchen_grn_lines';
 
-    protected $fillable = ['kitchen_grn_id', 'purchase_order_line_id', 'item_id', 'qty_received', 'unit_cost'];
+    protected $fillable = ['kitchen_grn_id', 'purchase_order_line_id', 'item_id', 'qty_received', 'unit_cost', 'image_path', 'image_disk', 'image_sha256'];
 
     public function goodsReceipt()
     {

@@ -50,6 +50,7 @@ Route::prefix('kitchen')->group(function () {
         Route::get('/grn', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'index']);
         Route::post('/grn', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'store'])->middleware('throttle:60,1');
         Route::get('/grn/{id}', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'show'])->whereNumber('id');
+        Route::get('/grn-lines/{lineId}/image', [\App\Http\Controllers\Api\Kitchen\KitchenGrnController::class, 'lineImage'])->whereNumber('lineId');
 
         Route::post('/outstanding', [\App\Http\Controllers\Api\Kitchen\KitchenOutstandingController::class, 'lookup'])->middleware('throttle:60,1');
     });
@@ -67,6 +68,7 @@ Route::prefix('admin-app')->group(function () {
         Route::post('/procurement/po/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'rejectPo'])->whereNumber('id');
         Route::post('/procurement/grn/{id}/approve', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'approveGrn'])->whereNumber('id');
         Route::post('/procurement/grn/{id}/reject', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'rejectGrn'])->whereNumber('id');
+        Route::get('/procurement/grn-lines/{lineId}/image', [\App\Http\Controllers\Api\AdminApp\AdminProcurementController::class, 'grnLineImage'])->whereNumber('lineId');
 
         Route::get('/payments/pending', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'pending']);
         Route::get('/payments/{id}/proof', [\App\Http\Controllers\Api\AdminApp\AdminPaymentController::class, 'proof'])->whereNumber('id');

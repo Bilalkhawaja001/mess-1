@@ -9,6 +9,7 @@ use App\Support\DocumentNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class KitchenGrnController extends KitchenAuthController
 {
@@ -53,6 +54,7 @@ class KitchenGrnController extends KitchenAuthController
             'lines' => ['required', 'array', 'min:1', 'max:100'],
             'lines.*.item_id' => ['required', 'integer'],
             'lines.*.qty_received' => ['required', 'numeric', 'gt:0'],
+            'lines.*.image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
         $po = KitchenPo::with('lines')
@@ -74,28 +76,46 @@ class KitchenGrnController extends KitchenAuthController
             }
         }
 
-        $grn = DB::transaction(function () use ($data, $staff, $po) {
-            $grn = KitchenGrn::create([
-                'temp_number' => DocumentNumber::generate('KGRN'),
-                'kitchen_staff_id' => $staff->id,
-                'kitchen_po_id' => $po->id,
-                'purchase_order_id' => $po->purchase_order_id,
-                'received_date' => $data['received_date'],
-                'remarks' => $data['remarks'] ?? null,
-                'status' => KitchenGrn::STATUS_PENDING,
-            ]);
+        $storedPaths = [];
 
-            foreach ($data['lines'] as $line) {
-                KitchenGrnLine::create([
-                    'kitchen_grn_id' => $grn->id,
-                    'item_id' => (int) $line['item_id'],
-                    'qty_received' => (float) $line['qty_received'],
-                    'unit_cost' => null,
+        try {
+            $grn = DB::transaction(function () use ($data, $staff, $po, &$storedPaths) {
+                $grn = KitchenGrn::create([
+                    'temp_number' => DocumentNumber::generate('KGRN'),
+                    'kitchen_staff_id' => $staff->id,
+                    'kitchen_po_id' => $po->id,
+                    'purchase_order_id' => $po->purchase_order_id,
+                    'received_date' => $data['received_date'],
+                    'remarks' => $data['remarks'] ?? null,
+                    'status' => KitchenGrn::STATUS_PENDING,
                 ]);
+
+                foreach ($data['lines'] as $line) {
+                    $file = $line['image'];
+                    $hash = hash_file('sha256', $file->getRealPath());
+                    $path = $file->store('kitchen-grn-images/'.now()->format('Y/m'), 'local');
+                    $storedPaths[] = $path;
+
+                    KitchenGrnLine::create([
+                        'kitchen_grn_id' => $grn->id,
+                        'item_id' => (int) $line['item_id'],
+                        'qty_received' => (float) $line['qty_received'],
+                        'unit_cost' => null,
+                        'image_path' => $path,
+                        'image_disk' => 'local',
+                        'image_sha256' => $hash,
+                    ]);
+                }
+
+                return $grn;
+            });
+        } catch (\Throwable $e) {
+            foreach ($storedPaths as $path) {
+                Storage::disk('local')->delete($path);
             }
 
-            return $grn;
-        });
+            throw $e;
+        }
 
         return response()->json([
             'success' => true,
@@ -151,6 +171,37 @@ class KitchenGrnController extends KitchenAuthController
         return response()->json(['success' => true, 'goods_receipt' => $this->grnPayload($grn)]);
     }
 
+    public function lineImage(Request $request, int $lineId)
+    {
+        $staff = $this->staff($request);
+        if (! $staff) {
+            return $this->unauthenticated();
+        }
+
+        $line = KitchenGrnLine::with('goodsReceipt')->find($lineId);
+
+        if (! $line || ! $line->goodsReceipt || (int) $line->goodsReceipt->kitchen_staff_id !== (int) $staff->id) {
+            return response()->json(['success' => false, 'message' => 'Not found'], 404);
+        }
+
+        return $this->streamLineImage($line);
+    }
+
+    protected function streamLineImage(KitchenGrnLine $line)
+    {
+        $path = (string) $line->image_path;
+        $disk = (string) ($line->image_disk ?: 'local');
+
+        if ($path === '' || ! in_array($disk, ['local', 'public'], true) || ! Storage::disk($disk)->exists($path)) {
+            return response()->json(['success' => false, 'message' => 'Image not available'], 404);
+        }
+
+        return response()->file(Storage::disk($disk)->path($path), [
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     protected function grnPayload(KitchenGrn $grn): array
     {
         return [
@@ -163,6 +214,8 @@ class KitchenGrnController extends KitchenAuthController
             'remarks' => $grn->remarks,
             'reject_reason' => $grn->reject_reason,
             'lines' => $grn->lines->map(fn ($l) => [
+                'line_id' => (int) $l->id,
+                'has_image' => (bool) $l->image_path,
                 'item_id' => (int) $l->item_id,
                 'item' => $l->item->name ?? null,
                 'sku' => $l->item->sku ?? null,

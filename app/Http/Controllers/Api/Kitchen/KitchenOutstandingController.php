@@ -26,7 +26,7 @@ class KitchenOutstandingController extends KitchenAuthController
 
         $member = Member::query()
             ->where('member_code', trim($data['member_code']))
-            ->first(['id']);
+            ->first(['id', 'member_code', 'name', 'department_name']);
 
         if (! $member) {
             return response()->json(['success' => false, 'message' => 'Not found'], 404);
@@ -40,6 +40,9 @@ class KitchenOutstandingController extends KitchenAuthController
 
         return response()->json([
             'success' => true,
+            'member_code' => $member->member_code,
+            'member_name' => $member->name,
+            'department' => $member->department_name,
             'outstanding' => number_format($outstanding, 2, '.', ''),
         ]);
     }

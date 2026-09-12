@@ -256,7 +256,7 @@ class AdminPaymentController extends AdminAuthController
             'member_code' => ['required', 'string', 'max:50'],
         ]);
 
-        $member = Member::where('member_code', trim($data['member_code']))->first(['id', 'member_code', 'name']);
+        $member = Member::where('member_code', trim($data['member_code']))->first(['id', 'member_code', 'name', 'department_name']);
         if (! $member) {
             return response()->json(['success' => false, 'message' => 'Not found'], 404);
         }
@@ -278,6 +278,7 @@ class AdminPaymentController extends AdminAuthController
             'success' => true,
             'member_code' => $member->member_code,
             'member_name' => $member->name,
+            'department' => $member->department_name,
             'outstanding' => number_format($outstanding, 2, '.', ''),
             'last_payment' => $last ? [
                 'amount' => number_format((float) $last->amount, 2, '.', ''),

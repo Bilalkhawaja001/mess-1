@@ -132,6 +132,10 @@
             Business &amp; Payment Info
         </a>
 
+        <a href="{{ url('/faqs') }}">
+            FAQs
+        </a>
+
     </nav>
     <p class="login-powered">Powered by <strong>NodeSky Technologies</strong></p>
 </footer>

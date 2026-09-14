@@ -526,3 +526,14 @@ Route::view('/refund-and-cancellation-policy', 'refund-and-cancellation-policy')
 
 Route::view('/business-information', 'business-information')
     ->name('business-information');
+
+Route::view('/faqs', 'faqs')->name('faqs');
+Route::get('/app', function () {
+    $path = public_path('downloads/nodesky-mess.apk');
+    $size = file_exists($path) ? round(filesize($path) / 1048576, 1).' MB' : '—';
+
+    return view('app-download', [
+        'version' => '1.1.2',
+        'size' => $size,
+    ]);
+})->name('app.download');

@@ -184,6 +184,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
     Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->middleware('permission:users.toggle')->name('users.toggle-active');
 
     Route::middleware('permission:procurement.manage')->group(function () {
+        Route::get('/kitchen-approvals', [\App\Http\Controllers\Admin\KitchenApprovalController::class, 'index'])->name('kitchen-approvals.index');
+        Route::get('/kitchen-approvals/line/{lineId}/image', [\App\Http\Controllers\Admin\KitchenApprovalController::class, 'lineImage'])->whereNumber('lineId')->name('kitchen-approvals.line-image');
+        Route::post('/kitchen-approvals/po/{id}/approve', [\App\Http\Controllers\Admin\KitchenApprovalController::class, 'approvePo'])->whereNumber('id')->name('kitchen-approvals.po.approve');
+        Route::post('/kitchen-approvals/po/{id}/reject', [\App\Http\Controllers\Admin\KitchenApprovalController::class, 'rejectPo'])->whereNumber('id')->name('kitchen-approvals.po.reject');
+        Route::post('/kitchen-approvals/grn/{id}/approve', [\App\Http\Controllers\Admin\KitchenApprovalController::class, 'approveGrn'])->whereNumber('id')->name('kitchen-approvals.grn.approve');
+        Route::post('/kitchen-approvals/grn/{id}/reject', [\App\Http\Controllers\Admin\KitchenApprovalController::class, 'rejectGrn'])->whereNumber('id')->name('kitchen-approvals.grn.reject');
+
         Route::get('/kitchen-staff', [\App\Http\Controllers\Admin\KitchenStaffController::class, 'index'])->name('kitchen-staff.index');
         Route::post('/kitchen-staff', [\App\Http\Controllers\Admin\KitchenStaffController::class, 'store'])->name('kitchen-staff.store');
         Route::put('/kitchen-staff/{kitchenStaff}', [\App\Http\Controllers\Admin\KitchenStaffController::class, 'update'])->name('kitchen-staff.update');
@@ -326,6 +333,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::post('/procurement/po', [ProcurementController::class, 'storePo'])->name('procurement.po.store');
         Route::post('/procurement/po/bulk-approve', [ProcurementController::class, 'bulkApprovePo'])->name('procurement.po.bulk-approve');
         Route::post('/procurement/po/{po}/approve', [ProcurementController::class, 'approvePo'])->name('procurement.po.approve');
+        Route::get('/procurement/po/{po}/pdf', [ProcurementController::class, 'downloadPoPdf'])->name('procurement.po.pdf');
         Route::post('/procurement/purchase-orders/{po}/cancel', [ProcurementController::class, 'cancelPurchaseOrder'])->name('procurement.po.cancel');
         Route::post('/procurement/purchase-orders/{po}/lines/update', [ProcurementController::class, 'updatePurchaseOrderLines'])->name('procurement.po.lines.update');
         Route::get('/procurement/grn/template', [ProcurementController::class, 'downloadGrnTemplate'])->name('procurement.grn.template');
@@ -337,6 +345,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::post('/procurement/grn/bulk-approve', [ProcurementController::class, 'bulkApproveGrn'])->name('procurement.grn.bulk-approve');
         Route::post('/procurement/grn/{grn}/approve', [ProcurementController::class, 'approveGrn'])->name('procurement.grn.approve');
         Route::post('/procurement/grn/{grn}/reverse', [ProcurementController::class, 'reverseGrn'])->name('procurement.grn.reverse');
+        Route::post('/procurement/grn-lines/{line}/reverse', [ProcurementController::class, 'reverseGrnLine'])->name('procurement.grn-line.reverse');
+        Route::get('/procurement/grn/{grn}/pdf', [ProcurementController::class, 'downloadGrnPdf'])->name('procurement.grn.pdf');
         Route::get('/procurement/reports/export', [ProcurementController::class, 'exportPurchaseReports'])->name('procurement.reports.export');
         Route::get('/procurement/reports/export-selected', [ProcurementController::class, 'exportSelectedPurchaseReport'])->name('procurement.reports.export-selected');
     });

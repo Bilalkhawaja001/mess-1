@@ -353,7 +353,7 @@
 
 @php
     $activeTab = request('tab', 'po');
-    if (! in_array($activeTab, ['vendors', 'po', 'grn', 'reports', 'datewise'], true)) {
+    if (! in_array($activeTab, ['vendors', 'po', 'grn', 'approvals', 'reports', 'datewise'], true)) {
         $activeTab = 'po';
     }
 
@@ -436,6 +436,7 @@
             <a href="{{ route('admin.procurement.index', ['tab' => 'vendors']) }}" class="procurement-tab-link {{ $activeTab === 'vendors' ? 'active' : '' }}">Vendors</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="procurement-tab-link {{ $activeTab === 'po' ? 'active' : '' }}">Purchase Orders</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}" class="procurement-tab-link {{ $activeTab === 'grn' ? 'active' : '' }}">GRNs / Receiving</a>
+            <a href="{{ route('admin.procurement.index', ['tab' => 'approvals']) }}" class="procurement-tab-link {{ $activeTab === 'approvals' ? 'active' : '' }}">Kitchen Approvals @if(($kitchenPendingCount ?? 0) > 0)<span class="badge bg-warning text-dark ms-1">{{ $kitchenPendingCount }}</span>@endif</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'reports']) }}" class="procurement-tab-link {{ $activeTab === 'reports' ? 'active' : '' }}">Purchase Reports</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'datewise']) }}" class="procurement-tab-link {{ $activeTab === 'datewise' ? 'active' : '' }}">Date wise Purchase</a>
         </div>
@@ -761,10 +762,19 @@
                                 <tbody>
                                 @forelse($pos as $po)
                                     @php
-                                        $poSelectable = in_array($po->status, ['DRAFT', 'ISSUED'], true);
+                                        $poSelectable = in_array(
+                                            $po->status,
+                                            ['DRAFT', 'ISSUED'],
+                                            true
+                                        );
+
                                         $ordered = (float) ($po->total_qty ?? 0);
                                         $received = (float) ($po->received_qty ?? 0);
-                                        $pct = $ordered > 0 ? min(100, round(($received / $ordered) * 100)) : 0;
+
+                                        $pct = $ordered > 0
+                                            ? min(100, round(($received / $ordered) * 100))
+                                            : 0;
+
                                         $statusMap = [
                                             'DRAFT'              => ['#64748b','#f1f5f9'],
                                             'ISSUED'             => ['#1d4ed8','#dbeafe'],
@@ -773,50 +783,203 @@
                                             'RECEIVED'           => ['#15803d','#dcfce7'],
                                             'CANCELLED'          => ['#57534e','#f5f5f4'],
                                         ];
-                                        $sc = $statusMap[$po->status] ?? ['#57534e','#f5f5f4'];
-                                        $barColor = $pct >= 100 ? '#15803d' : ($pct > 0 ? '#b45309' : '#c5c6ce');
+
+                                        $sc = $statusMap[$po->status]
+                                            ?? ['#57534e','#f5f5f4'];
+
+                                        $barColor = $pct >= 100
+                                            ? '#15803d'
+                                            : ($pct > 0 ? '#b45309' : '#c5c6ce');
                                     @endphp
-                                    <tr style="border-bottom:1px solid #e0e3e5" onmouseover="this.style.background='#f7f9fb';this.querySelector('.po-actions').style.opacity=1" onmouseout="this.style.background='#fff';this.querySelector('.po-actions').style.opacity=0">
-                                        <td style="padding:11px 16px;text-align:center">
-                                            @if($poSelectable)<input type="checkbox" class="po-row-check" name="po_ids[]" value="{{ $po->id }}">@endif
+
+                                    {{-- PO SUMMARY ROW --}}
+                                    <tr style="border-bottom:1px solid #e0e3e5;cursor:pointer"
+                                        onclick="togglePoRow({{ $po->id }})"
+                                        onmouseover="this.style.background='#f7f9fb';this.querySelector('.po-actions').style.opacity=1"
+                                        onmouseout="this.style.background='#fff';this.querySelector('.po-actions').style.opacity=0">
+
+                                        <td style="padding:11px 16px;text-align:center"
+                                            onclick="event.stopPropagation();">
+                                            @if($poSelectable)
+                                                <input type="checkbox"
+                                                       class="po-row-check"
+                                                       name="po_ids[]"
+                                                       value="{{ $po->id }}">
+                                            @endif
                                         </td>
-                                        <td style="padding:11px 16px;font-size:13px;font-weight:500;color:#041632">{{ $po->po_number }}</td>
-                                        <td style="padding:11px 16px;font-size:13px;color:#191c1e;white-space:nowrap">{{ $po->po_date }}</td>
+
+                                        <td style="padding:11px 16px;font-size:13px;font-weight:500;color:#041632">
+                                            <span id="po-arrow-{{ $po->id }}"
+                                                  style="display:inline-block;width:18px">
+                                                ▶
+                                            </span>
+
+                                            {{ $po->po_number }}
+                                        </td>
+
+                                        <td style="padding:11px 16px;font-size:13px;color:#191c1e;white-space:nowrap">
+                                            {{ $po->po_date }}
+                                        </td>
+
                                         <td style="padding:11px 16px;font-size:13px;color:#191c1e">
-                                            <div>{{ $po->vendor->name ?? '-' }}</div>
-                                            <div style="font-size:11px;color:#8a8d93;margin-top:2px">
-                                                @foreach($po->lines->take(2) as $line){{ $line->item?->sku }}@if(!$loop->last), @endif @endforeach
-                                            </div>
+                                            {{ $po->vendor->name ?? '-' }}
                                         </td>
-                                        <td style="padding:11px 16px;text-align:center;font-size:13px;color:#545f72">{{ $po->total_lines }}</td>
-                                        <td style="padding:11px 16px;text-align:right;font-size:13px;color:#191c1e;font-variant-numeric:tabular-nums">{{ number_format($ordered, 3) }}</td>
-                                        <td style="padding:11px 16px;text-align:right;font-size:13px;font-weight:500;color:#191c1e;font-variant-numeric:tabular-nums">{{ number_format((float) ($po->total_amount ?? 0), 2) }}</td>
+
+                                        <td style="padding:11px 16px;text-align:center;font-size:13px;color:#545f72">
+                                            {{ $po->total_lines }}
+                                        </td>
+
+                                        <td style="padding:11px 16px;text-align:right;font-size:13px;color:#191c1e;font-variant-numeric:tabular-nums">
+                                            {{ number_format($ordered, 3) }}
+                                        </td>
+
+                                        <td style="padding:11px 16px;text-align:right;font-size:13px;font-weight:500;color:#191c1e;font-variant-numeric:tabular-nums">
+                                            {{ number_format((float) ($po->total_amount ?? 0), 2) }}
+                                        </td>
+
                                         <td style="padding:11px 16px">
                                             <div style="width:130px">
-                                                <div style="display:flex;justify-content:space-between;font-size:10px;color:#8a8d93;margin-bottom:3px;font-variant-numeric:tabular-nums"><span>{{ number_format($received, 0) }}</span><span>{{ number_format($ordered, 0) }}</span></div>
-                                                <div style="width:100%;height:6px;background:#e0e3e5;border-radius:9999px;overflow:hidden"><div style="height:100%;width:{{ $pct }}%;background:{{ $barColor }}"></div></div>
+                                                <div style="display:flex;justify-content:space-between;font-size:10px;color:#8a8d93;margin-bottom:3px">
+                                                    <span>{{ number_format($received, 0) }}</span>
+                                                    <span>{{ number_format($ordered, 0) }}</span>
+                                                </div>
+
+                                                <div style="width:100%;height:6px;background:#e0e3e5;border-radius:9999px;overflow:hidden">
+                                                    <div style="height:100%;width:{{ $pct }}%;background:{{ $barColor }}"></div>
+                                                </div>
                                             </div>
                                         </td>
+
                                         <td style="padding:11px 16px;text-align:center">
-                                            <span style="display:inline-block;padding:3px 9px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:{{ $sc[0] }};background:{{ $sc[1] }}">{{ str_replace('_',' ',$po->status) }}</span>
+                                            <span style="display:inline-block;padding:3px 9px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:{{ $sc[0] }};background:{{ $sc[1] }}">
+                                                {{ str_replace('_',' ',$po->status) }}
+                                            </span>
                                         </td>
-                                        <td style="padding:11px 16px;text-align:right;white-space:nowrap">
-                                            <span class="po-actions" style="opacity:0;transition:opacity .1s;display:inline-flex;gap:6px;justify-content:flex-end">
+
+                                        <td style="padding:11px 16px;text-align:right;white-space:nowrap"
+                                            onclick="event.stopPropagation();">
+
+                                            <span class="po-actions"
+                                                  style="opacity:0;transition:opacity .1s;display:inline-flex;gap:6px;justify-content:flex-end">
+
+                                                <a href="{{ route('admin.procurement.po.pdf', $po) }}"
+                                                   style="border:1px solid #44474d;background:#fff;color:#44474d;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;text-decoration:none">
+                                                    PDF
+                                                </a>
+
                                                 @if($poSelectable)
-                                                    <button type="submit" formaction="{{ route('admin.procurement.po.approve',$po) }}?tab=po" formmethod="POST" style="border:1px solid #15803d;background:#fff;color:#15803d;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer">Approve</button>
+                                                    <button type="submit"
+                                                            formaction="{{ route('admin.procurement.po.approve',$po) }}?tab=po"
+                                                            formmethod="POST"
+                                                            style="border:1px solid #15803d;background:#fff;color:#15803d;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer">
+                                                        Approve
+                                                    </button>
                                                 @endif
+
                                                 @if($po->goodsReceipts->isEmpty() && $po->status !== 'CANCELLED')
-                                                    <a href="{{ route('admin.procurement.index', ['tab' => 'po', 'edit_po' => $po->id]) }}" style="border:1px solid #041632;background:#fff;color:#041632;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;text-decoration:none">Edit</a>
-                                                    <button type="submit" formaction="{{ route('admin.procurement.po.cancel',$po) }}?tab=po" formmethod="POST" onclick="return confirm('Cancel this PO? This is allowed only before GRN creation.');" style="border:1px solid #ba1a1a;background:#fff;color:#ba1a1a;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer">Cancel</button>
+                                                    <a href="{{ route('admin.procurement.index', ['tab' => 'po', 'edit_po' => $po->id]) }}"
+                                                       style="border:1px solid #041632;background:#fff;color:#041632;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;text-decoration:none">
+                                                        Edit
+                                                    </a>
+
+                                                    <button type="submit"
+                                                            formaction="{{ route('admin.procurement.po.cancel',$po) }}?tab=po"
+                                                            formmethod="POST"
+                                                            onclick="return confirm('Cancel this PO? This is allowed only before GRN creation.');"
+                                                            style="border:1px solid #ba1a1a;background:#fff;color:#ba1a1a;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer">
+                                                        Cancel
+                                                    </button>
                                                 @endif
+
                                                 @if($po->goodsReceipts->isNotEmpty())
-                                                    <span style="font-size:11px;color:#8a8d93">GRN Created</span>
+                                                    <span style="font-size:11px;color:#8a8d93;align-self:center">
+                                                        GRN Created
+                                                    </span>
                                                 @endif
                                             </span>
                                         </td>
                                     </tr>
+
+                                    {{-- EXPANDED PO ITEMS --}}
+                                    <tr id="po-detail-{{ $po->id }}"
+                                        style="display:none;background:#f7f9fb">
+
+                                        <td colspan="10"
+                                            style="padding:16px 24px">
+
+                                            @if($po->remarks)
+                                                <div style="font-size:12px;color:#545f72;margin-bottom:10px">
+                                                    <strong>Remarks:</strong>
+                                                    {{ $po->remarks }}
+                                                </div>
+                                            @endif
+
+                                            <div style="overflow-x:auto">
+                                                <table class="table table-sm table-bordered bg-white mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Item Code</th>
+                                                            <th>Item Name</th>
+                                                            <th class="text-end">Ordered Qty</th>
+                                                            <th class="text-end">Rate</th>
+                                                            <th class="text-end">Amount</th>
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tbody>
+                                                    @foreach($po->lines as $line)
+                                                        @php
+                                                            $lineAmount =
+                                                                ((float)$line->qty_ordered)
+                                                                * ((float)$line->unit_price);
+                                                        @endphp
+
+                                                        <tr>
+                                                            <td>
+                                                                {{ $line->item?->sku }}
+                                                            </td>
+
+                                                            <td>
+                                                                {{ $line->item?->name ?? '-' }}
+                                                            </td>
+
+                                                            <td class="text-end">
+                                                                {{ number_format((float)$line->qty_ordered, 3) }}
+                                                            </td>
+
+                                                            <td class="text-end">
+                                                                {{ number_format((float)$line->unit_price, 2) }}
+                                                            </td>
+
+                                                            <td class="text-end">
+                                                                {{ number_format($lineAmount, 2) }}
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+
+                                                        <tr>
+                                                            <td colspan="4"
+                                                                class="text-end fw-bold">
+                                                                PO Total
+                                                            </td>
+
+                                                            <td class="text-end fw-bold">
+                                                                {{ number_format((float)($po->total_amount ?? 0), 2) }}
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+
                                 @empty
-                                    <tr><td colspan="10" style="padding:48px 24px;text-align:center;color:#545f72;font-size:14px">No purchase orders found.</td></tr>
+                                    <tr>
+                                        <td colspan="10"
+                                            style="padding:48px 24px;text-align:center;color:#545f72;font-size:14px">
+                                            No purchase orders found.
+                                        </td>
+                                    </tr>
                                 @endforelse
                                 </tbody>
                             </table>
@@ -1183,37 +1346,237 @@
             <div class="card procurement-table-card">
                 <div class="card-header"><span>GRNs</span><span class="text-muted small">Posted on create</span></div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.procurement.grn.bulk-approve') }}?tab=grn" id="grn-bulk-form">
-                            @csrf
-                            <div class="bulk-action-bar">
-                                <div><span id="grn-selected-count">0</span> GRN(s) selected</div>
-                                <button type="submit" class="btn btn-sm btn-outline-success" id="grn-bulk-submit" disabled>Bulk Acknowledge</button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-sm align-middle"><thead><tr><th><input type="checkbox" id="grn-select-all"></th><th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th><th>Item</th><th>Qty Received</th><th>Unit Cost</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-                                    @forelse($grns as $grn)
-                                        @php $grnLine = $grn->lines->first(); @endphp
-                                        <tr>
-                                            <td><input type="checkbox" class="grn-row-check" name="grn_ids[]" value="{{ $grn->id }}"></td>
-                                            <td>{{ $grn->grn_number }}</td>
-                                            <td>{{ $grn->received_date }}</td>
-                                            <td>{{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}</td>
-                                            <td>{{ $grn->purchaseOrder->vendor->name ?? '-' }}</td>
-                                            <td>{{ $grnLine?->item?->sku }} {{ $grnLine?->item?->name ? '— '.$grnLine->item->name : '' }}</td>
-                                            <td>{{ number_format((float) ($grnLine?->qty_received ?? 0), 3) }}</td>
-                                            <td>{{ number_format((float) ($grnLine?->unit_cost ?? 0), 2) }}</td>
-                                            <td>Posted on Create</td>
-                                            <td class="text-end">
-                                                <button type="submit" formaction="{{ route('admin.procurement.grn.approve',$grn) }}?tab=grn" formmethod="POST" class="btn btn-sm btn-outline-success">Acknowledge</button>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="grnReverse({{ $grn->id }}, '{{ $grn->grn_number }}')">Reverse</button>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr><td colspan="10" class="text-center text-muted py-4">No GRNs found.</td></tr>
-                                    @endforelse
-                                </tbody></table>
-                            </div>
+
+                    <form method="GET"
+                          action="{{ route('admin.procurement.index') }}"
+                          class="row g-3 mb-3">
+
+                        <input type="hidden" name="tab" value="grn">
+
+                        <div class="col-md-4">
+                            <label class="form-label">Vendor</label>
+
+                            <select name="grn_vendor_id" class="form-select">
+                                <option value="">All Vendors</option>
+
+                                @foreach($vendors as $vendor)
+                                    <option value="{{ $vendor->id }}"
+                                        @selected((int)$grnVendorId === (int)$vendor->id)>
+                                        {{ $vendor->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">From Date</label>
+
+                            <input type="date"
+                                   name="from_date"
+                                   value="{{ $grnFromDate }}"
+                                   class="form-control">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">To Date</label>
+
+                            <input type="date"
+                                   name="to_date"
+                                   value="{{ $grnToDate }}"
+                                   class="form-control">
+                        </div>
+
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            <button type="submit"
+                                    class="btn btn-primary flex-grow-1">
+                                Apply
+                            </button>
+
+                            <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}"
+                               class="btn btn-outline-secondary">
+                                Reset
+                            </a>
+                        </div>
                     </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Vendor</th>
+                                    <th>GRN Number</th>
+                                    <th class="text-center">Items</th>
+                                    <th class="text-end">Total Amount</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                            @forelse($grns as $grn)
+                                @php
+                                    $grossTotal = $grn->lines->sum(
+                                        fn ($line) =>
+                                            ((float)$line->qty_received)
+                                            * ((float)$line->unit_cost)
+                                    );
+                                @endphp
+
+                                <tr style="cursor:pointer;"
+                                    onclick="toggleGrnRow({{ $grn->id }})">
+
+                                    <td>
+                                        <span id="grn-arrow-{{ $grn->id }}">▶</span>
+                                        {{ $grn->received_date }}
+                                    </td>
+
+                                    <td>
+                                        {{ $grn->purchaseOrder->vendor->name ?? '-' }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ $grn->grn_number }}</strong>
+
+                                        @if($grn->is_reversed)
+                                            <span class="badge bg-danger ms-1">
+                                                Reversed
+                                            </span>
+                                        @elseif($grn->has_line_reversal)
+                                            <span class="badge bg-warning text-dark ms-1">
+                                                Partial Reversal
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    <td class="text-center">
+                                        {{ $grn->lines->count() }}
+                                    </td>
+
+                                    <td class="text-end">
+                                        {{ number_format($grossTotal, 2) }}
+                                    </td>
+
+                                    <td class="text-end"
+                                        onclick="event.stopPropagation();">
+
+                                        <a href="{{ route('admin.procurement.grn.pdf', $grn) }}"
+                                           class="btn btn-sm btn-outline-dark">
+                                            PDF
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                <tr id="grn-detail-{{ $grn->id }}"
+                                    style="display:none;">
+
+                                    <td colspan="6"
+                                        class="p-3 bg-light">
+
+                                        <div class="mb-2">
+                                            <strong>PO:</strong>
+                                            {{ $grn->purchaseOrder->po_number ?? $grn->purchase_order_id }}
+
+                                            &nbsp;&nbsp;
+
+                                            <strong>Vendor:</strong>
+                                            {{ $grn->purchaseOrder->vendor->name ?? '-' }}
+                                        </div>
+
+                                        <table class="table table-sm table-bordered bg-white mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Item</th>
+                                                    <th class="text-end">Qty</th>
+                                                    <th class="text-end">Rate</th>
+                                                    <th class="text-end">Amount</th>
+                                                    <th>Status</th>
+                                                    <th class="text-end">Action</th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody>
+                                            @foreach($grn->lines as $line)
+                                                @php
+                                                    $lineAmount =
+                                                        ((float)$line->qty_received)
+                                                        * ((float)$line->unit_cost);
+                                                @endphp
+
+                                                <tr>
+                                                    <td>
+                                                        {{ $line->item?->sku }}
+
+                                                        @if($line->item?->name)
+                                                            — {{ $line->item->name }}
+                                                        @endif
+                                                    </td>
+
+                                                    <td class="text-end">
+                                                        {{ number_format((float)$line->qty_received, 3) }}
+                                                    </td>
+
+                                                    <td class="text-end">
+                                                        {{ number_format((float)$line->unit_cost, 2) }}
+                                                    </td>
+
+                                                    <td class="text-end">
+                                                        {{ number_format($lineAmount, 2) }}
+                                                    </td>
+
+                                                    <td>
+                                                        @if($grn->is_reversed)
+                                                            <span class="badge bg-danger">
+                                                                GRN Reversed
+                                                            </span>
+                                                        @elseif($line->is_reversed)
+                                                            <span class="badge bg-secondary">
+                                                                Item Reversed
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-success">
+                                                                Posted
+                                                            </span>
+                                                        @endif
+                                                    </td>
+
+                                                    <td class="text-end">
+                                                        @if(! $grn->is_reversed && ! $line->is_reversed)
+                                                            <form method="POST"
+                                                                  action="{{ route('admin.procurement.grn-line.reverse', $line) }}?tab=grn"
+                                                                  onsubmit="return reverseSingleGrnItem(this, '{{ addslashes($line->item?->name ?? $line->item?->sku ?? 'Item') }}');">
+
+                                                                @csrf
+
+                                                                <input type="hidden"
+                                                                       name="reason"
+                                                                       value="">
+
+                                                                <button type="submit"
+                                                                        class="btn btn-sm btn-outline-danger">
+                                                                    Reverse Item
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            </tbody>
+                                        </table>
+
+                                    </td>
+                                </tr>
+
+                            @empty
+                                <tr>
+                                    <td colspan="6"
+                                        class="text-center text-muted py-4">
+                                        No GRNs found.
+                                    </td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1385,6 +1748,12 @@
 
     @endif
 
+    @if($activeTab === 'approvals')
+    <div class="procurement-tab-panel" id="approvals-panel">
+        @include('admin.kitchen-approvals._panel')
+    </div>
+    @endif
+
     @if($activeTab === 'datewise')
     <div class="procurement-tab-panel" id="datewise-panel">
         <div class="card shadow-sm">
@@ -1522,6 +1891,80 @@ function grnReverse(id, num){
   f.submit();
 }
 </script>
+
+<script>
+function toggleGrnRow(id) {
+    const detail = document.getElementById('grn-detail-' + id);
+    const arrow = document.getElementById('grn-arrow-' + id);
+
+    if (!detail) {
+        return;
+    }
+
+    const opening =
+        detail.style.display === 'none'
+        || detail.style.display === '';
+
+    detail.style.display = opening ? 'table-row' : 'none';
+
+    if (arrow) {
+        arrow.textContent = opening ? '▼' : '▶';
+    }
+}
+
+function reverseSingleGrnItem(form, itemName) {
+    let reason = window.prompt(
+        'Reverse item: ' + itemName
+        + '\n\nOnly this GRN item stock will be reversed.'
+        + '\nEnter reason (minimum 5 characters):'
+    );
+
+    if (reason === null) {
+        return false;
+    }
+
+    reason = reason.trim();
+
+    if (reason.length < 5) {
+        alert('Reason must be at least 5 characters.');
+        return false;
+    }
+
+    const input = form.querySelector('input[name="reason"]');
+
+    if (!input) {
+        return false;
+    }
+
+    input.value = reason;
+
+    return window.confirm(
+        'Confirm item reversal?\n\n'
+        + 'Only this selected item will be reversed.'
+    );
+}
+</script>
+
+
+<script>
+function togglePoRow(id) {
+    const row = document.getElementById('po-detail-' + id);
+    const arrow = document.getElementById('po-arrow-' + id);
+
+    if (!row) return;
+
+    const opening =
+        row.style.display === 'none'
+        || row.style.display === '';
+
+    row.style.display = opening ? 'table-row' : 'none';
+
+    if (arrow) {
+        arrow.textContent = opening ? '▼' : '▶';
+    }
+}
+</script>
+
 @endsection
 
 @push('scripts')

@@ -353,6 +353,7 @@
                         @endif
 
                         @if($canProcurementTop)
+                            <a href="{{ route('admin.kitchen-approvals.index') }}">Kitchen Approvals</a>
                             <a href="{{ route('admin.kitchen-staff.index') }}">Kitchen Staff</a>
                         @endif
 

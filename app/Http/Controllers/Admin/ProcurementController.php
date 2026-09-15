@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -82,23 +83,90 @@ class ProcurementController extends Controller
         [$reportFromDate, $reportToDate] = $this->resolvePurchaseReportDateRange($request);
         $reportSearch = trim((string) $request->input('q', ''));
 
+        $grnSearch = trim((string) $request->input('grn_q', ''));
+        $grnVendorId = $request->integer('grn_vendor_id');
+        $grnItemId = $request->integer('grn_item_id');
+
         $grns = GoodsReceipt::query()
             ->with(['purchaseOrder.vendor', 'lines.item'])
             ->whereBetween('received_date', [$grnFromDate, $grnToDate])
-            ->when($reportSearch !== '', function ($query) use ($reportSearch) {
-                $like = '%'.$reportSearch.'%';
-                $query->where(function ($q) use ($like) {
-                    $q->where('grn_number', 'like', $like)
-                        ->orWhereHas('purchaseOrder', function ($po) use ($like) {
-                            $po->where('po_number', 'like', $like)
-                                ->orWhereHas('vendor', fn ($vendor) => $vendor->where('name', 'like', $like));
-                        });
+            ->when($grnVendorId > 0, function ($query) use ($grnVendorId) {
+                $query->whereHas('purchaseOrder', function ($po) use ($grnVendorId) {
+                    $po->where('vendor_id', $grnVendorId);
                 });
+            })
+            ->when($grnItemId > 0, function ($query) use ($grnItemId) {
+                $query->whereHas('lines', function ($line) use ($grnItemId) {
+                    $line->where('item_id', $grnItemId);
+                });
+            })
+            ->when($grnSearch !== '', function ($query) use ($grnSearch) {
+                $terms = preg_split('/\\s+/', $grnSearch, -1, PREG_SPLIT_NO_EMPTY);
+
+                foreach ($terms as $term) {
+                    $like = '%'.$term.'%';
+
+                    $query->where(function ($q) use ($like) {
+                        $q->where('grn_number', 'like', $like)
+                            ->orWhere('received_date', 'like', $like)
+                            ->orWhereHas('purchaseOrder', function ($po) use ($like) {
+                                $po->where('po_number', 'like', $like)
+                                    ->orWhereHas('vendor', function ($vendor) use ($like) {
+                                        $vendor->where('name', 'like', $like);
+                                    });
+                            })
+                            ->orWhereHas('lines.item', function ($item) use ($like) {
+                                $item->where('sku', 'like', $like)
+                                    ->orWhere('name', 'like', $like);
+                            });
+                    });
+                }
             })
             ->orderByDesc('received_date')
             ->orderByDesc('id')
             ->limit(200)
             ->get();
+
+        $visibleGrnIds = $grns->pluck('id');
+
+        $visibleGrnLineIds = $grns
+            ->flatMap(fn (GoodsReceipt $receipt) => $receipt->lines->pluck('id'))
+            ->values();
+
+        $wholeReversedGrnIds = StockTransaction::query()
+            ->where('txn_type', 'GRN_REVERSAL')
+            ->where('reference_type', GoodsReceipt::class)
+            ->whereIn('reference_id', $visibleGrnIds)
+            ->pluck('reference_id')
+            ->map(fn ($id) => (int) $id);
+
+        $reversedGrnLineIds = StockTransaction::query()
+            ->where('txn_type', 'GRN_REVERSAL')
+            ->where('reference_type', GoodsReceiptLine::class)
+            ->whereIn('reference_id', $visibleGrnLineIds)
+            ->pluck('reference_id')
+            ->map(fn ($id) => (int) $id);
+
+        $grns->each(function (GoodsReceipt $receipt) use ($wholeReversedGrnIds, $reversedGrnLineIds) {
+            $receipt->setAttribute(
+                'is_reversed',
+                $wholeReversedGrnIds->contains((int) $receipt->id)
+            );
+
+            $receipt->lines->each(function (GoodsReceiptLine $line) use ($reversedGrnLineIds) {
+                $line->setAttribute(
+                    'is_reversed',
+                    $reversedGrnLineIds->contains((int) $line->id)
+                );
+            });
+
+            $receipt->setAttribute(
+                'has_line_reversal',
+                $receipt->lines->contains(
+                    fn (GoodsReceiptLine $line) => (bool) $line->is_reversed
+                )
+            );
+        });
 
         $purchaseReportData = $this->buildPurchaseReportData($reportFromDate, $reportToDate, $reportSearch);
 
@@ -114,7 +182,29 @@ class ProcurementController extends Controller
             }
         }
 
+        $pendingPos = \App\Models\KitchenPo::with(['staff:id,name,staff_code', 'vendor:id,name', 'lines.item:id,name,sku,uom'])
+            ->where('status', \App\Models\KitchenPo::STATUS_PENDING)
+            ->orderBy('id')
+            ->get();
+
+        $pendingGrns = \App\Models\KitchenGrn::with(['staff:id,name,staff_code', 'kitchenPo:id,temp_number,status', 'lines.item:id,name,sku,uom'])
+            ->where('status', \App\Models\KitchenGrn::STATUS_PENDING)
+            ->orderBy('id')
+            ->get();
+
+        $history = \App\Models\KitchenPo::with(['staff:id,name', 'vendor:id,name'])
+            ->whereIn('status', [\App\Models\KitchenPo::STATUS_APPROVED, \App\Models\KitchenPo::STATUS_REJECTED])
+            ->orderByDesc('reviewed_at')
+            ->limit(20)
+            ->get();
+
+        $kitchenPendingCount = $pendingPos->count() + $pendingGrns->count();
+
         return view('admin.procurement.index', compact(
+            'pendingPos',
+            'pendingGrns',
+            'history',
+            'kitchenPendingCount',
             'vendors',
             'items',
             'pos',
@@ -125,6 +215,9 @@ class ProcurementController extends Controller
             'selectedGrnTemplatePo',
             'grnFromDate',
             'grnToDate',
+            'grnSearch',
+            'grnVendorId',
+            'grnItemId',
             'reportFromDate',
             'reportToDate',
             'reportSearch',
@@ -241,6 +334,7 @@ class ProcurementController extends Controller
                 $po = PurchaseOrder::create([
                     'vendor_id' => (int) $group['vendor_id'],
                     'po_number' => DocumentNumber::generate('PO'),
+                    'created_by_user_id' => Auth::id(),
                     'po_date' => $group['po_date'],
                     'status' => 'DRAFT',
                     'remarks' => collect($group['rows'])->pluck('remarks')->filter()->unique()->implode(' | ') ?: null,
@@ -542,6 +636,7 @@ class ProcurementController extends Controller
                     $grn = GoodsReceipt::create([
                         'purchase_order_id' => $lockedPo->id,
                         'grn_number' => DocumentNumber::generate('GRN'),
+                        'created_by_user_id' => Auth::id(),
                         'received_date' => $group['received_date'],
                         'remarks' => collect($group['rows'])->pluck('remarks')->filter()->implode(' | ') ?: null,
                     ]);
@@ -647,6 +742,7 @@ class ProcurementController extends Controller
             $po = PurchaseOrder::create([
                 'vendor_id' => $d['vendor_id'],
                 'po_number' => DocumentNumber::generate('PO'),
+                    'created_by_user_id' => Auth::id(),
                 'po_date' => $d['po_date'],
                 'status' => 'DRAFT',
                 'remarks' => $r->input('remarks'),
@@ -753,6 +849,876 @@ class ProcurementController extends Controller
 
 
 
+    public function downloadPoPdf(PurchaseOrder $po): Response
+    {
+        $po->load([
+            'vendor',
+            'lines.item',
+            'goodsReceipts.lines',
+        ]);
+
+        $pdf = $this->buildStyledPoPdf($po);
+
+        $filename = preg_replace(
+            '/[^A-Za-z0-9_-]+/',
+            '_',
+            (string) $po->po_number
+        ).'.pdf';
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => strlen($pdf),
+        ]);
+    }
+
+    private function buildStyledPoPdf(PurchaseOrder $po): string
+    {
+        $logoPath = public_path('branding/nodesky-po-logo.jpg');
+        $logoData = is_file($logoPath)
+            ? file_get_contents($logoPath)
+            : null;
+
+        $logoInfo = $logoData
+            ? @getimagesize($logoPath)
+            : false;
+
+        $hasLogo = is_array($logoInfo)
+            && ($logoInfo[2] ?? null) === 2;
+
+        $logoWidth = $hasLogo
+            ? (int) $logoInfo[0]
+            : 0;
+
+        $logoHeight = $hasLogo
+            ? (int) $logoInfo[1]
+            : 0;
+
+        $items = collect($po->lines ?? []);
+
+        $chunks = $items
+            ->chunk(7)
+            ->values();
+
+        if ($chunks->isEmpty()) {
+            $chunks = collect([collect()]);
+        }
+
+        $pageCount = $chunks->count();
+
+        $grandTotal = (float) $items->sum(
+            fn ($line) =>
+                (float) $line->qty_ordered
+                * (float) $line->unit_price
+        );
+
+        $poDate = '-';
+
+        if (! empty($po->po_date)) {
+            try {
+                $poDate = \Illuminate\Support\Carbon::parse(
+                    $po->po_date
+                )->format('d-M-Y');
+            } catch (\Throwable $e) {
+                $poDate = (string) $po->po_date;
+            }
+        }
+
+        $pageStreams = [];
+
+        foreach ($chunks as $pageIndex => $chunk) {
+            $stream = '';
+
+            /*
+             * HEADER
+             */
+
+            if ($hasLogo) {
+                $stream .=
+                    "q 72 0 0 64 25 500 cm /Im1 Do Q\n";
+            } else {
+                $stream .= $this->pdfFillRect(
+                    28, 512, 58, 58,
+                    0.08, 0.32, 0.62
+                );
+
+                $stream .= $this->pdfText(
+                    32, 500,
+                    'NODE SKY',
+                    8.5,
+                    true
+                );
+            }
+
+            $stream .= $this->pdfText(
+                305,
+                557,
+                'NodeSky Technologies',
+                18,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                361,
+                535,
+                'Admin Mess',
+                12,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                337,
+                503,
+                'Local Purchase Order',
+                14,
+                true
+            );
+
+            $stream .= $this->pdfLine(
+                335,
+                499,
+                507,
+                499,
+                0.8
+            );
+
+            /*
+             * LEFT INFORMATION
+             */
+
+            $leftY = 462;
+
+            $stream .= $this->pdfText(
+                35,
+                $leftY,
+                'Company',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                120,
+                $leftY,
+                ': NodeSky Technologies',
+                8
+            );
+
+            $leftY -= 18;
+
+            $stream .= $this->pdfText(
+                35,
+                $leftY,
+                'Department',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                120,
+                $leftY,
+                ': Admin Mess',
+                8
+            );
+
+            $leftY -= 18;
+
+            $stream .= $this->pdfText(
+                35,
+                $leftY,
+                'Supplier Name',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                120,
+                $leftY,
+                ': '.(string) ($po->vendor?->name ?? '-'),
+                8
+            );
+
+            $leftY -= 18;
+
+            $stream .= $this->pdfText(
+                35,
+                $leftY,
+                'Vendor ID',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                120,
+                $leftY,
+                ': '.(string) ($po->vendor_id ?? '-'),
+                8
+            );
+
+            /*
+             * RIGHT INFORMATION
+             */
+
+            $rightY = 462;
+
+            $stream .= $this->pdfText(
+                478,
+                $rightY,
+                'PO Number',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                575,
+                $rightY,
+                ': '.(string) ($po->po_number ?? '-'),
+                8,
+                true
+            );
+
+            $rightY -= 18;
+
+            $stream .= $this->pdfText(
+                478,
+                $rightY,
+                'PO Date',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                575,
+                $rightY,
+                ': '.$poDate,
+                8
+            );
+
+            $rightY -= 18;
+
+            $stream .= $this->pdfText(
+                478,
+                $rightY,
+                'Status',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                575,
+                $rightY,
+                ': '.(string) ($po->status ?? '-'),
+                8,
+                true
+            );
+
+            $rightY -= 18;
+
+            $stream .= $this->pdfText(
+                478,
+                $rightY,
+                'Total Items',
+                8,
+                true
+            );
+
+            $stream .= $this->pdfText(
+                575,
+                $rightY,
+                ': '.(string) $items->count(),
+                8
+            );
+
+            if (! empty($po->remarks)) {
+                $remarks = substr(
+                    (string) $po->remarks,
+                    0,
+                    80
+                );
+
+                $stream .= $this->pdfText(
+                    35,
+                    382,
+                    'Comments',
+                    8,
+                    true
+                );
+
+                $stream .= $this->pdfText(
+                    120,
+                    382,
+                    ': '.$remarks,
+                    8
+                );
+            }
+
+            /*
+             * TERMS BAR
+             */
+
+            $stream .= $this->pdfFillRect(
+                25,
+                350,
+                792,
+                20,
+                0.67,
+                0.82,
+                0.94
+            );
+
+            $terms = [
+                [95,  'Payment Terms', '-'],
+                [245, 'Freight Terms', '-'],
+                [395, 'Delivery Term', '-'],
+                [560, 'Currency', 'PKR'],
+                [705, 'Exchange Rate', '1.00'],
+            ];
+
+            foreach ($terms as [$x, $label, $value]) {
+                $stream .= $this->pdfText(
+                    $x,
+                    356,
+                    $label,
+                    7.5,
+                    true
+                );
+
+                $stream .= $this->pdfText(
+                    $x + 12,
+                    337,
+                    $value,
+                    7.5
+                );
+            }
+
+            /*
+             * ITEM TABLE
+             */
+
+            $tableTop = 305;
+
+            $stream .= $this->pdfFillRect(
+                25,
+                $tableTop,
+                792,
+                24,
+                0.67,
+                0.82,
+                0.94
+            );
+
+            $headers = [
+                [31,  'S#'],
+                [63,  'Item Code'],
+                [158, 'Item Description'],
+                [420, 'UoM'],
+                [480, 'Quantity'],
+                [565, 'Rate'],
+                [662, 'Amount'],
+            ];
+
+            foreach ($headers as [$x, $label]) {
+                $stream .= $this->pdfText(
+                    $x,
+                    $tableTop + 8,
+                    $label,
+                    7.5,
+                    true
+                );
+            }
+
+            $rowY = $tableTop - 18;
+
+            foreach ($chunk as $localIndex => $line) {
+                $globalIndex =
+                    ($pageIndex * 7)
+                    + $localIndex
+                    + 1;
+
+                $qty = (float) $line->qty_ordered;
+                $rate = (float) $line->unit_price;
+                $amount = $qty * $rate;
+
+                $code = substr(
+                    (string) ($line->item?->sku ?? ''),
+                    0,
+                    15
+                );
+
+                $name = substr(
+                    (string) ($line->item?->name ?? '-'),
+                    0,
+                    38
+                );
+
+                $uom = substr(
+                    (string) ($line->item?->uom ?? '-'),
+                    0,
+                    8
+                );
+
+                $stream .= $this->pdfText(
+                    33,
+                    $rowY,
+                    (string) $globalIndex,
+                    7.2
+                );
+
+                $stream .= $this->pdfText(
+                    63,
+                    $rowY,
+                    $code,
+                    7.2
+                );
+
+                $stream .= $this->pdfText(
+                    158,
+                    $rowY,
+                    $name,
+                    7.2
+                );
+
+                $stream .= $this->pdfText(
+                    424,
+                    $rowY,
+                    $uom,
+                    7.2
+                );
+
+                $stream .= $this->pdfRightText(
+                    548,
+                    $rowY,
+                    number_format($qty, 3),
+                    7.2
+                );
+
+                $stream .= $this->pdfRightText(
+                    645,
+                    $rowY,
+                    number_format($rate, 2),
+                    7.2
+                );
+
+                $stream .= $this->pdfRightText(
+                    802,
+                    $rowY,
+                    number_format($amount, 2),
+                    7.2
+                );
+
+                $stream .=
+                    "0.82 0.82 0.82 RG 0.35 w "
+                    ."25 ".($rowY - 5)
+                    ." m 817 ".($rowY - 5)
+                    ." l S\n";
+
+                $rowY -= 18;
+            }
+
+            /*
+             * TOTALS + SIGNATURE AREA ON FINAL PAGE
+             */
+
+            if ($pageIndex === $pageCount - 1) {
+                $summaryTop = max(
+                    150,
+                    $rowY - 12
+                );
+
+                $stream .= $this->pdfLine(
+                    25,
+                    $summaryTop,
+                    817,
+                    $summaryTop,
+                    0.8
+                );
+
+                $stream .= $this->pdfText(
+                    610,
+                    $summaryTop - 24,
+                    'Amount',
+                    8.5,
+                    true
+                );
+
+                $stream .= $this->pdfRightText(
+                    802,
+                    $summaryTop - 24,
+                    number_format($grandTotal, 2),
+                    8.5
+                );
+
+                $stream .= $this->pdfText(
+                    610,
+                    $summaryTop - 42,
+                    'Sales Tax Amount',
+                    8.5,
+                    true
+                );
+
+                $stream .= $this->pdfRightText(
+                    802,
+                    $summaryTop - 42,
+                    '0.00',
+                    8.5
+                );
+
+                $stream .= $this->pdfText(
+                    610,
+                    $summaryTop - 60,
+                    'Discount',
+                    8.5,
+                    true
+                );
+
+                $stream .= $this->pdfRightText(
+                    802,
+                    $summaryTop - 60,
+                    '0.00',
+                    8.5
+                );
+
+                $stream .= $this->pdfText(
+                    610,
+                    $summaryTop - 78,
+                    'Net Amount',
+                    9,
+                    true
+                );
+
+                $stream .= $this->pdfRightText(
+                    802,
+                    $summaryTop - 78,
+                    number_format($grandTotal, 2),
+                    9,
+                    true
+                );
+
+                $signY = 32;
+
+                $stream .= $this->pdfLine(
+                    35, $signY + 18,
+                    195, $signY + 18,
+                    0.7
+                );
+
+                $stream .= $this->pdfLine(
+                    230, $signY + 18,
+                    390, $signY + 18,
+                    0.7
+                );
+
+                $stream .= $this->pdfLine(
+                    425, $signY + 18,
+                    585, $signY + 18,
+                    0.7
+                );
+
+                $stream .= $this->pdfLine(
+                    620, $signY + 18,
+                    780, $signY + 18,
+                    0.7
+                );
+
+                $preparedName = (string) ($po->stampCreatedBy() ?: '');
+                $approverName = (string) (optional($po->approvedByUser)->name ?: '');
+                $approvedOn = '';
+
+                if (! empty($po->approved_at)) {
+                    try {
+                        $approvedOn = \Illuminate\Support\Carbon::parse($po->approved_at)->format('d-M-Y');
+                    } catch (\Throwable $e) {
+                        $approvedOn = '';
+                    }
+                }
+
+                if ($preparedName !== '') {
+                    $stream .= $this->pdfText(
+                        40,
+                        $signY + 24,
+                        substr($preparedName, 0, 26),
+                        7.2
+                    );
+                }
+
+                if ($approverName !== '') {
+                    $stream .= $this->pdfText(
+                        235,
+                        $signY + 24,
+                        substr($approverName, 0, 26),
+                        7.2
+                    );
+                }
+
+                if ($approvedOn !== '') {
+                    $stream .= $this->pdfText(
+                        625,
+                        $signY + 24,
+                        $approvedOn,
+                        7.2
+                    );
+                }
+
+                $stream .= $this->pdfText(
+                    82,
+                    $signY + 5,
+                    'Prepared By',
+                    7.5,
+                    true
+                );
+
+                $stream .= $this->pdfText(
+                    278,
+                    $signY + 5,
+                    'Approved By',
+                    7.5,
+                    true
+                );
+
+                $stream .= $this->pdfText(
+                    477,
+                    $signY + 5,
+                    'Received By',
+                    7.5,
+                    true
+                );
+
+                $stream .= $this->pdfText(
+                    694,
+                    $signY + 5,
+                    'Date',
+                    7.5,
+                    true
+                );
+
+                $stream .= $this->pdfText(
+                    25,
+                    12,
+                    'Note: This is a computer generated report and does not need any sign.',
+                    7.2
+                );
+            }
+
+            $stream .= $this->pdfRightText(
+                815,
+                12,
+                'Page '.($pageIndex + 1).' of '.$pageCount,
+                7
+            );
+
+            $pageStreams[] = $stream;
+        }
+
+        /*
+         * PDF OBJECTS
+         */
+
+        $n = count($pageStreams);
+
+        $regularFontId =
+            3 + ($n * 2);
+
+        $boldFontId =
+            $regularFontId + 1;
+
+        $imageObjectId =
+            $hasLogo
+                ? $boldFontId + 1
+                : null;
+
+        $objects = [];
+
+        $objects[1] =
+            '<< /Type /Catalog /Pages 2 0 R >>';
+
+        $kids = [];
+
+        foreach ($pageStreams as $i => $stream) {
+            $pageId =
+                3 + ($i * 2);
+
+            $contentId =
+                $pageId + 1;
+
+            $kids[] =
+                $pageId.' 0 R';
+
+            $xObject = $hasLogo
+                ? ' /XObject << /Im1 '.$imageObjectId.' 0 R >>'
+                : '';
+
+            $objects[$pageId] =
+                '<< /Type /Page'
+                .' /Parent 2 0 R'
+                .' /MediaBox [0 0 842 595]'
+                .' /Resources <<'
+                .' /Font <<'
+                .' /F1 '.$regularFontId.' 0 R'
+                .' /F2 '.$boldFontId.' 0 R'
+                .' >>'
+                .$xObject
+                .' >>'
+                .' /Contents '.$contentId.' 0 R'
+                .' >>';
+
+            $objects[$contentId] =
+                '<< /Length '.strlen($stream)." >>\n"
+                ."stream\n"
+                .$stream
+                ."\nendstream";
+        }
+
+        $objects[2] =
+            '<< /Type /Pages /Kids ['
+            .implode(' ', $kids)
+            .'] /Count '.$n
+            .' >>';
+
+        $objects[$regularFontId] =
+            '<< /Type /Font'
+            .' /Subtype /Type1'
+            .' /BaseFont /Helvetica'
+            .' >>';
+
+        $objects[$boldFontId] =
+            '<< /Type /Font'
+            .' /Subtype /Type1'
+            .' /BaseFont /Helvetica-Bold'
+            .' >>';
+
+        if ($hasLogo && $imageObjectId !== null) {
+            $objects[$imageObjectId] =
+                '<< /Type /XObject'
+                .' /Subtype /Image'
+                .' /Width '.$logoWidth
+                .' /Height '.$logoHeight
+                .' /ColorSpace /DeviceRGB'
+                .' /BitsPerComponent 8'
+                .' /Filter /DCTDecode'
+                .' /Length '.strlen($logoData)
+                ." >>\n"
+                ."stream\n"
+                .$logoData
+                ."\nendstream";
+        }
+
+        ksort($objects);
+
+        $lastObjectId =
+            $hasLogo && $imageObjectId !== null
+                ? $imageObjectId
+                : $boldFontId;
+
+        $pdf = "%PDF-1.4\n";
+
+        $offsets = [
+            0 => 0,
+        ];
+
+        for ($id = 1; $id <= $lastObjectId; $id++) {
+            $offsets[$id] =
+                strlen($pdf);
+
+            $pdf .=
+                $id." 0 obj\n"
+                .$objects[$id]
+                ."\nendobj\n";
+        }
+
+        $xrefPosition =
+            strlen($pdf);
+
+        $pdf .=
+            "xref\n"
+            ."0 ".($lastObjectId + 1)."\n"
+            ."0000000000 65535 f \n";
+
+        for ($id = 1; $id <= $lastObjectId; $id++) {
+            $pdf .= sprintf(
+                "%010d 00000 n \n",
+                $offsets[$id]
+            );
+        }
+
+        $pdf .=
+            "trailer\n"
+            .'<< /Size '.($lastObjectId + 1)
+            .' /Root 1 0 R >>'
+            ."\n"
+            ."startxref\n"
+            .$xrefPosition
+            ."\n%%EOF";
+
+        return $pdf;
+    }
+
+    private function pdfText(
+        float $x,
+        float $y,
+        string $text,
+        float $size = 8,
+        bool $bold = false
+    ): string {
+        $font =
+            $bold
+                ? 'F2'
+                : 'F1';
+
+        return
+            "0 0 0 rg BT /{$font} {$size} Tf "
+            ."{$x} {$y} Td ("
+            .$this->escapePdfText($text)
+            .") Tj ET\n";
+    }
+
+    private function pdfRightText(
+        float $rightX,
+        float $y,
+        string $text,
+        float $size = 8,
+        bool $bold = false
+    ): string {
+        $width =
+            strlen($text)
+            * $size
+            * 0.50;
+
+        return $this->pdfText(
+            max(0, $rightX - $width),
+            $y,
+            $text,
+            $size,
+            $bold
+        );
+    }
+
+    private function pdfLine(
+        float $x1,
+        float $y1,
+        float $x2,
+        float $y2,
+        float $width = 0.6
+    ): string {
+        return
+            "0 0 0 RG {$width} w "
+            ."{$x1} {$y1} m "
+            ."{$x2} {$y2} l S\n";
+    }
+
+    private function pdfFillRect(
+        float $x,
+        float $y,
+        float $w,
+        float $h,
+        float $r,
+        float $g,
+        float $b
+    ): string {
+        return
+            "{$r} {$g} {$b} rg "
+            ."{$x} {$y} "
+            ."{$w} {$h} re f\n";
+    }
+
     public function approvePo(PurchaseOrder $po): RedirectResponse
     {
         $this->approvePurchaseOrderRecord($po);
@@ -833,6 +1799,7 @@ class ProcurementController extends Controller
             $grn = GoodsReceipt::create([
                 'purchase_order_id' => $lockedPo->id,
                 'grn_number' => DocumentNumber::generate('GRN'),
+                        'created_by_user_id' => Auth::id(),
                 'received_date' => $d['received_date'],
                 'remarks' => $lockedRows->pluck('request.remarks')->filter()->implode(' | ') ?: null,
             ]);
@@ -895,6 +1862,23 @@ class ProcurementController extends Controller
         $data = $request->validate([
             "reason" => "required|string|min:5|max:500",
         ]);
+
+        $grnLineIds = GoodsReceiptLine::query()
+            ->where('goods_receipt_id', $grn->id)
+            ->pluck('id');
+
+        $hasItemReversal = StockTransaction::query()
+            ->where('txn_type', 'GRN_REVERSAL')
+            ->where('reference_type', GoodsReceiptLine::class)
+            ->whereIn('reference_id', $grnLineIds)
+            ->exists();
+
+        if ($hasItemReversal) {
+            return back()->with(
+                'error',
+                'This GRN has item-level reversals. Reverse remaining items individually.'
+            );
+        }
 
         $already = StockTransaction::query()
             ->where("txn_type", "GRN_REVERSAL")
@@ -962,12 +1946,388 @@ class ProcurementController extends Controller
 
                     PurchaseOrder::whereKey($po->id)->update(["status" => $status]);
                 }
+
+                $this->syncPurchaseOrderReceiptStatus(
+                    (int) $lockedGrn->purchase_order_id
+                );
             });
         } catch (\RuntimeException $e) {
             return back()->with("error", $e->getMessage());
         }
 
         return back()->with("success", "GRN reversed. Stock has been rolled back.");
+    }
+
+    public function reverseGrnLine(GoodsReceiptLine $line, Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+
+        try {
+            DB::transaction(function () use ($line, $data) {
+                $lockedLine = GoodsReceiptLine::query()
+                    ->lockForUpdate()
+                    ->findOrFail($line->id);
+
+                $grn = GoodsReceipt::query()
+                    ->lockForUpdate()
+                    ->findOrFail($lockedLine->goods_receipt_id);
+
+                $wholeReversed = StockTransaction::query()
+                    ->where('txn_type', 'GRN_REVERSAL')
+                    ->where('reference_type', GoodsReceipt::class)
+                    ->where('reference_id', $grn->id)
+                    ->exists();
+
+                if ($wholeReversed) {
+                    throw new \RuntimeException(
+                        'Complete GRN has already been reversed.'
+                    );
+                }
+
+                $alreadyReversed = StockTransaction::query()
+                    ->where('txn_type', 'GRN_REVERSAL')
+                    ->where('reference_type', GoodsReceiptLine::class)
+                    ->where('reference_id', $lockedLine->id)
+                    ->exists();
+
+                if ($alreadyReversed) {
+                    throw new \RuntimeException(
+                        'This GRN item has already been reversed.'
+                    );
+                }
+
+                $original = StockTransaction::query()
+                    ->where('txn_type', 'GRN')
+                    ->where('reference_type', GoodsReceiptLine::class)
+                    ->where('reference_id', $lockedLine->id)
+                    ->first();
+
+                if (! $original) {
+                    throw new \RuntimeException(
+                        'Original GRN stock transaction not found.'
+                    );
+                }
+
+                StockTransaction::create([
+                    'item_id' => $original->item_id,
+                    'txn_type' => 'GRN_REVERSAL',
+                    'quantity' => -1 * (float) $original->quantity,
+                    'unit_cost' => $original->unit_cost,
+                    'trans_unit_code' => $original->trans_unit_code,
+                    'trans_quantity' => -1 * (float) $original->trans_quantity,
+                    'reference_type' => GoodsReceiptLine::class,
+                    'reference_id' => $lockedLine->id,
+                    'txn_at' => now(),
+                    'remarks' => 'GRN item reversal ('
+                        .$grn->grn_number
+                        .', line '.$lockedLine->id
+                        .'). Reason: '.$data['reason'],
+                ]);
+
+                $this->syncPurchaseOrderReceiptStatus(
+                    (int) $grn->purchase_order_id
+                );
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with(
+            'success',
+            'Selected GRN item reversed successfully.'
+        );
+    }
+
+    public function downloadGrnPdf(GoodsReceipt $grn): Response
+    {
+        $grn->load([
+            'purchaseOrder.vendor',
+            'lines.item',
+        ]);
+
+        $wholeReversed = StockTransaction::query()
+            ->where('txn_type', 'GRN_REVERSAL')
+            ->where('reference_type', GoodsReceipt::class)
+            ->where('reference_id', $grn->id)
+            ->exists();
+
+        $reversedLineIds = StockTransaction::query()
+            ->where('txn_type', 'GRN_REVERSAL')
+            ->where('reference_type', GoodsReceiptLine::class)
+            ->whereIn('reference_id', $grn->lines->pluck('id'))
+            ->pluck('reference_id')
+            ->map(fn ($id) => (int) $id);
+
+        $vendor = (string) ($grn->purchaseOrder->vendor->name ?? '-');
+        $poNumber = (string) ($grn->purchaseOrder->po_number ?? $grn->purchase_order_id);
+
+        $lines = [
+            'GOODS RECEIPT NOTE',
+            '',
+            'GRN Number : '.$grn->grn_number,
+            'Date       : '.$grn->received_date,
+            'Vendor     : '.$vendor,
+            'PO Number  : '.$poNumber,
+            'Status     : '.($wholeReversed ? 'REVERSED' : 'POSTED'),
+            '',
+            str_repeat('-', 94),
+            sprintf(
+                '%-3s %-37s %10s %10s %12s %12s',
+                '#',
+                'Item',
+                'Qty',
+                'Rate',
+                'Amount',
+                'Status'
+            ),
+            str_repeat('-', 94),
+        ];
+
+        $grossTotal = 0.0;
+        $activeTotal = 0.0;
+
+        foreach ($grn->lines as $index => $line) {
+            $qty = (float) $line->qty_received;
+            $rate = (float) $line->unit_cost;
+            $amount = $qty * $rate;
+
+            $grossTotal += $amount;
+
+            $lineReversed = $wholeReversed
+                || $reversedLineIds->contains((int) $line->id);
+
+            if (! $lineReversed) {
+                $activeTotal += $amount;
+            }
+
+            $itemText = trim(
+                (string) ($line->item?->sku ?? '')
+                .' '
+                .(string) ($line->item?->name ?? '')
+            );
+
+            $itemText = substr($itemText, 0, 37);
+
+            $lines[] = sprintf(
+                '%-3s %-37s %10s %10s %12s %12s',
+                $index + 1,
+                $itemText,
+                number_format($qty, 3, '.', ''),
+                number_format($rate, 2, '.', ''),
+                number_format($amount, 2, '.', ''),
+                $lineReversed ? 'REVERSED' : 'POSTED'
+            );
+        }
+
+        $lines[] = str_repeat('-', 94);
+        $lines[] = sprintf(
+            '%-63s %12s',
+            'Gross Total:',
+            number_format($grossTotal, 2, '.', '')
+        );
+
+        $lines[] = sprintf(
+            '%-63s %12s',
+            'Active Total:',
+            number_format($activeTotal, 2, '.', '')
+        );
+
+        $lines[] = '';
+        $lines[] = 'Generated from Mess Procurement System';
+
+        $pdf = $this->buildSimplePdf($lines);
+
+        $filename = preg_replace(
+            '/[^A-Za-z0-9_-]+/',
+            '_',
+            (string) $grn->grn_number
+        ).'.pdf';
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => strlen($pdf),
+        ]);
+    }
+
+    private function syncPurchaseOrderReceiptStatus(int $purchaseOrderId): void
+    {
+        $po = PurchaseOrder::query()
+            ->with(['lines', 'goodsReceipts.lines'])
+            ->lockForUpdate()
+            ->find($purchaseOrderId);
+
+        if (! $po) {
+            return;
+        }
+
+        $grnIds = $po->goodsReceipts->pluck('id');
+
+        $grnLineIds = $po->goodsReceipts
+            ->flatMap(
+                fn (GoodsReceipt $receipt) => $receipt->lines->pluck('id')
+            )
+            ->values();
+
+        $wholeReversedIds = StockTransaction::query()
+            ->where('txn_type', 'GRN_REVERSAL')
+            ->where('reference_type', GoodsReceipt::class)
+            ->whereIn('reference_id', $grnIds)
+            ->pluck('reference_id')
+            ->map(fn ($id) => (int) $id);
+
+        $lineReversedIds = StockTransaction::query()
+            ->where('txn_type', 'GRN_REVERSAL')
+            ->where('reference_type', GoodsReceiptLine::class)
+            ->whereIn('reference_id', $grnLineIds)
+            ->pluck('reference_id')
+            ->map(fn ($id) => (int) $id);
+
+        $totalReceivedQty = 0.0;
+
+        foreach ($po->goodsReceipts as $receipt) {
+            if ($wholeReversedIds->contains((int) $receipt->id)) {
+                continue;
+            }
+
+            foreach ($receipt->lines as $receiptLine) {
+                if ($lineReversedIds->contains((int) $receiptLine->id)) {
+                    continue;
+                }
+
+                $totalReceivedQty += (float) $receiptLine->qty_received;
+            }
+        }
+
+        $totalOrderedQty = (float) $po->lines->sum('qty_ordered');
+
+        $status = $totalReceivedQty <= 0
+            ? 'APPROVED'
+            : (
+                $totalReceivedQty < $totalOrderedQty
+                    ? 'PARTIALLY_RECEIVED'
+                    : 'RECEIVED'
+            );
+
+        PurchaseOrder::whereKey($po->id)->update([
+            'status' => $status,
+        ]);
+    }
+
+    private function buildSimplePdf(array $lines): string
+    {
+        $pages = array_chunk($lines, 52);
+
+        if (empty($pages)) {
+            $pages = [[]];
+        }
+
+        $pageCount = count($pages);
+        $fontObjectId = 3 + ($pageCount * 2);
+
+        $objects = [];
+        $objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+
+        $kids = [];
+
+        foreach ($pages as $pageIndex => $pageLines) {
+            $pageObjectId = 3 + ($pageIndex * 2);
+            $contentObjectId = $pageObjectId + 1;
+
+            $kids[] = $pageObjectId.' 0 R';
+
+            $stream = "BT\n";
+            $stream .= "/F1 8 Tf\n";
+            $stream .= "28 810 Td\n";
+            $stream .= "12 TL\n";
+
+            foreach ($pageLines as $text) {
+                $stream .= '('
+                    .$this->escapePdfText((string) $text)
+                    .") Tj\nT*\n";
+            }
+
+            $stream .= "ET";
+
+            $objects[$pageObjectId] =
+                '<< /Type /Page'
+                .' /Parent 2 0 R'
+                .' /MediaBox [0 0 595 842]'
+                .' /Resources << /Font << /F1 '.$fontObjectId.' 0 R >> >>'
+                .' /Contents '.$contentObjectId.' 0 R'
+                .' >>';
+
+            $objects[$contentObjectId] =
+                '<< /Length '.strlen($stream)." >>\n"
+                ."stream\n"
+                .$stream
+                ."\nendstream";
+        }
+
+        $objects[2] =
+            '<< /Type /Pages /Kids ['
+            .implode(' ', $kids)
+            .'] /Count '.$pageCount.' >>';
+
+        $objects[$fontObjectId] =
+            '<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>';
+
+        ksort($objects);
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0 => 0];
+
+        for ($id = 1; $id <= $fontObjectId; $id++) {
+            $offsets[$id] = strlen($pdf);
+
+            $pdf .= $id." 0 obj\n";
+            $pdf .= $objects[$id]."\n";
+            $pdf .= "endobj\n";
+        }
+
+        $xrefPosition = strlen($pdf);
+
+        $pdf .= "xref\n";
+        $pdf .= '0 '.($fontObjectId + 1)."\n";
+        $pdf .= "0000000000 65535 f \n";
+
+        for ($id = 1; $id <= $fontObjectId; $id++) {
+            $pdf .= sprintf(
+                "%010d 00000 n \n",
+                $offsets[$id]
+            );
+        }
+
+        $pdf .= "trailer\n";
+        $pdf .= '<< /Size '.($fontObjectId + 1).' /Root 1 0 R >>'."\n";
+        $pdf .= "startxref\n";
+        $pdf .= $xrefPosition."\n";
+        $pdf .= "%%EOF";
+
+        return $pdf;
+    }
+
+    private function escapePdfText(string $text): string
+    {
+        $text = str_replace(
+            ["\r", "\n", "\t", '—', '–'],
+            [' ', ' ', ' ', '-', '-'],
+            $text
+        );
+
+        $text = preg_replace(
+            '/[^\x20-\x7E]/',
+            '?',
+            $text
+        ) ?? '';
+
+        return str_replace(
+            ['\\', '(', ')'],
+            ['\\\\', '\\(', '\\)'],
+            $text
+        );
     }
 
     public function approveGrn(GoodsReceipt $grn): RedirectResponse

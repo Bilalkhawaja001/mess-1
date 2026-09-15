@@ -1508,6 +1508,25 @@ class ProcurementController extends Controller
             $pageStreams[] = $stream;
         }
 
+        return $this->assemblePdf(
+            $pageStreams,
+            $hasLogo,
+            $logoData,
+            $logoWidth,
+            $logoHeight
+        );
+    }
+
+    /**
+     * @param  array<int, string>  $pageStreams
+     */
+    private function assemblePdf(
+        array $pageStreams,
+        bool $hasLogo,
+        ?string $logoData,
+        int $logoWidth,
+        int $logoHeight
+    ): string {
         /*
          * PDF OBJECTS
          */
@@ -1650,6 +1669,173 @@ class ProcurementController extends Controller
 
         return $pdf;
     }
+
+
+    private function buildStyledGrnPdf(GoodsReceipt $grn, bool $wholeReversed, $reversedLineIds): string
+    {
+        $logoPath = public_path('branding/nodesky-po-logo.jpg');
+        $logoData = is_file($logoPath) ? file_get_contents($logoPath) : null;
+        $logoInfo = $logoData ? @getimagesize($logoPath) : false;
+        $hasLogo = is_array($logoInfo) && ($logoInfo[2] ?? null) === 2;
+        $logoWidth = $hasLogo ? (int) $logoInfo[0] : 0;
+        $logoHeight = $hasLogo ? (int) $logoInfo[1] : 0;
+
+        $items = collect($grn->lines ?? []);
+        $chunks = $items->chunk(7)->values();
+        if ($chunks->isEmpty()) {
+            $chunks = collect([collect()]);
+        }
+        $pageCount = $chunks->count();
+
+        $receivedDate = '-';
+        if (! empty($grn->received_date)) {
+            try {
+                $receivedDate = \Illuminate\Support\Carbon::parse($grn->received_date)->format('d-M-Y');
+            } catch (\Throwable $e) {
+                $receivedDate = (string) $grn->received_date;
+            }
+        }
+
+        $grossTotal = 0.0;
+        $activeTotal = 0.0;
+        foreach ($items as $line) {
+            $amount = (float) $line->qty_received * (float) $line->unit_cost;
+            $grossTotal += $amount;
+            if (! $wholeReversed && ! in_array((int) $line->id, $reversedLineIds->all(), true)) {
+                $activeTotal += $amount;
+            }
+        }
+
+        $pageStreams = [];
+
+        foreach ($chunks as $pageIndex => $chunk) {
+            $stream = '';
+
+            if ($hasLogo) {
+                $stream .= "q 72 0 0 64 25 500 cm /Im1 Do Q\n";
+            }
+
+            $stream .= $this->pdfText(305, 557, 'NodeSky Technologies', 18, true);
+            $stream .= $this->pdfText(361, 535, 'Admin Mess', 12, true);
+            $stream .= $this->pdfText(330, 503, 'Goods Receipt Note', 14, true);
+            $stream .= $this->pdfLine(328, 499, 514, 499, 0.8);
+
+            $leftY = 462;
+            foreach ([
+                ['Company', 'NodeSky Technologies'],
+                ['Department', 'Admin Mess'],
+                ['Supplier Name', (string) ($grn->purchaseOrder->vendor->name ?? '-')],
+                ['PO Number', (string) ($grn->purchaseOrder->po_number ?? '-')],
+            ] as [$label, $value]) {
+                $stream .= $this->pdfText(35, $leftY, $label, 8, true);
+                $stream .= $this->pdfText(120, $leftY, ': '.$value, 8);
+                $leftY -= 18;
+            }
+
+            $rightY = 462;
+            foreach ([
+                ['GRN Number', (string) ($grn->grn_number ?? '-'), true],
+                ['Received Date', $receivedDate, false],
+                ['Status', $wholeReversed ? 'REVERSED' : 'POSTED', true],
+                ['Total Items', (string) $items->count(), false],
+            ] as [$label, $value, $bold]) {
+                $stream .= $this->pdfText(478, $rightY, $label, 8, true);
+                $stream .= $this->pdfText(575, $rightY, ': '.$value, 8, $bold);
+                $rightY -= 18;
+            }
+
+            if (! empty($grn->remarks)) {
+                $stream .= $this->pdfText(35, 382, 'Remarks', 8, true);
+                $stream .= $this->pdfText(120, 382, ': '.substr((string) $grn->remarks, 0, 80), 8);
+            }
+
+            $tableTop = 340;
+            $stream .= $this->pdfFillRect(25, $tableTop, 792, 24, 0.67, 0.82, 0.94);
+
+            foreach ([
+                [31, 'S#'], [63, 'Item Code'], [158, 'Item Description'],
+                [420, 'UoM'], [480, 'Received'], [565, 'Unit Cost'],
+                [655, 'Amount'], [740, 'Status'],
+            ] as [$x, $label]) {
+                $stream .= $this->pdfText($x, $tableTop + 8, $label, 7.5, true);
+            }
+
+            $rowY = $tableTop - 18;
+
+            foreach ($chunk as $localIndex => $line) {
+                $globalIndex = ($pageIndex * 7) + $localIndex + 1;
+                $qty = (float) $line->qty_received;
+                $rate = (float) $line->unit_cost;
+                $amount = $qty * $rate;
+                $lineReversed = $wholeReversed || in_array((int) $line->id, $reversedLineIds->all(), true);
+
+                $stream .= $this->pdfText(33, $rowY, (string) $globalIndex, 7.2);
+                $stream .= $this->pdfText(63, $rowY, substr((string) ($line->item?->sku ?? ''), 0, 15), 7.2);
+                $stream .= $this->pdfText(158, $rowY, substr((string) ($line->item?->name ?? '-'), 0, 38), 7.2);
+                $stream .= $this->pdfText(424, $rowY, substr((string) ($line->item?->uom ?? '-'), 0, 8), 7.2);
+                $stream .= $this->pdfRightText(548, $rowY, number_format($qty, 3), 7.2);
+                $stream .= $this->pdfRightText(638, $rowY, number_format($rate, 2), 7.2);
+                $stream .= $this->pdfRightText(725, $rowY, number_format($amount, 2), 7.2);
+                $stream .= $this->pdfText(742, $rowY, $lineReversed ? 'REVERSED' : 'POSTED', 7.2);
+
+                $stream .= "0.82 0.82 0.82 RG 0.35 w 25 ".($rowY - 5)." m 817 ".($rowY - 5)." l S\n";
+                $rowY -= 18;
+            }
+
+            if ($pageIndex === $pageCount - 1) {
+                $summaryTop = max(150, $rowY - 12);
+                $stream .= $this->pdfLine(25, $summaryTop, 817, $summaryTop, 0.8);
+
+                $stream .= $this->pdfText(610, $summaryTop - 24, 'Gross Total', 8.5, true);
+                $stream .= $this->pdfRightText(802, $summaryTop - 24, number_format($grossTotal, 2), 8.5);
+
+                $stream .= $this->pdfText(610, $summaryTop - 44, 'Active Total', 9, true);
+                $stream .= $this->pdfRightText(802, $summaryTop - 44, number_format($activeTotal, 2), 9, true);
+
+                $signY = 32;
+
+                $preparedName = (string) ($grn->stampCreatedBy() ?: '');
+                $approverName = (string) (optional($grn->approvedByUser)->name ?: '');
+
+                $approvedOn = '';
+                if (! empty($grn->approved_at)) {
+                    try {
+                        $approvedOn = \Illuminate\Support\Carbon::parse($grn->approved_at)->format('d-M-Y');
+                    } catch (\Throwable $e) {
+                        $approvedOn = '';
+                    }
+                }
+
+                foreach ([[35, 195], [230, 390], [425, 585], [620, 780]] as [$x1, $x2]) {
+                    $stream .= $this->pdfLine($x1, $signY + 18, $x2, $signY + 18, 0.7);
+                }
+
+                if ($preparedName !== '') {
+                    $stream .= $this->pdfText(40, $signY + 24, substr($preparedName, 0, 26), 7.2);
+                }
+                if ($approverName !== '') {
+                    $stream .= $this->pdfText(235, $signY + 24, substr($approverName, 0, 26), 7.2);
+                }
+                if ($approvedOn !== '') {
+                    $stream .= $this->pdfText(625, $signY + 24, $approvedOn, 7.2);
+                }
+
+                $stream .= $this->pdfText(82, $signY + 5, 'Received By', 7.5, true);
+                $stream .= $this->pdfText(278, $signY + 5, 'Approved By', 7.5, true);
+                $stream .= $this->pdfText(477, $signY + 5, 'Store Keeper', 7.5, true);
+                $stream .= $this->pdfText(694, $signY + 5, 'Date', 7.5, true);
+
+                $stream .= $this->pdfText(25, 12, 'Note: This is a computer generated report and does not need any sign.', 7.2);
+            }
+
+            $stream .= $this->pdfRightText(815, 12, 'Page '.($pageIndex + 1).' of '.$pageCount, 7);
+
+            $pageStreams[] = $stream;
+        }
+
+        return $this->assemblePdf($pageStreams, $hasLogo, $logoData, $logoWidth, $logoHeight);
+    }
+
 
     private function pdfText(
         float $x,
@@ -2134,10 +2320,37 @@ class ProcurementController extends Controller
             number_format($activeTotal, 2, '.', '')
         );
 
+        $preparedBy = (string) ($grn->stampCreatedBy() ?: '-');
+        $approvedBy = (string) (optional($grn->approvedByUser)->name ?: '-');
+
+        $createdOn = '';
+        if (! empty($grn->created_at)) {
+            try {
+                $createdOn = \Illuminate\Support\Carbon::parse($grn->created_at)->format('d-M-Y H:i');
+            } catch (\Throwable $e) {
+                $createdOn = '';
+            }
+        }
+
+        $approvedOn = '';
+        if (! empty($grn->approved_at)) {
+            try {
+                $approvedOn = \Illuminate\Support\Carbon::parse($grn->approved_at)->format('d-M-Y H:i');
+            } catch (\Throwable $e) {
+                $approvedOn = '';
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = str_repeat('-', 94);
+        $lines[] = 'Prepared by : '.$preparedBy.($createdOn !== '' ? '   on '.$createdOn : '');
+        $lines[] = 'Approved by : '.$approvedBy.($approvedOn !== '' ? '   on '.$approvedOn : '');
+        $lines[] = str_repeat('-', 94);
+
         $lines[] = '';
         $lines[] = 'Generated from Mess Procurement System';
 
-        $pdf = $this->buildSimplePdf($lines);
+        $pdf = $this->buildStyledGrnPdf($grn, $wholeReversed, $reversedLineIds);
 
         $filename = preg_replace(
             '/[^A-Za-z0-9_-]+/',

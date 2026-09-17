@@ -68,7 +68,7 @@
 
         <h2>How to request data deletion</h2>
         <ol>
-            <li>Send an email to <span class="contact">admin@bilalkhawaja.pk</span></li>
+            <li>Send an email to <span class="contact">admin@nodesky.pk</span></li>
             <li>Use the subject: <strong>Mess Member App Data Deletion Request</strong></li>
             <li>Include your Employee ID / Member ID, full name, department and registered mobile number.</li>
             <li>The Mess Administration will verify your identity before processing the request.</li>
@@ -105,7 +105,7 @@
         <div class="note">
             For any data deletion request or privacy-related question, please contact:
             <br>
-            <span class="contact">admin@bilalkhawaja.pk</span>
+            <span class="contact">admin@nodesky.pk</span>
         </div>
 
         <div class="footer">

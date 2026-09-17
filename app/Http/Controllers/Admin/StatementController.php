@@ -86,14 +86,8 @@ class StatementController extends Controller
         }
 
         if ($fromMonth === '' || $toMonth === '') {
-            $latestMonth = DB::table('member_ledgers')
-                ->where('member_id', $memberId)
-                ->selectRaw("DATE_FORMAT(entry_date, '%Y-%m') as ym")
-                ->orderByDesc('entry_date')
-                ->value('ym');
-
-            $fromMonth = $fromMonth ?: ($latestMonth ?: now()->format('Y-m'));
-            $toMonth = $toMonth ?: $fromMonth;
+            $fromMonth = $fromMonth ?: now()->format('Y').'-01';
+            $toMonth = $toMonth ?: now()->format('Y-m');
         }
 
         $monthPattern = '/^\\d{4}-(0[1-9]|1[0-2])$/';

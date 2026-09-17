@@ -62,14 +62,17 @@ class KitchenController extends Controller
             ->orderByDesc('total_qty')
             ->get();
 
-        $selectedMonth = (string) ($request->query('month') ?: now()->format('Y-m'));
+        $selectedMonth = (string) ($request->query('month') ?: \App\Support\BusinessMonthCycle::defaultDashboardMonthCycle());
         try {
-            $monthStart = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+            $cycle = \App\Support\BusinessMonthCycle::resolve($selectedMonth);
+            $monthStart = $cycle['cycle_start']->copy();
+            $monthEnd = $cycle['cycle_end']->copy();
         } catch (\Throwable $e) {
-            $selectedMonth = now()->format('Y-m');
-            $monthStart = now()->startOfMonth();
+            $selectedMonth = \App\Support\BusinessMonthCycle::defaultDashboardMonthCycle();
+            $cycle = \App\Support\BusinessMonthCycle::resolve($selectedMonth);
+            $monthStart = $cycle['cycle_start']->copy();
+            $monthEnd = $cycle['cycle_end']->copy();
         }
-        $monthEnd = $monthStart->copy()->endOfMonth();
 
         $fromDate = (string) ($request->query('from_date') ?: $monthStart->toDateString());
         $toDate = (string) ($request->query('to_date') ?: $monthEnd->toDateString());
@@ -652,8 +655,11 @@ class KitchenController extends Controller
 
     private function resolveLedgerDateRange(Request $request): array
     {
-        $defaultStart = now()->startOfMonth();
-        $defaultEnd = now()->endOfMonth();
+        $defaultCycle = \App\Support\BusinessMonthCycle::resolve(
+            \App\Support\BusinessMonthCycle::defaultDashboardMonthCycle()
+        );
+        $defaultStart = $defaultCycle['cycle_start']->copy();
+        $defaultEnd = $defaultCycle['cycle_end']->copy();
 
         try {
             $fromDate = Carbon::parse((string) $request->query('from_date', $defaultStart->toDateString()))->startOfDay();

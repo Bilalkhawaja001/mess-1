@@ -186,9 +186,9 @@ class ExportCenterController extends Controller
         }
         if ($monthCycle !== '') {
             try {
-                $month = Carbon::createFromFormat('Y-m', $monthCycle);
-                $fromDate = $month->copy()->startOfMonth();
-                $toDate = $month->copy()->endOfMonth();
+                $cycle = \App\Support\BusinessMonthCycle::resolve($monthCycle);
+                $fromDate = $cycle['cycle_start']->copy();
+                $toDate = $cycle['cycle_end']->copy();
             } catch (\Throwable $e) {
             }
         }

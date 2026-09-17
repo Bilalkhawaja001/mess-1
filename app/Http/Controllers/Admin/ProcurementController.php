@@ -81,7 +81,7 @@ class ProcurementController extends Controller
         $selectedGrnTemplatePo = $request->integer('template_po_id');
         [$grnFromDate, $grnToDate] = $this->resolveGrnDateRange($request);
         [$reportFromDate, $reportToDate] = $this->resolvePurchaseReportDateRange($request);
-        $reportSearch = trim((string) $request->input('q', ''));
+        $reportSearch = trim((string) $request->input('report_search', $request->input('q', '')));
 
         $grnSearch = trim((string) $request->input('grn_q', ''));
         $grnVendorId = $request->integer('grn_vendor_id');
@@ -3063,14 +3063,29 @@ class ProcurementController extends Controller
         ];
     }
 
+    private function defaultBusinessCycleRange(): array
+    {
+        try {
+            $cycle = \App\Support\BusinessMonthCycle::resolve(
+                \App\Support\BusinessMonthCycle::defaultDashboardMonthCycle()
+            );
+
+            return [$cycle['cycle_start_date'], $cycle['cycle_end_date']];
+        } catch (\Throwable $e) {
+            return [
+                now()->startOfMonth()->toDateString(),
+                now()->endOfMonth()->toDateString(),
+            ];
+        }
+    }
+
     private function resolvePurchaseReportDateRange(Request $request, bool $validate = false): array
     {
-        $defaultFrom = DB::table('goods_receipts')->min('received_date') ?: now()->startOfMonth()->toDateString();
-        $defaultTo = DB::table('goods_receipts')->max('received_date') ?: now()->endOfMonth()->toDateString();
+        [$defaultFrom, $defaultTo] = $this->defaultBusinessCycleRange();
 
         $data = [
-            'from_date' => $request->input('from_date', $defaultFrom),
-            'to_date' => $request->input('to_date', $defaultTo),
+            'from_date' => $request->input('report_from', $request->input('from_date', $defaultFrom)),
+            'to_date' => $request->input('report_to', $request->input('to_date', $defaultTo)),
         ];
 
         if ($validate) {
@@ -3088,8 +3103,7 @@ class ProcurementController extends Controller
 
     private function resolveGrnDateRange(Request $request, bool $validate = false): array
     {
-        $defaultFrom = DB::table('goods_receipts')->min('received_date') ?: now()->startOfMonth()->toDateString();
-        $defaultTo = DB::table('goods_receipts')->max('received_date') ?: now()->endOfMonth()->toDateString();
+        [$defaultFrom, $defaultTo] = $this->defaultBusinessCycleRange();
 
         $data = [
             'from_date' => $request->input('from_date', $defaultFrom),

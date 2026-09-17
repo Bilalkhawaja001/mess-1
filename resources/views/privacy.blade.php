@@ -126,7 +126,7 @@
         </p>
         <p>
             <strong>Centralized Mess</strong><br>
-            Email: <a href="mailto:admin@bilalkhawaja.pk">admin@bilalkhawaja.pk</a><br>
+            Email: <a href="mailto:admin@nodesky.pk">admin@nodesky.pk</a><br>
             Website: <a href="https://mess.bilalkhawaja.pk">https://mess.bilalkhawaja.pk</a>
         </p>
 

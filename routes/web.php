@@ -162,6 +162,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
 
     Route::get('/admin-mess-bill', [\App\Http\Controllers\Admin\AdminMessBillController::class, 'index'])
         ->name('admin-mess-bill.index');
+    Route::get('/admin-mess-bill/{monthCycle}/pdf', [\App\Http\Controllers\Admin\AdminMessBillController::class, 'downloadPdf'])
+        ->where('monthCycle', '[0-9]{4}-[0-9]{2}')
+        ->name('admin-mess-bill.pdf');
+    Route::get('/mess-bill-history', [\App\Http\Controllers\Admin\AdminMessBillController::class, 'history'])
+        ->name('mess-bill-history');
     Route::get('/cost-allocation-preview', [\App\Http\Controllers\Admin\CostAllocationPreviewController::class, 'index'])
         ->name('cost-allocation-preview.index');
 

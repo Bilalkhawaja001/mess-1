@@ -7,7 +7,7 @@
     $opsOpen = request()->routeIs('admin.members.*') || request()->routeIs('admin.attendance.*') || request()->routeIs('admin.attendance-monthly.*') || request()->routeIs('admin.complaints.*') || request()->routeIs('admin.guests.*') || request()->routeIs('admin.extras.*') || request()->routeIs('admin.hubs.operations');
     $invOpen = request()->routeIs('admin.inventory.*') || request()->routeIs('admin.procurement.*') || request()->routeIs('admin.hubs.inventory');
     $mealsOpen = request()->routeIs('admin.kitchen.*') || request()->routeIs('admin.menu.*') || request()->routeIs('admin.hubs.meals');
-    $financeOpen = request()->routeIs('admin.billing.*') || request()->routeIs('admin.bill-publish.*') || request()->routeIs('admin.mess-costing.*') || request()->routeIs('admin.admin-mess-bill.*') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.ledger.*') || request()->routeIs('admin.rates.*') || request()->routeIs('admin.accounting.*');
+    $financeOpen = request()->routeIs('admin.billing.*') || request()->routeIs('admin.bill-publish.*') || request()->routeIs('admin.mess-costing.*') || request()->routeIs('admin.admin-mess-bill.*') || request()->routeIs('admin.mess-bill-history') || request()->routeIs('admin.payments.*') || request()->routeIs('admin.ledger.*') || request()->routeIs('admin.rates.*') || request()->routeIs('admin.accounting.*');
     $reportsOpen = request()->routeIs('admin.summary.*') || request()->routeIs('admin.reports.*') || request()->routeIs('admin.statement.*') || request()->routeIs('admin.month.*') || request()->routeIs('admin.exports.*') || request()->routeIs('admin.hubs.reports');
     $adminOpen = request()->routeIs('admin.users.*') || request()->routeIs('admin.member-accounts.*') || request()->routeIs('admin.audit-log.*') || request()->routeIs('admin.announcements.*') || request()->routeIs('admin.settings.*');
 @endphp
@@ -136,6 +136,7 @@
                         @endif
                         @if($isAdminCore)
                         <a class="nav-link sidebar-link {{ request()->routeIs('admin.admin-mess-bill.*') ? 'active' : '' }}" href="{{ route('admin.admin-mess-bill.index') }}" title="Admin Mess Bill"><span class="sidebar-icon-wrap"><i class="bi bi-file-earmark-text sidebar-icon"></i></span><span>Admin Mess Bill</span></a>
+                        <a class="nav-link sidebar-link {{ request()->routeIs('admin.mess-bill-history') ? 'active' : '' }}" href="{{ route('admin.mess-bill-history') }}" title="Mess Bill History"><span class="sidebar-icon-wrap"><i class="bi bi-clock-history sidebar-icon"></i></span><span>Mess Bill History</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('payments.view_admin'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" href="{{ route('admin.payments.index') }}" title="Payments"><span class="sidebar-icon-wrap"><i class="bi bi-cash-stack sidebar-icon"></i></span><span>Payments</span></a>

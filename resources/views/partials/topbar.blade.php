@@ -279,6 +279,7 @@
                             <a href="{{ route('admin.bill-publish.index') }}">Bill Publish</a>
                             <a href="{{ route('admin.mess-costing.index') }}">Mess Costing</a>
                             <a href="{{ route('admin.admin-mess-bill.index') }}">Admin Mess Bill</a>
+                            <a href="{{ route('admin.mess-bill-history') }}">Mess Bill History</a>
                         @endif
 
                         @if($canPaymentsTop)

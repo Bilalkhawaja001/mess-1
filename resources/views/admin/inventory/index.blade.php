@@ -165,7 +165,7 @@
 <div class="inventory-page-wrap">
     <div class="page-hero page-hero-compact mb-4">
         <div>
-            <h1 class="page-hero-title">Items / Store</h1>
+            <h1 class="page-hero-title">Items</h1>
         </div>
     </div>
 
@@ -173,7 +173,7 @@
         <div class="stat-card stat-card-primary">
             <div class="stat-label">Items</div>
             <div class="stat-value">{{ $inventoryItemCount }}</div>
-            <div class="stat-help">Inventory master records</div>
+            <div class="stat-help">Items master records</div>
         </div>
         <div class="stat-card stat-card-danger">
             <div class="stat-label">Low Stock</div>
@@ -194,7 +194,7 @@
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
-            <div class="inventory-header-title mb-1">Items / Store</div>
+            <div class="inventory-header-title mb-1">Items</div>
         </div>
         <div class="d-flex align-items-center gap-2 inventory-header-badges">
             <span class="badge bg-danger">{{ $inventoryLowStockCount }} low stock</span>
@@ -206,7 +206,7 @@
         <div class="card-body">
             <div class="row g-2 align-items-end">
                 <div class="col-lg-7">
-                    <label class="form-label">Search inventory</label>
+                    <label class="form-label">Search items</label>
                     <input type="text" name="q" class="form-control" value="{{ $search ?? '' }}" placeholder="Search by item name, code, category, store stock, vendor, GRN, reference">
                 </div>
                 <div class="col-lg-3">

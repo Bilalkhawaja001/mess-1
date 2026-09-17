@@ -202,7 +202,10 @@ class ProcurementController extends Controller
 
         $kitchenPendingCount = $pendingPos->count() + $pendingGrns->count();
 
+        $historyMonths = $this->purchaseHistoryMonths();
+
         return view('admin.procurement.index', compact(
+            'historyMonths',
             'pendingPos',
             'pendingGrns',
             'history',
@@ -2830,6 +2833,372 @@ class ProcurementController extends Controller
             'grnDetails' => $grnDetails,
             'dateRows' => $dateRows,
         ];
+    }
+
+    public function viewPurchaseHistory(Request $request, string $monthCycle)
+    {
+        $vendorId = $request->integer('vendor');
+
+        $report = $this->purchaseHistoryReportData(
+            $monthCycle,
+            $vendorId > 0 ? $vendorId : null
+        );
+
+        return view(
+            'admin.procurement.history-report',
+            $report
+        );
+    }
+
+    public function downloadPurchaseHistoryPdf(
+        Request $request,
+        string $monthCycle
+    ): Response {
+        $vendorId = $request->integer('vendor');
+
+        $report = $this->purchaseHistoryReportData(
+            $monthCycle,
+            $vendorId > 0 ? $vendorId : null
+        );
+
+        $lines = [];
+
+        $lines[] = 'NODESKY TECHNOLOGIES';
+        $lines[] = 'ADMIN MESS';
+        $lines[] = '';
+        $lines[] = 'PURCHASE HISTORY';
+        $lines[] = '';
+        $lines[] = 'Cycle       : '.$report['month_label'];
+        $lines[] = 'Period      : '
+            .\Carbon\Carbon::parse($report['from'])->format('d M Y')
+            .' - '
+            .\Carbon\Carbon::parse($report['to'])->format('d M Y');
+
+        $lines[] = 'Vendor      : '
+            .($report['selected_vendor_name'] ?: 'All Vendors');
+
+        $lines[] = 'Total       : PKR '
+            .number_format($report['total'], 2);
+
+        $lines[] = '';
+
+        if ($report['selected_vendor_id'] === null) {
+            $lines[] = 'VENDOR SUMMARY';
+            $lines[] = str_repeat('-', 82);
+
+            foreach ($report['vendors'] as $vendor) {
+                $lines[] = sprintf(
+                    '%-55s %20s',
+                    substr($vendor['vendor_name'], 0, 55),
+                    number_format($vendor['total'], 2)
+                );
+            }
+
+            $lines[] = str_repeat('-', 82);
+            $lines[] = '';
+        }
+
+        foreach ($report['vendors'] as $vendor) {
+            $lines[] = 'VENDOR: '.$vendor['vendor_name']
+                .' | TOTAL: PKR '
+                .number_format($vendor['total'], 2);
+
+            $lines[] = str_repeat('-', 94);
+
+            foreach ($vendor['dates'] as $date => $items) {
+                $lines[] = \Carbon\Carbon::parse($date)
+                    ->format('d M Y');
+
+                $lines[] = sprintf(
+                    '%-36s %10s %10s %15s',
+                    'Item',
+                    'Qty',
+                    'Rate',
+                    'Amount'
+                );
+
+                foreach ($items as $item) {
+                    $lines[] = sprintf(
+                        '%-36s %10s %10s %15s',
+                        substr(
+                            trim(
+                                $item['item']
+                                .' '
+                                .$item['sku']
+                            ),
+                            0,
+                            36
+                        ),
+                        rtrim(
+                            rtrim(
+                                number_format(
+                                    $item['qty'],
+                                    3,
+                                    '.',
+                                    ''
+                                ),
+                                '0'
+                            ),
+                            '.'
+                        ),
+                        number_format(
+                            $item['rate'],
+                            2
+                        ),
+                        number_format(
+                            $item['amount'],
+                            2
+                        )
+                    );
+                }
+
+                $lines[] = '';
+            }
+
+            $lines[] = '';
+        }
+
+        $pdf = $this->buildSimplePdf($lines);
+
+        $suffix = $report['selected_vendor_id']
+            ? '_vendor_'.$report['selected_vendor_id']
+            : '_all_vendors';
+
+        $filename = 'purchase_history_'
+            .$monthCycle
+            .$suffix
+            .'.pdf';
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' =>
+                'attachment; filename="'.$filename.'"',
+            'Content-Length' => strlen($pdf),
+        ]);
+    }
+
+    private function purchaseHistoryReportData(
+        string $monthCycle,
+        ?int $vendorId = null
+    ): array {
+        if (! preg_match('/^\d{4}-\d{2}$/', $monthCycle)) {
+            abort(404);
+        }
+
+        try {
+            $cycle = \App\Support\BusinessMonthCycle::resolve(
+                $monthCycle
+            );
+        } catch (\Throwable $e) {
+            abort(404);
+        }
+
+        $from = $cycle['cycle_start_date'];
+        $to = $cycle['cycle_end_date'];
+
+        $query = DB::table('goods_receipt_lines as gl')
+            ->join(
+                'goods_receipts as g',
+                'g.id',
+                '=',
+                'gl.goods_receipt_id'
+            )
+            ->join(
+                'purchase_orders as po',
+                'po.id',
+                '=',
+                'g.purchase_order_id'
+            )
+            ->join(
+                'vendors as v',
+                'v.id',
+                '=',
+                'po.vendor_id'
+            )
+            ->join(
+                'items as i',
+                'i.id',
+                '=',
+                'gl.item_id'
+            )
+            ->whereBetween(
+                'g.received_date',
+                [$from, $to]
+            );
+
+        if ($vendorId !== null) {
+            $query->where(
+                'v.id',
+                $vendorId
+            );
+        }
+
+        $rows = $query
+            ->selectRaw(
+                'v.id as vendor_id,
+                 v.name as vendor_name,
+                 g.received_date,
+                 i.name as item_name,
+                 i.sku,
+                 i.uom,
+                 SUM(gl.qty_received) as qty,
+                 SUM(gl.qty_received * gl.unit_cost) as amount'
+            )
+            ->groupBy(
+                'v.id',
+                'v.name',
+                'g.received_date',
+                'i.id',
+                'i.name',
+                'i.sku',
+                'i.uom'
+            )
+            ->orderBy('v.name')
+            ->orderBy('g.received_date')
+            ->orderBy('i.name')
+            ->get();
+
+        $vendors = [];
+
+        foreach ($rows as $row) {
+            $vid = (int) $row->vendor_id;
+
+            if (! isset($vendors[$vid])) {
+                $vendors[$vid] = [
+                    'vendor_id' => $vid,
+                    'vendor_name' => $row->vendor_name,
+                    'total' => 0.0,
+                    'dates' => [],
+                ];
+            }
+
+            $qty = (float) $row->qty;
+            $amount = (float) $row->amount;
+
+            $rate = $qty != 0
+                ? $amount / $qty
+                : 0;
+
+            $vendors[$vid]['total'] += $amount;
+
+            $vendors[$vid]['dates'][$row->received_date][] = [
+                'item' => $row->item_name,
+                'sku' => $row->sku,
+                'uom' => $row->uom,
+                'qty' => $qty,
+                'rate' => $rate,
+                'amount' => $amount,
+            ];
+        }
+
+        $selectedVendorName = null;
+
+        if ($vendorId !== null) {
+            $selectedVendorName = Vendor::query()
+                ->whereKey($vendorId)
+                ->value('name');
+        }
+
+        return [
+            'month_cycle' => $monthCycle,
+
+            'month_label' =>
+                \Carbon\Carbon::createFromFormat(
+                    '!Y-m',
+                    $monthCycle
+                )->format('F Y'),
+
+            'from' => $from,
+            'to' => $to,
+
+            'selected_vendor_id' => $vendorId,
+
+            'selected_vendor_name' =>
+                $selectedVendorName,
+
+            'vendors' =>
+                array_values($vendors),
+
+            'total' =>
+                round(
+                    array_sum(
+                        array_column(
+                            $vendors,
+                            'total'
+                        )
+                    ),
+                    2
+                ),
+        ];
+    }
+
+    private function purchaseHistoryMonths(int $count = 12): array
+    {
+        $base = \Carbon\Carbon::createFromFormat('!Y-m', \App\Support\BusinessMonthCycle::defaultDashboardMonthCycle());
+        $months = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $mc = $base->copy()->subMonthsNoOverflow($i)->format('Y-m');
+
+            try {
+                $cycle = \App\Support\BusinessMonthCycle::resolve($mc);
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            $from = $cycle['cycle_start_date'];
+            $to = $cycle['cycle_end_date'];
+
+            $rows = DB::table('goods_receipt_lines as gl')
+                ->join('goods_receipts as g', 'g.id', '=', 'gl.goods_receipt_id')
+                ->join('purchase_orders as po', 'po.id', '=', 'g.purchase_order_id')
+                ->join('vendors as v', 'v.id', '=', 'po.vendor_id')
+                ->join('items as i', 'i.id', '=', 'gl.item_id')
+                ->whereBetween('g.received_date', [$from, $to])
+                ->selectRaw('v.id as vendor_id, v.name as vendor_name, g.received_date,
+                             i.name as item_name, i.sku, i.uom,
+                             SUM(gl.qty_received) as qty,
+                             SUM(gl.qty_received * gl.unit_cost) as amount')
+                ->groupBy('v.id', 'v.name', 'g.received_date', 'i.id', 'i.name', 'i.sku', 'i.uom')
+                ->orderBy('v.name')
+                ->orderBy('g.received_date')
+                ->orderBy('i.name')
+                ->get();
+
+            $vendors = [];
+
+            foreach ($rows as $r) {
+                $vid = (int) $r->vendor_id;
+
+                if (! isset($vendors[$vid])) {
+                    $vendors[$vid] = [
+                        'vendor_id' => $vid,
+                        'vendor_name' => $r->vendor_name,
+                        'total' => 0.0,
+                        'dates' => [],
+                    ];
+                }
+
+                $vendors[$vid]['total'] += (float) $r->amount;
+                $vendors[$vid]['dates'][$r->received_date][] = [
+                    'item' => $r->item_name,
+                    'sku' => $r->sku,
+                    'uom' => $r->uom,
+                    'qty' => (float) $r->qty,
+                    'amount' => (float) $r->amount,
+                ];
+            }
+
+            $months[] = [
+                'month_cycle' => $mc,
+                'from' => $from,
+                'to' => $to,
+                'total' => round(array_sum(array_column($vendors, 'total')), 2),
+                'vendors' => array_values($vendors),
+            ];
+        }
+
+        return $months;
     }
 
     private function defaultBusinessCycleRange(): array

@@ -216,7 +216,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
     });
 
     Route::prefix('/member-accounts')->name('member-accounts.')->middleware('permission:superadmin.member_account_create')->group(function () {
-        Route::get('/', [MemberAccountController::class, 'index'])->name('index');
+        Route::get('/', fn () => redirect()->route('admin.members.index'))->name('index');
         Route::post('/', [MemberAccountController::class, 'store'])->name('store');
         Route::post('/{member}/activate', [MemberAccountController::class, 'activate'])->middleware('permission:superadmin.member_account_activate')->name('activate');
         Route::post('/{member}/deactivate', [MemberAccountController::class, 'deactivate'])->middleware('permission:superadmin.member_account_deactivate')->name('deactivate');
@@ -352,6 +352,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'force_password_chan
         Route::post('/procurement/grn/{grn}/reverse', [ProcurementController::class, 'reverseGrn'])->name('procurement.grn.reverse');
         Route::post('/procurement/grn-lines/{line}/reverse', [ProcurementController::class, 'reverseGrnLine'])->name('procurement.grn-line.reverse');
         Route::get('/procurement/grn/{grn}/pdf', [ProcurementController::class, 'downloadGrnPdf'])->name('procurement.grn.pdf');
+        Route::get('/procurement/history/{monthCycle}', [ProcurementController::class, 'viewPurchaseHistory'])->name('purchase-history.view');
+        Route::get('/procurement/history/{monthCycle}/pdf', [ProcurementController::class, 'downloadPurchaseHistoryPdf'])->name('purchase-history.pdf');
         Route::get('/procurement/reports/export', [ProcurementController::class, 'exportPurchaseReports'])->name('procurement.reports.export');
         Route::get('/procurement/reports/export-selected', [ProcurementController::class, 'exportSelectedPurchaseReport'])->name('procurement.reports.export-selected');
     });

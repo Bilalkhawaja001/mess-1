@@ -353,7 +353,7 @@
 
 @php
     $activeTab = request('tab', 'po');
-    if (! in_array($activeTab, ['vendors', 'po', 'grn', 'approvals', 'reports', 'datewise'], true)) {
+    if (! in_array($activeTab, ['vendors', 'po', 'grn', 'approvals', 'history', 'reports', 'datewise'], true)) {
         $activeTab = 'po';
     }
 
@@ -437,6 +437,7 @@
             <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="procurement-tab-link {{ $activeTab === 'po' ? 'active' : '' }}">Purchase Orders</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}" class="procurement-tab-link {{ $activeTab === 'grn' ? 'active' : '' }}">GRNs / Receiving</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'approvals']) }}" class="procurement-tab-link {{ $activeTab === 'approvals' ? 'active' : '' }}">Kitchen Approvals @if(($kitchenPendingCount ?? 0) > 0)<span class="badge bg-warning text-dark ms-1">{{ $kitchenPendingCount }}</span>@endif</a>
+            <a href="{{ route('admin.procurement.index', ['tab' => 'history']) }}" class="procurement-tab-link {{ $activeTab === 'history' ? 'active' : '' }}">Purchase History</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'reports']) }}" class="procurement-tab-link {{ $activeTab === 'reports' ? 'active' : '' }}">Purchase Reports</a>
             <a href="{{ route('admin.procurement.index', ['tab' => 'datewise']) }}" class="procurement-tab-link {{ $activeTab === 'datewise' ? 'active' : '' }}">Date wise Purchase</a>
         </div>
@@ -1751,6 +1752,12 @@
     @if($activeTab === 'approvals')
     <div class="procurement-tab-panel" id="approvals-panel">
         @include('admin.kitchen-approvals._panel')
+    </div>
+    @endif
+
+    @if($activeTab === 'history')
+    <div class="procurement-tab-panel" id="history-panel">
+        @include('admin.procurement._history')
     </div>
     @endif
 

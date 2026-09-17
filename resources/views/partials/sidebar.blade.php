@@ -106,10 +106,10 @@
                 </div>
 
                 <div class="sb-group sidebar-group">
-                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-inventory" aria-expanded="{{ $invOpen ? 'true' : 'false' }}" aria-controls="sidebar-inventory">Inventory & Procurement <i class="bi {{ $invOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
+                    <button class="sb-label sidebar-label btn btn-link text-start text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-inventory" aria-expanded="{{ $invOpen ? 'true' : 'false' }}" aria-controls="sidebar-inventory">Items & Procurement <i class="bi {{ $invOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i></button>
                     <nav class="nav flex-column gap-1 collapse {{ $invOpen ? 'show' : '' }}" id="sidebar-inventory">
                         @if(auth()->user()->hasPermission('inventory.manage'))
-                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.inventory.*') ? 'active' : '' }}" href="{{ route('admin.inventory.index') }}" title="Inventory"><span class="sidebar-icon-wrap"><i class="bi bi-box-seam sidebar-icon"></i></span><span>Inventory</span></a>
+                            <a class="nav-link sidebar-link {{ request()->routeIs('admin.inventory.*') ? 'active' : '' }}" href="{{ route('admin.inventory.index') }}" title="Items"><span class="sidebar-icon-wrap"><i class="bi bi-box-seam sidebar-icon"></i></span><span>Items</span></a>
                         @endif
                         @if(auth()->user()->hasPermission('procurement.manage'))
                             <a class="nav-link sidebar-link {{ request()->routeIs('admin.procurement.*') ? 'active' : '' }}" href="{{ route('admin.procurement.index') }}" title="Procurement"><span class="sidebar-icon-wrap"><i class="bi bi-truck sidebar-icon"></i></span><span>Procurement</span></a>

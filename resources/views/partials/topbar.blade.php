@@ -237,14 +237,14 @@
                     <button type="button"
                             class="{{ request()->routeIs('admin.inventory.*') || request()->routeIs('admin.procurement.*') || request()->routeIs('admin.hubs.inventory') ? 'is-active' : '' }}">
                         <i class="bi bi-box-seam"></i>
-                        <span>Inventory & Procurement</span>
+                        <span>Items & Procurement</span>
                         <i class="bi bi-chevron-down"></i>
                     </button>
 
                     <div class="enterprise-dropdown">
 
                         @if($canInventoryTop)
-                            <a href="{{ route('admin.inventory.index') }}">Inventory</a>
+                            <a href="{{ route('admin.inventory.index') }}">Items</a>
                         @endif
 
                         @if($canProcurementTop)
@@ -350,7 +350,7 @@
                         @endif
 
                         @if($canMemberAccountsTop)
-                            <a href="{{ route('admin.member-accounts.index') }}">Member Accounts</a>
+                            
                         @endif
 
                         @if($canProcurementTop)

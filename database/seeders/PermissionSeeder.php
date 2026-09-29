@@ -42,12 +42,9 @@ class PermissionSeeder extends Seeder
         $dataEntry = Role::query()->where('code', 'DATA_ENTRY')->first();
         if ($dataEntry) {
             $dataEntryPerms = Permission::query()->whereIn('code', [
-                'member.manage', 'attendance.manage', 'billing.generate', 'billing.correct',
-                'payment.create', 'payments.view_admin', 'payments.verify_admin', 'payments.manual_record_admin',
-                'payments.reconcile_admin', 'ledger.adjust', 'ledger.recompute', 'inventory.manage', 'procurement.manage',
-                'kitchen.manage', 'guest.manage', 'accounting.manage', 'report.view', 'report.export',
+                'member.manage', 'attendance.manage',
             ])->pluck('id')->all();
-            $dataEntry->permissions()->syncWithoutDetaching($dataEntryPerms);
+            $dataEntry->permissions()->sync($dataEntryPerms);
         }
 
         $auditor = Role::query()->where('code', 'AUDITOR')->first();

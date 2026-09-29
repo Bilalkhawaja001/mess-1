@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
+            'data_entry_scope' => \App\Http\Middleware\RestrictDataEntryAccess::class,
             'must_change_password' => \App\Http\Middleware\RequirePasswordChange::class,
         ]);
     })

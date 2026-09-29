@@ -39,6 +39,10 @@ class AuthController extends Controller
             return redirect()->route('member.dashboard');
         }
 
+        if (optional($user->role)->code === 'DATA_ENTRY') {
+            return redirect()->route('admin.members.index');
+        }
+
         return redirect()->route('admin.dashboard');
     }
 

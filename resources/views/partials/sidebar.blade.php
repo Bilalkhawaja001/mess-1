@@ -1,5 +1,6 @@
 @php
     $isMember = auth()->check() && auth()->user()->isMemberRole();
+    $isDataEntry = auth()->check() && optional(auth()->user()->role)->code === 'DATA_ENTRY';
     $path = request()->path();
 @endphp
 <aside class="sidebar">
@@ -21,6 +22,16 @@
             </nav>
         </div>
     @else
+        @if($isDataEntry)
+            <div class="sb-group">
+                <div class="sb-label">Data Entry</div>
+                <nav class="nav flex-column gap-1">
+                    <a class="nav-link {{ request()->routeIs('admin.members.*') ? 'active' : '' }}" href="{{ route('admin.members.index') }}"><i class="bi bi-person-lines-fill"></i>Members</a>
+                    <a class="nav-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.index') }}"><i class="bi bi-calendar-check"></i>Attendance</a>
+                    <a class="nav-link {{ request()->routeIs('admin.attendance-monthly.*') ? 'active' : '' }}" href="{{ route('admin.attendance-monthly.index') }}"><i class="bi bi-calendar3"></i>Monthly Attendance</a>
+                </nav>
+            </div>
+        @else
         <div class="sb-group">
             <div class="sb-label">Operations</div>
             <nav class="nav flex-column gap-1">
@@ -58,6 +69,7 @@
                 <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><i class="bi bi-sliders"></i>Settings</a>
             </nav>
         </div>
+        @endif
     @endif
 
     <div class="sb-powered">

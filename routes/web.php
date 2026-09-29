@@ -49,19 +49,21 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware(['auth'])-
 
 Route::get('/', function () {
     if (! auth()->check()) return redirect()->route('login');
-    return auth()->user()->isMemberRole() ? redirect()->route('member.dashboard') : redirect()->route('admin.dashboard');
+    if (auth()->user()->isMemberRole()) return redirect()->route('member.dashboard');
+    if (optional(auth()->user()->role)->code === 'DATA_ENTRY') return redirect()->route('admin.members.index');
+    return redirect()->route('admin.dashboard');
 });
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::get('/ready', fn () => response()->json(['ready' => true]));
 
-Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR'])->group(function () {
+Route::middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'data_entry_scope'])->group(function () {
     Route::get('/api/menus', [KitchenController::class, 'apiMenus'])->name('api.menus');
     Route::get('/api/guest-rate', [GuestController::class, 'guestRate'])->name('api.guest-rate');
     Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.legacy');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'must_change_password'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'active', 'role:SUPER_ADMIN,ADMIN,DATA_ENTRY,AUDITOR', 'data_entry_scope', 'must_change_password'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::post('/auth/password-reset/request', [AuthController::class, 'requestPasswordReset'])->name('auth.password-reset.request');

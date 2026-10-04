@@ -37,7 +37,7 @@ class StatementController extends Controller
 
         $outstandingAmount = (float) ($ledgerRows->last()->balance_after ?? 0);
 
-        return view('member.mobile.statement', [
+        return view('member.app.statement.index', [
             'member' => $member,
             'rows' => $rows,
             'outstandingAmount' => $outstandingAmount,

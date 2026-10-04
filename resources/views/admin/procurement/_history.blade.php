@@ -59,18 +59,14 @@
 
                     <td class="text-end text-nowrap">
                         <a
-                            href="{{ route('admin.purchase-history.view', [
-                                'monthCycle' => $m['month_cycle']
-                            ]) }}"
+                            href="#"
                             target="_blank"
                             class="btn btn-sm btn-outline-secondary">
                             View
                         </a>
 
                         <a
-                            href="{{ route('admin.purchase-history.pdf', [
-                                'monthCycle' => $m['month_cycle']
-                            ]) }}"
+                            href="#"
                             class="btn btn-sm btn-outline-primary">
                             Download
                         </a>
@@ -119,20 +115,14 @@
                                     </button>
 
                                     <a
-                                        href="{{ route('admin.purchase-history.view', [
-                                            'monthCycle' => $m['month_cycle'],
-                                            'vendor' => $v['vendor_id']
-                                        ]) }}"
+                                        href="#"
                                         target="_blank"
                                         class="btn btn-sm btn-outline-secondary">
                                         View
                                     </a>
 
                                     <a
-                                        href="{{ route('admin.purchase-history.pdf', [
-                                            'monthCycle' => $m['month_cycle'],
-                                            'vendor' => $v['vendor_id']
-                                        ]) }}"
+                                        href="#"
                                         class="btn btn-sm btn-outline-primary">
                                         Download
                                     </a>

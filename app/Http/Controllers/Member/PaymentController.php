@@ -41,8 +41,8 @@ class PaymentController extends Controller
         $methods = PaymentMethod::query()->where('is_active', true)->orderBy('name')->get();
 
         $view = request()->routeIs('member.bill', 'member.app.bill')
-            ? 'member.mobile.bill'
-            : 'member.mobile.payments';
+            ? 'member.app.payments.index'
+            : 'member.app.payments.index';
 
         return view($view, compact('member', 'bills', 'payments', 'methods'));
     }

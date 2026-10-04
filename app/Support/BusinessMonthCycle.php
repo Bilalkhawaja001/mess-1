@@ -17,16 +17,20 @@ class BusinessMonthCycle
         $month = $month->startOfMonth();
         $daysInMonth = $month->daysInMonth;
 
-        [$startDay, $endDay] = match ($daysInMonth) {
-            31 => [26, 26],
-            30 => [26, 25],
-            29 => [27, 24],
-            28 => [27, 23],
-            default => throw new InvalidArgumentException("Unsupported business cycle month length [{$daysInMonth}] for {$monthCycle}."),
-        };
+        // Business month closes 5 days before calendar month-end.
+        $cycleEnd = $month->copy()
+            ->endOfMonth()
+            ->subDays(5)
+            ->startOfDay();
 
-        $cycleStart = $month->copy()->subMonthNoOverflow()->setDay($startDay)->startOfDay();
-        $cycleEnd = $month->copy()->setDay($endDay)->startOfDay();
+        // Next cycle starts one day after previous month's close.
+        $previousClose = $month->copy()
+            ->subMonthNoOverflow()
+            ->endOfMonth()
+            ->subDays(5)
+            ->startOfDay();
+
+        $cycleStart = $previousClose->copy()->addDay()->startOfDay();
 
         return [
             'month_cycle' => $monthCycle,

@@ -12,7 +12,10 @@ use App\Services\Billing\BillingGenerationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use RuntimeException;
+use Throwable;
 
 class BillingController extends Controller
 {
@@ -38,15 +41,37 @@ class BillingController extends Controller
     {
         $monthCycle = (string) $request->input('month_cycle');
 
-        $result = $service->generate($monthCycle, (int) Auth::id());
+        try {
+            $result = $service->generate($monthCycle, (int) Auth::id());
 
-        if (($result['status'] ?? '') === 'already_generated') {
+            if (($result['status'] ?? '') === 'already_generated') {
+                return redirect()->route('admin.billing.index', ['month_cycle' => $monthCycle])
+                    ->with('info', "Billing already generated for this scope (scope_hash={$result['scope_hash']}). No inserts.");
+            }
+
             return redirect()->route('admin.billing.index', ['month_cycle' => $monthCycle])
-                ->with('info', "Billing already generated for this scope (scope_hash={$result['scope_hash']}). No inserts.");
-        }
+                ->with('success', "Billing generated. inserted={$result['inserted']} skipped={$result['skipped']}");
 
-        return redirect()->route('admin.billing.index', ['month_cycle' => $monthCycle])
-            ->with('success', "Billing generated. inserted={$result['inserted']} skipped={$result['skipped']}");
+        } catch (RuntimeException $e) {
+
+            // Show exact billing/business validation reason to admin.
+            return redirect()->route('admin.billing.index', ['month_cycle' => $monthCycle])
+                ->withInput()
+                ->with('error', $e->getMessage());
+
+        } catch (Throwable $e) {
+
+            // Unexpected technical errors stay in logs; do not expose internals.
+            Log::error('Billing generation failed', [
+                'month_cycle' => $monthCycle,
+                'user_id' => Auth::id(),
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('admin.billing.index', ['month_cycle' => $monthCycle])
+                ->withInput()
+                ->with('error', 'Billing could not be generated due to an unexpected system error.');
+        }
     }
 
     public function correct(Billing $billing, Request $request, BillingCorrectionService $service): RedirectResponse

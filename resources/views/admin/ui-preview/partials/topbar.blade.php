@@ -1,0 +1,1 @@
+<header class="mess-ui-topbar"><div class="mess-ui-search"><span class="mess-ui-icon">search</span><span>Search member, bill, receipt, store item...</span></div><div class="mess-ui-top-actions"><span class="mess-ui-month">July 2026</span><span class="mess-ui-circle-btn"><span class="mess-ui-icon">notifications</span></span><span class="mess-ui-avatar">BA</span></div></header>

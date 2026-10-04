@@ -164,11 +164,13 @@ class GuestController extends Controller
             'name' => 'required|string|max:255',
             'came_from' => 'nullable|string|max:120',
             'remarks' => 'nullable|string',
+            'guest_type' => 'nullable|string|in:REGULAR,VIP',
             'department_id' => 'required|exists:departments,id',
             'host_member_id' => 'nullable|exists:members,id',
         ]);
 
         $data['guest_code'] = trim((string) ($data['guest_code'] ?? '')) ?: $this->nextGuestCode();
+        $data['guest_type'] = $this->normalizeGuestType($data['guest_type'] ?? 'REGULAR');
         $data['is_active'] = true;
         $data['is_deleted'] = false;
 
@@ -184,11 +186,13 @@ class GuestController extends Controller
             'name' => 'required|string|max:255',
             'came_from' => 'nullable|string|max:120',
             'remarks' => 'nullable|string',
+            'guest_type' => 'nullable|string|in:REGULAR,VIP',
             'department_id' => 'required|exists:departments,id',
             'host_member_id' => 'nullable|exists:members,id',
             'is_active' => 'nullable|boolean',
         ]);
 
+        $data['guest_type'] = $this->normalizeGuestType($data['guest_type'] ?? $guest->guest_type ?? 'REGULAR');
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
         $guest->update($data);
 
@@ -232,8 +236,10 @@ class GuestController extends Controller
             }
         }
 
+        $guest = Guest::query()->findOrFail((int) $data['guest_id']);
+
         try {
-            $this->guestRateForDate((string) $data['meal_date']);
+            $this->guestRateForDate((string) $data['meal_date'], (string) $guest->guest_type);
         } catch (\Throwable $e) {
             return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage())->withInput();
         }
@@ -241,6 +247,7 @@ class GuestController extends Controller
         foreach ($mealTypes as $mealType) {
             GuestMeal::query()->create([
                 'guest_id' => $data['guest_id'],
+                'guest_type_applied' => $this->normalizeGuestType($guest->guest_type),
                 'meal_date' => $data['meal_date'],
                 'meal_type' => $mealType,
                 'quantity' => $data['quantity'],
@@ -277,8 +284,10 @@ class GuestController extends Controller
         $oldMealDate = $meal->meal_date;
         $oldAmount = (float) ($meal->amount ?? 0);
 
+        $newGuest = Guest::query()->findOrFail((int) $data['guest_id']);
+
         try {
-            $rate = $this->guestRateForDate((string) $data['meal_date']);
+            $rate = $this->guestRateForDate((string) $data['meal_date'], (string) $newGuest->guest_type);
         } catch (\Throwable $e) {
             return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage())->withInput();
         }
@@ -288,6 +297,7 @@ class GuestController extends Controller
         DB::transaction(function () use ($meal, $data, $mealType, $rate, $amount, $wasApproved, $oldDepartmentId, $oldMealDate, $oldAmount) {
             $meal->update([
                 'guest_id' => $data['guest_id'],
+                'guest_type_applied' => $this->normalizeGuestType($newGuest->guest_type),
                 'meal_date' => $data['meal_date'],
                 'meal_type' => $mealType,
                 'quantity' => $data['quantity'],
@@ -352,7 +362,11 @@ class GuestController extends Controller
         }
 
         try {
-            [$rate, $amount] = $this->resolveGuestMealRateAmount($meal->meal_date, (int) $meal->quantity);
+            [$rate, $amount] = $this->resolveGuestMealRateAmount(
+                $meal->meal_date,
+                (int) $meal->quantity,
+                (string) ($meal->guest_type_applied ?? $meal->guest?->guest_type ?? 'REGULAR')
+            );
         } catch (\Throwable $e) {
             return back()->with('error', 'Guest rate missing for selected meal date. ' . $e->getMessage());
         }
@@ -401,7 +415,11 @@ class GuestController extends Controller
         $ratePayloads = [];
         foreach ($meals as $meal) {
             try {
-                $ratePayloads[$meal->id] = $this->resolveGuestMealRateAmount($meal->meal_date, (int) $meal->quantity);
+                $ratePayloads[$meal->id] = $this->resolveGuestMealRateAmount(
+                $meal->meal_date,
+                (int) $meal->quantity,
+                (string) ($meal->guest_type_applied ?? $meal->guest?->guest_type ?? 'REGULAR')
+            );
             } catch (\Throwable $e) {
                 return back()->with('error', 'Bulk approve blocked. Missing guest rate for ' . Carbon::parse((string) $meal->meal_date)->format('Y-m-d') . ' on meal #' . $meal->id . '. ' . $e->getMessage());
             }
@@ -605,8 +623,14 @@ class GuestController extends Controller
                 continue;
             }
 
+            $importGuest = Guest::query()->find((int) $payload['guest_id']);
+            if (! $importGuest) {
+                $counts['failed']++;
+                continue;
+            }
+
             try {
-                $rate = $this->guestRateForDate($payload['meal_date']);
+                $rate = $this->guestRateForDate($payload['meal_date'], (string) $importGuest->guest_type);
             } catch (\Throwable $e) {
                 $counts['failed']++;
                 continue;
@@ -620,6 +644,7 @@ class GuestController extends Controller
             ];
             $values = [
                 'quantity' => $payload['quantity'],
+                'guest_type_applied' => $this->normalizeGuestType($importGuest->guest_type),
                 'rate' => $rate,
                 'rate_applied' => $rate,
                 'amount' => $amount,
@@ -640,29 +665,44 @@ class GuestController extends Controller
         return back()->with('success', "Guest meals import done. Inserted: {$counts['inserted']}, Updated: {$counts['updated']}, Failed: {$counts['failed']}");
     }
 
-    private function guestRatePolicyForDate(string $date): RatePolicy
+    private function normalizeGuestType(?string $guestType): string
     {
+        return strtoupper(trim((string) $guestType)) === 'VIP'
+            ? 'VIP'
+            : 'REGULAR';
+    }
+
+    private function guestRatePolicyForDate(string $date, string $guestType = 'REGULAR'): RatePolicy
+    {
+        $rateType = $this->normalizeGuestType($guestType) === 'VIP'
+            ? 'VIP_GUEST'
+            : 'GUEST';
+
         $policy = RatePolicy::query()
-            ->where('rate_type', 'GUEST')
+            ->where('rate_type', $rateType)
             ->where('is_active', true)
             ->whereNotNull('approved_at')
             ->whereDate('effective_from', '<=', $date)
             ->where(function ($query) use ($date) {
-                $query->whereNull('effective_to')->orWhereDate('effective_to', '>=', $date);
+                $query->whereNull('effective_to')
+                    ->orWhereDate('effective_to', '>=', $date);
             })
             ->orderByDesc('effective_from')
             ->first();
 
         if (! $policy) {
-            throw new \RuntimeException('Rate not configured for this date/meal_type');
+            throw new \RuntimeException($rateType . ' rate not configured for this date.');
         }
 
         return $policy;
     }
 
-    private function guestRateForDate(string $date): float
+    private function guestRateForDate(string $date, string $guestType = 'REGULAR'): float
     {
-        return (float) $this->guestRatePolicyForDate(Carbon::parse($date)->toDateString())->value;
+        return (float) $this->guestRatePolicyForDate(
+            Carbon::parse($date)->toDateString(),
+            $guestType
+        )->value;
     }
 
     private function nextGuestCode(): string
@@ -676,7 +716,11 @@ class GuestController extends Controller
     private function dynamicRatePayload(GuestMeal $meal): array
     {
         try {
-            [$rate, $amount] = $this->resolveGuestMealRateAmount($meal->meal_date, (int) $meal->quantity);
+            [$rate, $amount] = $this->resolveGuestMealRateAmount(
+                $meal->meal_date,
+                (int) $meal->quantity,
+                (string) ($meal->guest_type_applied ?? $meal->guest?->guest_type ?? 'REGULAR')
+            );
 
             return [$rate, $amount, false, null];
         } catch (\Throwable $e) {
@@ -684,9 +728,9 @@ class GuestController extends Controller
         }
     }
 
-    private function resolveGuestMealRateAmount(mixed $mealDate, int $quantity): array
+    private function resolveGuestMealRateAmount(mixed $mealDate, int $quantity, string $guestType = 'REGULAR'): array
     {
-        $rate = $this->guestRateForDate((string) $mealDate);
+        $rate = $this->guestRateForDate((string) $mealDate, $guestType);
         $amount = round($rate * $quantity, 2);
 
         return [$rate, $amount];

@@ -22,7 +22,7 @@ class ComplaintController extends Controller
 
         $rows = Complaint::query()->where('member_id', $member->id)->latest('id')->paginate(25);
 
-        return view('member.mobile.complaints.index', compact('rows'));
+        return view('member.app.complaints.index', compact('rows'));
     }
 
     public function create(): View|RedirectResponse
@@ -31,7 +31,7 @@ class ComplaintController extends Controller
             return redirect()->route('member.dashboard')->with('warning', 'Your member profile is not linked yet. Please contact admin.');
         }
 
-        return view('member.mobile.complaints.create');
+        return view('member.app.complaints.create');
     }
 
     public function store(Request $request): RedirectResponse

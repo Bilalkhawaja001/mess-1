@@ -118,7 +118,7 @@
                 </article>
             </div>
         @else
-            <div class="member-dashboard-empty">Today's menu is not available yet.</div>
+            <div class="member-dashboard-empty">Today's menu has not been published.</div>
         @endif
     </section>
 

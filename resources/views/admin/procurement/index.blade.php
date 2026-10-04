@@ -324,6 +324,1289 @@
 </style>
 @endpush
 
+
+{{-- PROCUREMENT_STITCH_MEMBERS_V1 --}}
+<style>
+
+/* =========================================
+   PROCUREMENT — MEMBERS + STITCH SYSTEM
+   ========================================= */
+
+.procurement-page-shell {
+    color:#0b1c30;
+}
+
+
+/* ----- kill old large hero only ----- */
+
+.procurement-page-shell > .page-hero {
+    display:none !important;
+}
+
+
+/* =========================================
+   KPI ROW — Members raised-card feel
+   ========================================= */
+
+.procurement-page-shell .stats-grid {
+    display:grid !important;
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:14px !important;
+    margin-bottom:20px !important;
+}
+
+.procurement-page-shell .stat-card {
+    background:#fff !important;
+    border:1px solid #e4eaf3 !important;
+    border-radius:12px !important;
+
+    padding:14px 16px !important;
+    min-height:78px !important;
+
+    box-shadow:
+        0 2px 4px rgba(15,23,42,.05),
+        0 7px 16px rgba(15,23,42,.045) !important;
+}
+
+.procurement-page-shell .stat-label {
+    color:#667085 !important;
+    font-size:11px !important;
+    font-weight:500 !important;
+}
+
+.procurement-page-shell .stat-value {
+    color:#0b1c30 !important;
+    font-size:21px !important;
+    line-height:1.1 !important;
+    font-weight:700 !important;
+    margin-top:5px !important;
+}
+
+.procurement-page-shell .stat-help {
+    color:#8a94a5 !important;
+    font-size:10px !important;
+    margin-top:4px !important;
+}
+
+
+/* =========================================
+   GOOGLE STITCH TAB STRIP
+   Members page softness
+   ========================================= */
+
+.proc-stitch-tabs-shell {
+    margin-bottom:20px;
+
+    padding:5px;
+
+    background:#eff4ff;
+
+    border:1px solid #e3eaf5;
+    border-radius:13px;
+
+    box-shadow:
+        0 2px 4px rgba(15,23,42,.04),
+        0 5px 12px rgba(15,23,42,.035);
+
+    overflow-x:auto;
+}
+
+.proc-stitch-tabs {
+    display:flex;
+    align-items:center;
+    gap:4px;
+
+    min-width:max-content;
+}
+
+.proc-stitch-tab {
+    min-height:38px;
+
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+
+    padding:8px 13px;
+
+    border-radius:9px;
+
+    color:#596579 !important;
+    text-decoration:none !important;
+
+    font-size:12px;
+    font-weight:600;
+
+    transition:.15s ease;
+}
+
+.proc-stitch-tab .material-symbols-outlined {
+    font-size:17px;
+}
+
+.proc-stitch-tab:hover {
+    color:#2a14b4 !important;
+    background:rgba(255,255,255,.60);
+}
+
+.proc-stitch-tab.active {
+    color:#2a14b4 !important;
+    background:#fff;
+
+    box-shadow:
+        0 2px 5px rgba(15,23,42,.08),
+        0 5px 12px rgba(15,23,42,.045);
+}
+
+.proc-stitch-count {
+    min-width:21px;
+    height:20px;
+
+    padding:0 6px;
+
+    border-radius:999px;
+
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:10px;
+    font-weight:700;
+}
+
+.proc-stitch-count-warning {
+    color:#8a5700;
+    background:#ffe6a8;
+}
+
+
+/* =========================================
+   STITCH COMMAND BAR
+   ========================================= */
+
+.proc-stitch-command {
+    margin-bottom:16px;
+
+    padding:14px 16px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+
+    background:#fff;
+
+    border:1px solid #e4eaf3;
+    border-radius:13px;
+
+    box-shadow:
+        0 2px 4px rgba(15,23,42,.05),
+        0 7px 16px rgba(15,23,42,.045);
+}
+
+.proc-stitch-command-title {
+    color:#0b1c30;
+
+    font-size:14px;
+    font-weight:700;
+}
+
+.proc-stitch-command-sub {
+    margin-top:2px;
+
+    color:#7a8798;
+
+    font-size:10px;
+}
+
+.proc-stitch-command-actions {
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.proc-stitch-btn {
+    min-height:38px;
+
+    padding:8px 14px;
+
+    border-radius:11px;
+
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+
+    text-decoration:none !important;
+
+    font-size:12px;
+    font-weight:600;
+
+    border:1px solid transparent;
+
+    cursor:pointer;
+}
+
+.proc-stitch-btn .material-symbols-outlined {
+    font-size:18px;
+}
+
+.proc-stitch-btn-soft {
+    color:#27364a !important;
+
+    background:#eff4ff;
+
+    border-color:#e1e8f3;
+}
+
+.proc-stitch-btn-soft:hover {
+    color:#2a14b4 !important;
+    background:#e9f0fc;
+}
+
+.proc-stitch-btn-primary {
+    color:#fff !important;
+
+    background:#1473f3;
+
+    border-color:#1473f3;
+}
+
+.proc-stitch-btn-primary:hover {
+    color:#fff !important;
+    background:#0c64df;
+}
+
+
+/* =========================================
+   ALL PROCUREMENT CARDS
+   exact Members raised feeling
+   ========================================= */
+
+.procurement-tab-panel .card,
+.procurement-tab-panel .procurement-form-card,
+.procurement-tab-panel .procurement-table-card,
+.procurement-tab-panel .procurement-vendor-table-card {
+
+    background:#fff !important;
+
+    border:1px solid #e4eaf3 !important;
+    border-radius:13px !important;
+
+    box-shadow:
+        0 2px 4px rgba(15,23,42,.045),
+        0 7px 16px rgba(15,23,42,.04) !important;
+
+    overflow:hidden;
+}
+
+.procurement-tab-panel .card-header {
+
+    padding:13px 16px !important;
+
+    background:#fff !important;
+
+    border-bottom:1px solid #e8edf5 !important;
+
+    color:#12213a !important;
+
+    font-size:12px !important;
+    font-weight:700 !important;
+}
+
+.procurement-tab-panel .card-body {
+    background:#fff !important;
+}
+
+
+/* =========================================
+   TABLES — same visual plane as Members
+   ========================================= */
+
+.procurement-tab-panel table {
+    margin-bottom:0 !important;
+}
+
+.procurement-tab-panel table thead th {
+
+    padding:11px 13px !important;
+
+    color:#515c6f !important;
+
+    background:#eff4ff !important;
+
+    border-bottom:1px solid #e1e8f2 !important;
+
+    font-size:10px !important;
+    font-weight:700 !important;
+
+    letter-spacing:.045em;
+    text-transform:uppercase;
+
+    vertical-align:middle;
+}
+
+.procurement-tab-panel table tbody td {
+
+    padding:11px 13px !important;
+
+    color:#233247 !important;
+
+    background:#fff;
+
+    border-bottom:1px solid #edf1f6 !important;
+
+    font-size:12px !important;
+
+    vertical-align:middle;
+}
+
+.procurement-tab-panel table tbody tr:hover > td {
+    background:#fafcff !important;
+}
+
+
+/* =========================================
+   FORM CONTROLS
+   Attendance fix pattern:
+   keep real browser edge, DO NOT border-0
+   ========================================= */
+
+.procurement-tab-panel .form-control,
+.procurement-tab-panel .form-select {
+
+    min-height:38px;
+
+    color:#1f2d42;
+
+    background:#eff4ff !important;
+
+    border:1px solid #cdd6e4 !important;
+    border-radius:10px !important;
+
+    box-shadow:
+        inset 0 1px 1px rgba(15,23,42,.025) !important;
+
+    font-size:12px;
+}
+
+.procurement-tab-panel .form-control:focus,
+.procurement-tab-panel .form-select:focus {
+
+    background:#fff !important;
+
+    border-color:#6675e9 !important;
+
+    box-shadow:
+        0 0 0 3px rgba(79,70,229,.08) !important;
+}
+
+.procurement-tab-panel .form-label {
+
+    color:#586579;
+
+    font-size:10px;
+    font-weight:600;
+}
+
+
+/* =========================================
+   BUTTONS
+   ========================================= */
+
+.procurement-tab-panel .btn {
+
+    min-height:36px;
+
+    border-radius:9px !important;
+
+    font-size:11px !important;
+    font-weight:600 !important;
+}
+
+.procurement-tab-panel .btn-primary {
+
+    color:#fff !important;
+
+    background:#1473f3 !important;
+
+    border-color:#0f68e1 !important;
+}
+
+.procurement-tab-panel .btn-outline-primary,
+.procurement-tab-panel .btn-outline-secondary {
+
+    color:#2e3b50 !important;
+
+    background:#eff4ff !important;
+
+    border-color:#ccd6e5 !important;
+}
+
+.procurement-tab-panel .btn-outline-success {
+
+    color:#08766b !important;
+
+    background:#e5fbf6 !important;
+
+    border-color:#b9e9df !important;
+}
+
+
+/* =========================================
+   BADGES / STATUS
+   ========================================= */
+
+.procurement-tab-panel .badge {
+
+    padding:5px 9px !important;
+
+    border-radius:999px !important;
+
+    font-size:9px !important;
+    font-weight:700 !important;
+}
+
+.procurement-tab-panel .text-bg-success,
+.procurement-tab-panel .bg-success {
+
+    color:#087167 !important;
+    background:#7ae8d8 !important;
+}
+
+.procurement-tab-panel .text-bg-warning,
+.procurement-tab-panel .bg-warning {
+
+    color:#885600 !important;
+    background:#ffe6a8 !important;
+}
+
+.procurement-tab-panel .text-bg-danger,
+.procurement-tab-panel .bg-danger {
+
+    color:#a32626 !important;
+    background:#ffded9 !important;
+}
+
+.procurement-tab-panel .text-bg-info,
+.procurement-tab-panel .bg-info {
+
+    color:#4747b8 !important;
+    background:#e3e4ff !important;
+}
+
+
+/* =========================================
+   PO — Stitch hierarchy
+   Register first, import secondary
+   No DOM move, no fake JS.
+   ========================================= */
+
+body:has(.procurement-page-shell) .bulk-po-upload {
+    scroll-margin-top:180px;
+}
+
+.procurement-tab-panel:has(#po-bulk-form) {
+    display:flex;
+    flex-direction:column;
+}
+
+.procurement-tab-panel:has(#po-bulk-form)
+.procurement-grid {
+    order:30;
+}
+
+.procurement-tab-panel:has(#po-bulk-form)
+.procurement-import-grid {
+    order:40;
+}
+
+.procurement-tab-panel:has(#po-bulk-form)
+.procurement-table-card:has(#po-bulk-form) {
+    order:20;
+}
+
+.procurement-tab-panel:has(#po-bulk-form)
+.proc-stitch-command {
+    order:10;
+}
+
+
+/* =========================================
+   PO CREATE — existing real popup
+   becomes Members right drawer visually
+   ========================================= */
+
+#poModal {
+
+    justify-content:flex-end !important;
+    align-items:stretch !important;
+
+    padding:0 !important;
+
+    background:rgba(20,35,55,.28) !important;
+
+    backdrop-filter:blur(2px);
+}
+
+#poModal > div {
+
+    width:min(680px,100%) !important;
+    height:100vh !important;
+    max-height:100vh !important;
+
+    border-radius:0 !important;
+
+    box-shadow:
+        -18px 0 55px rgba(15,23,42,.17) !important;
+}
+
+#poModal > div > div:first-child {
+
+    padding:16px 20px !important;
+
+    background:#eff4ff !important;
+
+    border-bottom:1px solid #dfe7f2 !important;
+
+    border-radius:0 !important;
+}
+
+#poModal > div > div:nth-child(2) {
+    padding:20px !important;
+}
+
+#poModal > div > div:last-child {
+
+    padding:14px 20px !important;
+
+    background:#fff !important;
+
+    border-top:1px solid #e5eaf2 !important;
+
+    border-radius:0 !important;
+}
+
+#poModal input,
+#poModal select {
+
+    min-height:38px !important;
+
+    background:#eff4ff !important;
+
+    border:1px solid #cdd6e4 !important;
+    border-radius:9px !important;
+}
+
+
+/* =========================================
+   GRN receiving modal
+   ========================================= */
+
+#grnReceiveModal .modal-content,
+#datewiseModal .modal-content {
+
+    border:1px solid #e1e7f0 !important;
+    border-radius:14px !important;
+
+    box-shadow:
+        0 22px 60px rgba(15,23,42,.16) !important;
+}
+
+#grnReceiveModal .modal-header,
+#datewiseModal .modal-header {
+
+    background:#eff4ff !important;
+
+    border-bottom:1px solid #dfe7f2 !important;
+}
+
+
+/* =========================================
+   IMPORT SECONDARY WORKFLOW
+   ========================================= */
+
+#poImportPanel,
+#grnImportPanel {
+
+    margin-top:16px !important;
+
+    border-style:dashed !important;
+}
+
+.procurement-import-grid {
+
+    margin-top:12px !important;
+}
+
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media(max-width:1100px) {
+
+    .procurement-page-shell .stats-grid {
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    }
+
+}
+
+@media(max-width:700px) {
+
+    .procurement-page-shell .stats-grid {
+        grid-template-columns:1fr !important;
+    }
+
+    .proc-stitch-command {
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .proc-stitch-command-actions {
+        width:100%;
+    }
+
+    .proc-stitch-btn {
+        flex:1;
+        justify-content:center;
+    }
+
+}
+
+</style>
+
+
+
+{{-- PROCUREMENT_MATERIAL_SYMBOLS_FIX_20260918 --}}
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0">
+
+<style>
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined' !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    font-size: 18px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none !important;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+}
+</style>
+
+
+<style>
+
+/* =========================================================
+   GOOGLE STITCH EXACT LAYOUT — 2026-09-18
+   ========================================================= */
+
+
+/* ---------- KPI BENTO ---------- */
+
+.stitch-kpi-grid {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:14px;
+    margin-bottom:18px;
+}
+
+.stitch-kpi-card {
+    padding:16px;
+    background:#fff;
+    border:1px solid #e4eaf3;
+    border-radius:13px;
+
+    box-shadow:
+        0 2px 4px rgba(15,23,42,.05),
+        0 8px 18px rgba(15,23,42,.04);
+}
+
+.stitch-kpi-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+
+    color:#667085;
+    font-size:11px;
+    font-weight:600;
+}
+
+.stitch-kpi-sign {
+    width:36px;
+    height:36px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:11px;
+}
+
+.stitch-kpi-sign .material-symbols-outlined {
+    font-size:20px;
+}
+
+.stitch-sign-primary {
+    background:#e3dfff;
+    color:#2a14b4;
+}
+
+.stitch-sign-warning {
+    background:#fff0c5;
+    color:#956000;
+}
+
+.stitch-sign-success {
+    background:#86f2e4;
+    color:#006a61;
+}
+
+.stitch-sign-info {
+    background:#e5eeff;
+    color:#2a14b4;
+}
+
+.stitch-kpi-number {
+    margin-top:7px;
+
+    color:#0b1c30;
+
+    font-size:24px;
+    line-height:1;
+    font-weight:700;
+}
+
+.stitch-kpi-foot {
+    margin-top:7px;
+
+    color:#8a94a5;
+
+    font-size:10px;
+}
+
+
+/* ---------- EXACT STITCH TAB STRIP ---------- */
+
+.proc-stitch-tabs-shell {
+    padding:5px !important;
+
+    background:#fff !important;
+
+    border:0 !important;
+
+    border-radius:13px !important;
+
+    box-shadow:
+        0 2px 5px rgba(15,23,42,.065),
+        0 8px 18px rgba(15,23,42,.035) !important;
+}
+
+.proc-stitch-tab {
+    min-height:40px !important;
+
+    padding:8px 13px !important;
+
+    border-radius:11px !important;
+
+    font-size:11px !important;
+    font-weight:600 !important;
+}
+
+.proc-stitch-tab .material-symbols-outlined {
+    font-size:18px !important;
+}
+
+.proc-stitch-tab.active {
+    color:#fff !important;
+
+    background:#2a14b4 !important;
+
+    box-shadow:
+        0 2px 5px rgba(42,20,180,.20),
+        0 7px 14px rgba(42,20,180,.12) !important;
+}
+
+.proc-stitch-tab.active .proc-stitch-count {
+    color:#fff !important;
+    background:#4338ca !important;
+}
+
+
+/* ---------- COMMAND CENTER ---------- */
+
+.stitch-command-center {
+    order:10 !important;
+
+    margin:0 !important;
+
+    padding:13px 14px !important;
+
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:12px !important;
+
+    background:#fff !important;
+
+    border:1px solid #e4eaf3 !important;
+    border-bottom:0 !important;
+
+    border-radius:13px 13px 0 0 !important;
+
+    box-shadow:
+        0 2px 5px rgba(15,23,42,.055),
+        0 7px 16px rgba(15,23,42,.03) !important;
+}
+
+.stitch-command-controls {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.stitch-search-box,
+.stitch-filter-box,
+.stitch-date-chip {
+    min-height:38px;
+
+    display:flex;
+    align-items:center;
+    gap:7px;
+
+    padding:7px 10px;
+
+    border-radius:11px;
+
+    background:#eff4ff;
+
+    box-shadow:
+        inset 0 1px 2px rgba(15,23,42,.035);
+}
+
+.stitch-search-box {
+    width:310px;
+}
+
+.stitch-search-box .material-symbols-outlined,
+.stitch-filter-box .material-symbols-outlined,
+.stitch-date-chip .material-symbols-outlined {
+    color:#66758b;
+    font-size:18px !important;
+}
+
+.stitch-search-box input,
+.stitch-filter-box select {
+    width:100%;
+
+    padding:0;
+
+    border:0 !important;
+    outline:0 !important;
+
+    background:transparent !important;
+
+    color:#17263b;
+
+    font-size:11px;
+}
+
+.stitch-date-chip {
+    color:#536176;
+    font-size:10px;
+}
+
+
+/* ---------- COMMAND ACTIONS ---------- */
+
+.stitch-action {
+    min-height:38px;
+
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+
+    padding:8px 13px;
+
+    border-radius:11px;
+
+    border:1px solid transparent;
+
+    font-size:11px;
+    font-weight:600;
+
+    cursor:pointer;
+}
+
+.stitch-action .material-symbols-outlined {
+    font-size:18px !important;
+}
+
+.stitch-action-import {
+    color:#25364a;
+
+    background:#eff4ff;
+
+    border-color:#dfe7f3;
+}
+
+.stitch-action-approve {
+    color:#005e56;
+
+    background:#86f2e4;
+
+    border-color:#6cddcf;
+}
+
+.stitch-action-primary {
+    color:#fff;
+
+    background:#2a14b4;
+
+    border-color:#2a14b4;
+
+    box-shadow:
+        0 2px 5px rgba(42,20,180,.20);
+}
+
+.stitch-selected-count {
+    min-width:18px;
+
+    padding:1px 5px;
+
+    border-radius:999px;
+
+    background:rgba(255,255,255,.60);
+
+    text-align:center;
+
+    font-size:9px;
+}
+
+
+/* ---------- PO REGISTER = PRIMARY CONTENT ---------- */
+
+.procurement-tab-panel:has(#po-bulk-form) {
+    display:flex !important;
+    flex-direction:column !important;
+}
+
+.procurement-tab-panel:has(#po-bulk-form)
+.procurement-table-card:has(#po-bulk-form) {
+    order:20 !important;
+}
+
+.procurement-tab-panel
+.procurement-table-card:has(#po-bulk-form) {
+    margin-top:0 !important;
+
+    border-radius:0 0 13px 13px !important;
+}
+
+.procurement-tab-panel
+.procurement-table-card:has(#po-bulk-form)
+> .card-header {
+    display:none !important;
+}
+
+
+/* Grid now only holds drawer + hidden import modal */
+.procurement-tab-panel:has(#po-bulk-form)
+> .procurement-grid {
+    order:30 !important;
+    margin:0 !important;
+}
+
+
+/* ---------- REAL IMPORT WORKFLOW AS STITCH MODAL ---------- */
+
+#poImportPanel {
+    display:none !important;
+}
+
+#poImportPanel.stitch-modal-open {
+    display:block !important;
+
+    position:fixed !important;
+
+    z-index:2060 !important;
+
+    top:50% !important;
+    left:50% !important;
+
+    transform:translate(-50%,-50%) !important;
+
+    width:min(620px,calc(100vw - 40px)) !important;
+
+    max-height:86vh !important;
+
+    overflow:auto !important;
+
+    margin:0 !important;
+
+    border-radius:14px !important;
+
+    box-shadow:
+        0 0 0 100vmax rgba(15,23,42,.34),
+        0 28px 75px rgba(15,23,42,.25) !important;
+}
+
+.stitch-import-header {
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:12px !important;
+}
+
+.stitch-import-heading {
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.stitch-import-sign {
+    width:36px;
+    height:36px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    flex:none;
+
+    border-radius:11px;
+
+    background:#e3dfff;
+    color:#2a14b4;
+}
+
+.stitch-import-sign .material-symbols-outlined {
+    font-size:20px !important;
+}
+
+.stitch-modal-close {
+    width:32px;
+    height:32px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:0;
+
+    border:0;
+
+    border-radius:9px;
+
+    background:#eff4ff;
+
+    color:#657186;
+
+    cursor:pointer;
+}
+
+
+/* ---------- IMPORT PREVIEW OVERLAY ---------- */
+
+#poImportPreviewPanel {
+    display:none !important;
+}
+
+#poImportPreviewPanel.stitch-preview-open {
+    display:block !important;
+
+    position:fixed !important;
+
+    z-index:2070 !important;
+
+    inset:6vh 6vw !important;
+
+    overflow:auto !important;
+
+    padding:14px !important;
+
+    margin:0 !important;
+
+    border-radius:14px !important;
+
+    background:#f8f9ff !important;
+
+    box-shadow:
+        0 0 0 100vmax rgba(15,23,42,.34),
+        0 28px 75px rgba(15,23,42,.25) !important;
+}
+
+
+/* ---------- RESPONSIVE ---------- */
+
+@media(max-width:1100px) {
+
+    .stitch-kpi-grid {
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .stitch-command-center {
+        align-items:stretch !important;
+        flex-direction:column !important;
+    }
+
+}
+
+@media(max-width:700px) {
+
+    .stitch-kpi-grid {
+        grid-template-columns:1fr;
+    }
+
+    .stitch-search-box {
+        width:100%;
+    }
+
+    .stitch-command-controls,
+    .proc-stitch-command-actions {
+        width:100%;
+    }
+
+    .stitch-action {
+        flex:1;
+    }
+
+}
+
+</style>
+
+
+
+{{-- STITCH_PO_REGISTER_DUPLICATE_CLEANUP_20260918 --}}
+<style>
+
+/*
+ Keep the real bulk-approve form and IDs alive for existing JS/backend,
+ but remove duplicated controls from the visible Stitch layout.
+*/
+
+.stitch-po-register-toolbar {
+    background:#fff !important;
+    padding:14px 18px !important;
+}
+
+.stitch-po-register-toolbar .stitch-legacy-selected,
+.stitch-po-register-toolbar .stitch-legacy-register-actions {
+    display:none !important;
+}
+
+.stitch-po-register-toolbar h2 {
+    margin:0 !important;
+    font-size:16px !important;
+    font-weight:700 !important;
+    color:#0b1c30 !important;
+}
+
+/* tighten Stitch command center -> PO register relationship */
+.procurement-tab-panel:has(#po-bulk-form)
+.stitch-po-register-toolbar {
+    border-top:0 !important;
+}
+
+</style>
+
+
+{{-- PO_DRAWER_INTERACTION_FIX_20260918 --}}
+<style>
+
+/*
+ New PO drawer interaction layer.
+ Fields remain the original Laravel form controls.
+*/
+
+#poModal {
+    z-index:50000 !important;
+    pointer-events:auto !important;
+    isolation:isolate !important;
+}
+
+#poModal > div {
+    position:relative !important;
+    z-index:50001 !important;
+    pointer-events:auto !important;
+}
+
+#poModal > div > div:nth-child(2) {
+    position:relative !important;
+    z-index:50002 !important;
+    pointer-events:auto !important;
+}
+
+#poModal #po-form {
+    position:relative !important;
+    z-index:50003 !important;
+    pointer-events:auto !important;
+}
+
+#poModal select[name="vendor_id"],
+#poModal input[name="po_date"] {
+    position:relative !important;
+    z-index:50004 !important;
+
+    pointer-events:auto !important;
+
+    opacity:1 !important;
+
+    cursor:pointer !important;
+
+    user-select:auto !important;
+
+    background-color:#eff4ff !important;
+}
+
+#poModal select[name="vendor_id"] option {
+    pointer-events:auto !important;
+}
+
+</style>
+
+
+{{-- PO_MODAL_BODY_PORTAL_CSS_20260918 --}}
+<style>
+
+body.po-drawer-open {
+    overflow:hidden !important;
+}
+
+body > #poModal {
+    position:fixed !important;
+    inset:0 !important;
+    z-index:50000 !important;
+
+    width:100vw !important;
+    height:100vh !important;
+
+    pointer-events:auto !important;
+}
+
+body > #poModal > div {
+    position:relative !important;
+    z-index:50001 !important;
+
+    pointer-events:auto !important;
+}
+
+body > #poModal select,
+body > #poModal input,
+body > #poModal button {
+    pointer-events:auto !important;
+}
+
+</style>
+
 @section('content')
 
 {{-- Procurement flash messages --}}
@@ -402,46 +1685,199 @@
         </div>
     </div>
 
-    <div class="stats-grid stats-grid-4 mb-4">
-        <div class="stat-card stat-card-primary">
-            <div class="stat-label">Vendors</div>
-            <div class="stat-value">{{ $vendorCount }}</div>
-            <div class="stat-help">Vendor master records</div>
-        </div>
-        <div class="stat-card stat-card-success">
-            <div class="stat-label">Purchase Orders</div>
-            <div class="stat-value">{{ $poCount }}</div>
-            <div class="stat-help">Visible PO records</div>
-        </div>
-        <div class="stat-card stat-card-info">
-            <div class="stat-label">GRNs</div>
-            <div class="stat-value">{{ $grnCount }}</div>
-            <div class="stat-help">Receiving documents</div>
-        </div>
-        <div class="stat-card stat-card-warning">
-            <div class="stat-label">Open for GRN</div>
-            <div class="stat-value">{{ $grnEligibleCount }}</div>
-            <div class="stat-help">POs still eligible for receipt</div>
-        </div>
-    </div>
+    {{-- GOOGLE_STITCH_EXACT_LAYOUT_20260918 --}}
 
-    <div class="procurement-toolbar">
-        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-            <div>
-                <div class="procurement-section-title">Procurement</div>
-            </div>
+<div class="stitch-kpi-grid">
+
+    <div class="stitch-kpi-card">
+
+        <div class="stitch-kpi-head">
+            <span>Active PO Portfolio</span>
+
+            <span class="stitch-kpi-sign stitch-sign-primary">
+                <span class="material-symbols-outlined">assignment</span>
+            </span>
         </div>
 
-        <div class="d-flex procurement-tab-nav">
-            <a href="{{ route('admin.procurement.index', ['tab' => 'vendors']) }}" class="procurement-tab-link {{ $activeTab === 'vendors' ? 'active' : '' }}">Vendors</a>
-            <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}" class="procurement-tab-link {{ $activeTab === 'po' ? 'active' : '' }}">Purchase Orders</a>
-            <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}" class="procurement-tab-link {{ $activeTab === 'grn' ? 'active' : '' }}">GRNs / Receiving</a>
-            <a href="{{ route('admin.procurement.index', ['tab' => 'approvals']) }}" class="procurement-tab-link {{ $activeTab === 'approvals' ? 'active' : '' }}">Kitchen Approvals @if(($kitchenPendingCount ?? 0) > 0)<span class="badge bg-warning text-dark ms-1">{{ $kitchenPendingCount }}</span>@endif</a>
-            <a href="{{ route('admin.procurement.index', ['tab' => 'history']) }}" class="procurement-tab-link {{ $activeTab === 'history' ? 'active' : '' }}">Purchase History</a>
-            <a href="{{ route('admin.procurement.index', ['tab' => 'reports']) }}" class="procurement-tab-link {{ $activeTab === 'reports' ? 'active' : '' }}">Purchase Reports</a>
-            <a href="{{ route('admin.procurement.index', ['tab' => 'datewise']) }}" class="procurement-tab-link {{ $activeTab === 'datewise' ? 'active' : '' }}">Date wise Purchase</a>
+        <div class="stitch-kpi-number">
+            {{ $pos->count() }}
         </div>
+
+        <div class="stitch-kpi-foot">
+            Visible purchase orders
+        </div>
+
     </div>
+
+
+    <div class="stitch-kpi-card">
+
+        <div class="stitch-kpi-head">
+            <span>Awaiting Approvals</span>
+
+            <span class="stitch-kpi-sign stitch-sign-warning">
+                <span class="material-symbols-outlined">pending_actions</span>
+            </span>
+        </div>
+
+        <div class="stitch-kpi-number">
+            {{ $kitchenPendingCount ?? 0 }}
+        </div>
+
+        <div class="stitch-kpi-foot">
+            Kitchen approval queue
+        </div>
+
+    </div>
+
+
+    <div class="stitch-kpi-card">
+
+        <div class="stitch-kpi-head">
+            <span>GRN Eligible Staging</span>
+
+            <span class="stitch-kpi-sign stitch-sign-success">
+                <span class="material-symbols-outlined">local_shipping</span>
+            </span>
+        </div>
+
+        <div class="stitch-kpi-number">
+            {{ $grnEligiblePos->count() }}
+        </div>
+
+        <div class="stitch-kpi-foot">
+            Ready for receiving
+        </div>
+
+    </div>
+
+
+    <div class="stitch-kpi-card">
+
+        <div class="stitch-kpi-head">
+            <span>Goods Receipts</span>
+
+            <span class="stitch-kpi-sign stitch-sign-info">
+                <span class="material-symbols-outlined">task_alt</span>
+            </span>
+        </div>
+
+        <div class="stitch-kpi-number">
+            {{ $grns->count() }}
+        </div>
+
+        <div class="stitch-kpi-foot">
+            Receiving documents
+        </div>
+
+    </div>
+
+</div>
+
+<div class="proc-stitch-tabs-shell">
+
+    <div class="proc-stitch-tabs">
+
+        <a href="{{ route('admin.procurement.index', ['tab' => 'po']) }}"
+           class="proc-stitch-tab {{ $activeTab === 'po' ? 'active' : '' }}">
+
+            <span class="material-symbols-outlined">
+                shopping_cart_checkout
+            </span>
+
+            <span>Purchase Orders</span>
+
+            <span class="proc-stitch-count">
+                {{ $pos->count() }}
+            </span>
+
+        </a>
+
+
+        <a href="{{ route('admin.procurement.index', ['tab' => 'grn']) }}"
+           class="proc-stitch-tab {{ $activeTab === 'grn' ? 'active' : '' }}">
+
+            <span class="material-symbols-outlined">
+                inventory_2
+            </span>
+
+            <span>GRNs / Receiving</span>
+
+            <span class="proc-stitch-count">
+                {{ $grnEligiblePos->count() }}
+            </span>
+
+        </a>
+
+
+        <a href="{{ route('admin.procurement.index', ['tab' => 'approvals']) }}"
+           class="proc-stitch-tab {{ $activeTab === 'approvals' ? 'active' : '' }}">
+
+            <span class="material-symbols-outlined">
+                restaurant
+            </span>
+
+            <span>Kitchen Approvals</span>
+
+            @if(($kitchenPendingCount ?? 0) > 0)
+                <span class="proc-stitch-count proc-stitch-count-warning">
+                    {{ $kitchenPendingCount }} Pending
+                </span>
+            @endif
+
+        </a>
+
+
+        <a href="{{ route('admin.procurement.index', ['tab' => 'vendors']) }}"
+           class="proc-stitch-tab {{ $activeTab === 'vendors' ? 'active' : '' }}">
+
+            <span class="material-symbols-outlined">
+                corporate_fare
+            </span>
+
+            <span>Vendors</span>
+
+        </a>
+
+
+        <a href="{{ route('admin.procurement.index', ['tab' => 'history']) }}"
+           class="proc-stitch-tab {{ $activeTab === 'history' ? 'active' : '' }}">
+
+            <span class="material-symbols-outlined">
+                history_edu
+            </span>
+
+            <span>Purchase History</span>
+
+        </a>
+
+
+        <a href="{{ route('admin.procurement.index', ['tab' => 'reports']) }}"
+           class="proc-stitch-tab {{ $activeTab === 'reports' ? 'active' : '' }}">
+
+            <span class="material-symbols-outlined">
+                bar_chart
+            </span>
+
+            <span>Purchase Reports</span>
+
+        </a>
+
+
+        <a href="{{ route('admin.procurement.index', ['tab' => 'datewise']) }}"
+           class="proc-stitch-tab {{ $activeTab === 'datewise' ? 'active' : '' }}">
+
+            <span class="material-symbols-outlined">
+                calendar_today
+            </span>
+
+            <span>Date wise Purchase</span>
+
+        </a>
+
+    </div>
+
+</div>
 
     @if($activeTab === 'vendors')
         <div class="procurement-tab-panel">
@@ -547,12 +1983,131 @@
             <div style="font-family:'Inter',system-ui,sans-serif">
 
             {{-- Action bar: New PO button --}}
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px">
-                <button type="button" onclick="poModalOpen()"
-                        style="height:36px;padding:0 18px;background:#041632;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-                    <span class="material-symbols-outlined" style="font-size:18px">add</span> New PO
-                </button>
-            </div>
+            
+<div class="proc-stitch-command stitch-command-center">
+
+    <div class="stitch-command-controls">
+
+        <div class="stitch-search-box">
+
+            <span class="material-symbols-outlined">
+                search
+            </span>
+
+            <input
+                type="text"
+                id="stitchPoSearch"
+                placeholder="Search PO #, vendor, item or status...">
+
+        </div>
+
+
+        <div class="stitch-filter-box">
+
+            <span class="material-symbols-outlined">
+                filter_alt
+            </span>
+
+            <select
+                onchange="window.location='{{ route('admin.procurement.index') }}?tab=po&po_status='+encodeURIComponent(this.value)">
+
+                <option value=""
+                    @selected(empty($poStatusFilter))>
+                    All Statuses
+                </option>
+
+                <option value="DRAFT"
+                    @selected($poStatusFilter === 'DRAFT')>
+                    Draft
+                </option>
+
+                <option value="APPROVED"
+                    @selected($poStatusFilter === 'APPROVED')>
+                    Approved
+                </option>
+
+                <option value="PARTIALLY_RECEIVED"
+                    @selected($poStatusFilter === 'PARTIALLY_RECEIVED')>
+                    Partially Received
+                </option>
+
+                <option value="RECEIVED"
+                    @selected($poStatusFilter === 'RECEIVED')>
+                    Received
+                </option>
+
+                <option value="CANCELLED"
+                    @selected($poStatusFilter === 'CANCELLED')>
+                    Cancelled
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="stitch-date-chip">
+
+            <span class="material-symbols-outlined">
+                date_range
+            </span>
+
+            <span>All PO Dates</span>
+
+        </div>
+
+    </div>
+
+
+    <div class="proc-stitch-command-actions">
+
+        <button type="button"
+                onclick="openStitchPoImport()"
+                class="stitch-action stitch-action-import">
+
+            <span class="material-symbols-outlined">
+                upload_file
+            </span>
+
+            <span>Import CSV</span>
+
+        </button>
+
+
+        <button type="button"
+                onclick="stitchBulkApprove()"
+                class="stitch-action stitch-action-approve">
+
+            <span class="material-symbols-outlined">
+                rule
+            </span>
+
+            <span>Bulk Approve</span>
+
+            <span class="stitch-selected-count"
+                  id="stitchSelectedCount">
+                0
+            </span>
+
+        </button>
+
+
+        <button type="button"
+                onclick="poModalOpen()"
+                class="stitch-action stitch-action-primary">
+
+            <span class="material-symbols-outlined">
+                add
+            </span>
+
+            <span>New Purchase Order</span>
+
+        </button>
+
+    </div>
+
+</div>
+
 
             {{-- CREATE PO MODAL (centered popup) --}}
             <div id="poModal" onclick="if(event.target===this)poModalClose()"
@@ -603,14 +2158,67 @@
             </div>
 
             <script>
-            function poModalOpen(){document.getElementById('poModal').style.display='flex';}
-            function poModalClose(){document.getElementById('poModal').style.display='none';}
+            /* PO_MODAL_BODY_PORTAL_FIX_20260918 */
+function poModalOpen(){
+    const modal = document.getElementById('poModal');
+
+    if (!modal) return;
+
+    /*
+     Escape Procurement/layout stacking context.
+     Keep the same real modal/form; only move its DOM parent.
+    */
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    modal.style.display = 'flex';
+    document.body.classList.add('po-drawer-open');
+}
+            function poModalClose(){
+    const modal = document.getElementById('poModal');
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    document.body.classList.remove('po-drawer-open');
+}
             @if($errors->any() && request('tab')==='po')poModalOpen();@endif
             </script>
 
             <div class="procurement-grid" style="margin-top:0">
-                <div class="card procurement-form-card bulk-po-upload">
-                    <div class="card-header"><span>Bulk PO Upload</span><span class="text-muted small">CSV workflow</span></div>
+                <div id="poImportPanel" class="card procurement-form-card bulk-po-upload">
+                    <div class="card-header stitch-import-header">
+
+    <div class="stitch-import-heading">
+
+        <span class="stitch-import-sign">
+            <span class="material-symbols-outlined">
+                upload_file
+            </span>
+        </span>
+
+        <div>
+            <div>Import Staged CSV File</div>
+            <div class="text-muted small">
+                Purchase order CSV workflow
+            </div>
+        </div>
+
+    </div>
+
+    <button type="button"
+            onclick="closeStitchPoImport()"
+            class="stitch-modal-close">
+
+        <span class="material-symbols-outlined">
+            close
+        </span>
+
+    </button>
+
+</div>
                     <div class="card-body">
                         <div class="d-grid gap-2 mb-3">
                             <a href="{{ route('admin.procurement.po.template') }}" class="btn btn-outline-primary">Download PO Template</a>
@@ -629,9 +2237,25 @@
                 </div>
             </div>
 
-            <div class="procurement-import-grid">
+            <div id="poImportPreviewPanel"
+         class="procurement-import-grid {{ $poImportPreview ? 'stitch-preview-open' : '' }}">
                 <div class="card procurement-table-card import-preview">
-                    <div class="card-header"><span>PO Import Preview</span><span class="text-muted small">Validate before save</span></div>
+                    <div class="card-header stitch-import-header">
+
+    <div>
+        <span>PO Import Preview</span>
+        <span class="text-muted small">
+            Validate before save
+        </span>
+    </div>
+
+    <button type="button"
+            onclick="closeStitchPoPreview()"
+            class="stitch-modal-close">
+        <span class="material-symbols-outlined">close</span>
+    </button>
+
+</div>
                     <div class="card-body">
                         @if($poImportPreview)
                             @if(isset($poImportPreview['po_groups']))
@@ -681,17 +2305,11 @@
                                     @else
                                         <div class="text-danger small mb-2">Fix error rows below before creating POs. No PO will be created while errors exist.</div>
                                     @endif
-                                    <form method="POST" action="{{ route('admin.procurement.po.import.cancel') }}" class="d-inline ms-2">
-                                        @csrf
-                                        <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
-                                    </form>
+                                    
                                 @endif
                             @else
                                 <div class="text-warning small mb-2">Preview format outdated (old session). Clear preview and re-upload the CSV.</div>
-                                <form method="POST" action="{{ route('admin.procurement.po.import.cancel') }}" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
-                                </form>
+                                
                             @endif
 
                             @if(!empty($poImportPreview['error_rows']))
@@ -714,6 +2332,20 @@
                             <div class="procurement-empty">Upload CSV to preview PO lines before saving.</div>
                         @endif
                     </div>
+
+                    @if($poImportPreview)
+                        <div class="card-footer bg-white border-top p-3">
+                            <form method="POST"
+                                  action="{{ route('admin.procurement.po.import.cancel') }}">
+                                @csrf
+                                <button type="submit"
+                                        class="btn btn-danger w-100"
+                                        onclick="return confirm('Cancel this PO import and clear the preview?');">
+                                    Cancel Import
+                                </button>
+                            </form>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -723,12 +2355,12 @@
                         @csrf
 
                         {{-- Toolbar --}}
-                        <div style="padding:16px 20px;border-bottom:1px solid #e0e3e5;background:#f7f9fb;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                        <div class="stitch-po-register-toolbar" style="padding:16px 20px;border-bottom:1px solid #e0e3e5;background:#f7f9fb;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
                             <div style="display:flex;align-items:center;gap:12px">
                                 <h2 style="font-size:20px;font-weight:600;color:#041632;margin:0">PO Register</h2>
-                                <span style="font-size:12px;color:#545f72"><span id="po-selected-count">0</span> selected</span>
+                                <span class="stitch-legacy-selected" style="font-size:12px;color:#545f72"><span id="po-selected-count">0</span> selected</span>
                             </div>
-                            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                            <div class="stitch-legacy-register-actions" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                                 <select onchange="window.location='{{ route('admin.procurement.index') }}?tab=po&po_status='+this.value"
                                         style="height:34px;padding:0 12px;border:1px solid #c5c6ce;border-radius:4px;font-size:13px;background:#fff;color:#191c1e;cursor:pointer">
                                     <option value="" @selected(($poStatusFilter ?? '') === '')>All statuses</option>
@@ -1198,7 +2830,7 @@
                     </div>
                 </div>
 
-                <div class="card procurement-form-card bulk-grn-upload">
+                <div id="grnImportPanel" class="card procurement-form-card bulk-grn-upload">
                     <div class="card-header"><span>Bulk GRN Upload</span><span class="text-muted small">CSV workflow</span></div>
                     <div class="card-body">
                         <form method="GET" action="{{ route('admin.procurement.index') }}" class="row g-3 mb-3">
@@ -1310,14 +2942,20 @@
                                     @endif
                                     <form method="POST" action="{{ route('admin.procurement.grn.import.cancel') }}" class="d-inline ms-2">
                                         @csrf
-                                        <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
+                                        <button type="submit" class="btn btn-danger w-100"
+            onclick="return confirm('Cancel this PO import and clear the preview?');">
+        Cancel Import
+    </button>
                                     </form>
                                 @endif
                             @else
                                 <div class="text-warning small mb-2">Preview format outdated (old session). Clear preview and re-upload the CSV.</div>
                                 <form method="POST" action="{{ route('admin.procurement.grn.import.cancel') }}" class="d-inline">
                                     @csrf
-                                    <button type="submit" class="btn btn-outline-secondary">Cancel Preview</button>
+                                    <button type="submit" class="btn btn-danger w-100"
+            onclick="return confirm('Cancel this PO import and clear the preview?');">
+        Cancel Import
+    </button>
                                 </form>
                             @endif
 
@@ -1972,6 +3610,193 @@ function togglePoRow(id) {
 }
 </script>
 
+
+<script>
+
+/* GOOGLE STITCH EXACT LAYOUT INTERACTIONS */
+
+function openStitchPoImport() {
+    const modal = document.getElementById('poImportPanel');
+
+    if (!modal) return;
+
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    modal.classList.add('stitch-modal-open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeStitchPoImport() {
+    const modal = document.getElementById('poImportPanel');
+
+    if (modal) {
+        modal.classList.remove('stitch-modal-open');
+    }
+
+    document.body.style.overflow = '';
+}
+
+function closeStitchPoPreview() {
+    const modal = document.getElementById('poImportPreviewPanel');
+
+    if (modal) {
+        modal.classList.remove('stitch-preview-open');
+    }
+
+    document.body.style.overflow = '';
+}
+
+function stitchBulkApprove() {
+
+    const form =
+        document.getElementById('po-bulk-form');
+
+    if (!form) return;
+
+    const selected =
+        form.querySelectorAll(
+            'input[name="po_ids[]"]:checked'
+        );
+
+    if (!selected.length) {
+        alert('Select at least one purchase order.');
+        return;
+    }
+
+    form.requestSubmit();
+}
+
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        const form =
+            document.getElementById('po-bulk-form');
+
+        const countNode =
+            document.getElementById(
+                'stitchSelectedCount'
+            );
+
+        function updateCount() {
+
+            if (!form || !countNode) return;
+
+            countNode.textContent =
+                form.querySelectorAll(
+                    'input[name="po_ids[]"]:checked'
+                ).length;
+        }
+
+
+        if (form) {
+
+            form.addEventListener(
+                'change',
+                function (event) {
+
+                    if (
+                        event.target.matches(
+                            'input[type="checkbox"]'
+                        )
+                    ) {
+                        setTimeout(updateCount,0);
+                    }
+
+                }
+            );
+
+        }
+
+
+        const search =
+            document.getElementById(
+                'stitchPoSearch'
+            );
+
+        if (search && form) {
+
+            search.addEventListener(
+                'input',
+                function () {
+
+                    const q =
+                        this.value
+                            .trim()
+                            .toLowerCase();
+
+                    form
+                        .querySelectorAll(
+                            'tbody > tr'
+                        )
+                        .forEach(function (row) {
+
+                            if (
+                                row.id &&
+                                row.id.startsWith(
+                                    'po-detail-'
+                                )
+                            ) {
+                                return;
+                            }
+
+                            const show =
+                                !q ||
+                                row.textContent
+                                    .toLowerCase()
+                                    .includes(q);
+
+                            row.style.display =
+                                show
+                                    ? ''
+                                    : 'none';
+
+                            if (
+                                !show &&
+                                row.nextElementSibling &&
+                                row.nextElementSibling.id &&
+                                row.nextElementSibling.id
+                                    .startsWith(
+                                        'po-detail-'
+                                    )
+                            ) {
+                                row.nextElementSibling
+                                    .style.display =
+                                    'none';
+                            }
+
+                        });
+
+                }
+            );
+
+        }
+
+
+        updateCount();
+
+
+        document.addEventListener(
+            'keydown',
+            function (event) {
+
+                if (event.key === 'Escape') {
+                    closeStitchPoImport();
+                    closeStitchPoPreview();
+                }
+
+            }
+        );
+
+    }
+);
+
+</script>
+
+
 @endsection
 
 @push('scripts')
@@ -2353,3 +4178,38 @@ function togglePoRow(id) {
 </script>
 <iframe id="procurement-download-frame" name="procurement-download-frame" style="display:none;"></iframe>
 @endpush
+
+<style id="po-import-modal-final-fix">
+body > #poImportPanel.stitch-modal-open {
+    display:block !important;
+    position:fixed !important;
+    top:50% !important;
+    left:50% !important;
+    transform:translate(-50%,-50%) !important;
+    width:min(620px,calc(100vw - 32px)) !important;
+    max-height:86vh !important;
+    overflow:auto !important;
+    z-index:60000 !important;
+    margin:0 !important;
+    background:#fff !important;
+    opacity:1 !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+    border:1px solid #dfe7f2 !important;
+    border-radius:14px !important;
+    box-shadow:
+        0 0 0 100vmax rgba(15,23,42,.34),
+        0 28px 75px rgba(15,23,42,.25) !important;
+}
+
+body > #poImportPanel .card-header,
+body > #poImportPanel .card-body,
+body > #poImportPanel form,
+body > #poImportPanel input,
+body > #poImportPanel button,
+body > #poImportPanel a {
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+}
+</style>

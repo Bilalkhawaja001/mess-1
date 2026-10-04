@@ -2670,8 +2670,10 @@ class ProcurementController extends Controller
     public function cancelPoImportPreview(Request $request): RedirectResponse
     {
         $request->session()->forget('procurement_po_import_preview');
+        $request->session()->flash('success', 'PO import preview cleared.');
+        $request->session()->save();
 
-        return redirect()->route('admin.procurement.index', ['tab' => 'po'])->with('success', 'PO import preview cleared.');
+        return redirect()->route('admin.procurement.index', ['tab' => 'po']);
     }
 
     public function cancelGrnImportPreview(Request $request): RedirectResponse

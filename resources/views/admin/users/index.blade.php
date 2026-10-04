@@ -4,6 +4,7 @@
 @section('page_title', 'Users Management')
 
 @section('content')
+@php($isDataEntry = optional(auth()->user()->role)->code === 'DATA_ENTRY')
 <div class="card shadow-sm mb-3">
     <div class="card-header">Create User</div>
     <div class="card-body">
@@ -52,13 +53,19 @@
                         <span class="badge {{ $u->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $u->is_active ? 'Active' : 'Inactive' }}</span>
                     </td>
                     <td class="d-flex gap-2 flex-wrap">
-                        <form method="POST" action="{{ route('admin.users.toggle-active', $u->id) }}">
-                            @csrf
-                            <button class="btn btn-sm btn-outline-warning">Toggle</button>
-                        </form>
-                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-user-{{ $u->id }}">Edit</button>
+                        @if(!$isDataEntry || !in_array(optional($u->role)->code, ['SUPER_ADMIN', 'ADMIN'], true))
+                            <form method="POST" action="{{ route('admin.users.toggle-active', $u->id) }}">
+                                @csrf
+                                <button class="btn btn-sm btn-outline-warning">Toggle</button>
+                            </form>
+                        @endif
+
+                        @unless($isDataEntry)
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-user-{{ $u->id }}">Edit</button>
+                        @endunless
                     </td>
                 </tr>
+                @unless($isDataEntry)
                 <tr class="collapse" id="edit-user-{{ $u->id }}">
                     <td colspan="6">
                         <form method="POST" action="{{ route('admin.users.update', $u->id) }}" class="row g-2">
@@ -82,6 +89,7 @@
                         </form>
                     </td>
                 </tr>
+                @endunless
             @endforeach
             </tbody>
         </table>

@@ -51,6 +51,7 @@ class SettingController extends Controller
             'PER_MEAL' => 'Per Meal',
             'MONTHLY_FIXED' => 'Monthly Fixed',
             'GUEST' => 'Guest Meal Rate',
+            'VIP_GUEST' => 'VIP Guest Meal Rate',
             'RATE_PER_DAY_EXECUTIVE' => 'Executive',
             'RATE_PER_DAY_CENTRALIZED' => 'Centralized',
             'RATE_PER_DAY_CONTRACTORS' => 'Contractors',

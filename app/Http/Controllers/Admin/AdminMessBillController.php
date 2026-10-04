@@ -252,6 +252,25 @@ class AdminMessBillController extends Controller
             ->join('purchase_orders', 'purchase_orders.id', '=', 'goods_receipts.purchase_order_id')
             ->join('vendors', 'vendors.id', '=', 'purchase_orders.vendor_id')
             ->join('items', 'items.id', '=', 'goods_receipt_lines.item_id')
+
+            // Exclude individually reversed GRN lines.
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('stock_transactions as line_reversal')
+                    ->whereColumn('line_reversal.reference_id', 'goods_receipt_lines.id')
+                    ->where('line_reversal.txn_type', 'GRN_REVERSAL')
+                    ->where('line_reversal.reference_type', 'App\\Models\\GoodsReceiptLine');
+            })
+
+            // Exclude lines belonging to a completely reversed GRN.
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('stock_transactions as grn_reversal')
+                    ->whereColumn('grn_reversal.reference_id', 'goods_receipts.id')
+                    ->where('grn_reversal.txn_type', 'GRN_REVERSAL')
+                    ->where('grn_reversal.reference_type', 'App\\Models\\GoodsReceipt');
+            })
+
             ->whereBetween('goods_receipts.received_date', [$fromDate, $toDate])
             ->selectRaw("COALESCE(SUM($netCostSql), 0) as total_cost")
             ->value('total_cost'), 2);

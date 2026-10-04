@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Online payment endpoints for the member app.
  *
- * Provider is disabled until Bank Alfalah approval, so every endpoint
+ * Payment provider availability is controlled by configuration, so every endpoint
  * returns a controlled "unavailable" response. No fees are calculated,
  * no bill is modified, and no payment row is created.
  */
@@ -61,7 +61,7 @@ class AlfaPaymentController extends MemberApiController
 
         return response()->json([
             'success' => false,
-            'message' => 'Payment charge breakdown is not configured yet.',
+            'message' => 'Unable to calculate payment charges for this request.',
         ], 503);
     }
 

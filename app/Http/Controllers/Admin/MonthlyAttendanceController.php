@@ -26,10 +26,7 @@ class MonthlyAttendanceController extends Controller
         $end = $cycle['cycle_end_date'];
 
         $members = Member::query()
-            ->where(function ($q) use ($start) {
-                $q->where('is_active', true)
-                  ->orWhereDate('leave_date', '>=', $start);
-            })
+            ->where('is_active', true)
             ->where(function ($q) use ($end) {
                 $q->whereNull('join_date')->orWhereDate('join_date', '<=', $end);
             })

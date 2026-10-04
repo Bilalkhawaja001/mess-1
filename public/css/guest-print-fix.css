@@ -1,0 +1,125 @@
+.guest-print-clone {
+  display: none !important;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm 6mm 10mm 6mm;
+  }
+
+  html,
+  body {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.guest-print-mode > *:not(.guest-print-clone) {
+    display: none !important;
+  }
+
+  /* GUEST_PRINT_CLONE_VISIBILITY_FIX_20260918 */
+  body.guest-print-mode .guest-print-clone,
+  body.guest-print-mode .guest-print-clone * {
+    visibility: visible !important;
+  }
+
+  body.guest-print-mode .guest-print-clone {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body.guest-print-mode .guest-print-page {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 0 3mm 0 !important;
+    overflow: visible !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  body.guest-print-mode .guest-print-page:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  body.guest-print-mode .guest-print-title {
+    text-align: center !important;
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+    margin: 0 0 2.5mm 0 !important;
+    padding: 0 !important;
+  }
+
+  body.guest-print-mode .guest-print-range {
+    display: block !important;
+    text-align: center !important;
+    font-size: 7.2pt !important;
+    font-weight: 400 !important;
+    margin-top: 0.8mm !important;
+  }
+
+  body.guest-print-mode table {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    font-size: 7.2pt !important;
+    line-height: 1.05 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.guest-print-mode thead {
+    display: table-header-group !important;
+  }
+
+  body.guest-print-mode tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body.guest-print-mode th,
+  body.guest-print-mode td {
+    padding: 2px 3px !important;
+    border: 1px solid #d7d7d7 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    vertical-align: top !important;
+  }
+
+  body.guest-print-mode th {
+    font-weight: 700 !important;
+  }
+
+  body.guest-print-mode .btn,
+  body.guest-print-mode button,
+  body.guest-print-mode input,
+  body.guest-print-mode select,
+  body.guest-print-mode textarea,
+  body.guest-print-mode form,
+  body.guest-print-mode .no-print,
+  body.guest-print-mode .d-print-none {
+    display: none !important;
+  }
+}

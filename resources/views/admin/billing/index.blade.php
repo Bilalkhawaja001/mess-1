@@ -4,6 +4,26 @@
 @section('page_title', 'Generate Monthly Bill')
 
 @section('content')
+
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Billing Error:</strong> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+@if(session('success'))
+    <div class="alert alert-success" role="alert">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if(session('info'))
+    <div class="alert alert-info" role="alert">
+        {{ session('info') }}
+    </div>
+@endif
+
 @php
     $billingRows = $rows ?? collect();
     $billingMonths = $months ?? collect();

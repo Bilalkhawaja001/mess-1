@@ -895,6 +895,8 @@ class MemberApiController extends Controller
         // Resend cap: max 3 in the last 10 minutes for this member.
         $recentCount = DB::table('member_registration_otps')
             ->where('member_id', $row->member_id)
+            ->where('purpose', 'EMAIL_VERIFICATION')
+            ->whereIn('status', ['SENT', 'EXPIRED', 'VERIFIED'])
             ->where('created_at', '>=', $windowStart)
             ->count();
         if ($recentCount >= 3) {
@@ -907,6 +909,8 @@ class MemberApiController extends Controller
         // Cooldown: 60s since last send.
         $lastSent = DB::table('member_registration_otps')
             ->where('member_id', $row->member_id)
+            ->where('purpose', 'EMAIL_VERIFICATION')
+            ->whereIn('status', ['SENT', 'EXPIRED', 'VERIFIED'])
             ->orderByDesc('id')
             ->value('last_sent_at');
         if ($lastSent && \Illuminate\Support\Carbon::parse($lastSent)->diffInSeconds($now) < 60) {
@@ -918,15 +922,11 @@ class MemberApiController extends Controller
             ], 429);
         }
 
-        // Invalidate previous open OTPs for this member.
-        DB::table('member_registration_otps')
-            ->where('member_id', $row->member_id)
-            ->where('status', 'SENT')
-            ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+        // Keep the previous OTP active until the new email is successfully sent.
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        DB::table('member_registration_otps')->insert([
+        $otpId = DB::table('member_registration_otps')->insertGetId([
             'member_id'     => $row->member_id,
             'email'         => $email,
             'mobile_number' => null,
@@ -936,7 +936,8 @@ class MemberApiController extends Controller
             'resend_count'  => $recentCount,
             'last_sent_at'  => $now,
             'verified_at'   => null,
-            'status'        => 'SENT',
+            'status'        => 'PENDING',
+            'purpose'       => 'EMAIL_VERIFICATION',
             'ip_address'    => $request->ip(),
             'user_agent'    => substr((string) $request->userAgent(), 0, 255),
             'created_at'    => $now,
@@ -945,7 +946,21 @@ class MemberApiController extends Controller
 
         try {
             Mail::to($email)->send(new MemberEmailOtp($otp, (string) ($row->name ?? ''), 10));
+
+            DB::table('member_registration_otps')
+                ->where('member_id', $row->member_id)
+                ->where('purpose', 'EMAIL_VERIFICATION')
+                ->where('status', 'SENT')
+                ->update(['status' => 'EXPIRED', 'updated_at' => now()]);
+
+            DB::table('member_registration_otps')
+                ->where('id', $otpId)
+                ->update(['status' => 'SENT', 'updated_at' => now()]);
         } catch (\Throwable $e) {
+            DB::table('member_registration_otps')
+                ->where('id', $otpId)
+                ->update(['status' => 'FAILED', 'updated_at' => now()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Email bhejne me masla hua. Thodi der baad try karein.',
@@ -972,7 +987,7 @@ class MemberApiController extends Controller
 
         $payload = $request->validate([
             'email' => ['required', 'string', 'email', 'max:120'],
-            'otp'   => ['required', 'string'],
+            'otp'   => ['required', 'string', 'regex:/^\d{6}$/'],
         ]);
         $email = strtolower(trim((string) $payload['email']));
         $otp   = trim((string) $payload['otp']);
@@ -982,6 +997,7 @@ class MemberApiController extends Controller
         $record = DB::table('member_registration_otps')
             ->where('member_id', $row->member_id)
             ->where('email', $email)
+            ->where('purpose', 'EMAIL_VERIFICATION')
             ->where('status', 'SENT')
             ->orderByDesc('id')
             ->first();
@@ -1013,11 +1029,11 @@ class MemberApiController extends Controller
             ], 429);
         }
 
-        DB::table('member_registration_otps')
-            ->where('id', $record->id)
-            ->increment('attempts', 1, ['updated_at' => $now]);
-
         if (! hash_equals((string) $record->otp_hash, hash('sha256', $otp))) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->increment('attempts', 1, ['updated_at' => $now]);
+
             $left = max(0, 5 - ((int) $record->attempts + 1));
             return response()->json([
                 'success' => false,
@@ -1083,12 +1099,14 @@ class MemberApiController extends Controller
 
         $recentCount = DB::table('member_registration_otps')
             ->where('member_id', $row->member_id)
+            ->where('purpose', 'PASSWORD_RESET')
+            ->whereIn('status', ['SENT', 'EXPIRED', 'VERIFIED'])
             ->where('created_at', '>=', $windowStart)
             ->count();
         if ($recentCount >= 3) {
             return response()->json([
                 'success' => false,
-                'message' => 'Too many attempts. Please wait a minute and try again.',
+                'message' => 'Too many attempts. Please wait 10 minutes and try again.',
                 'retry_after' => 600,
                 'resend_available_in' => 600,
             ], 429);
@@ -1096,6 +1114,8 @@ class MemberApiController extends Controller
 
         $lastSent = DB::table('member_registration_otps')
             ->where('member_id', $row->member_id)
+            ->where('purpose', 'PASSWORD_RESET')
+            ->whereIn('status', ['SENT', 'EXPIRED', 'VERIFIED'])
             ->orderByDesc('id')
             ->value('last_sent_at');
         if ($lastSent && \Illuminate\Support\Carbon::parse($lastSent)->diffInSeconds($now) < 60) {
@@ -1109,14 +1129,11 @@ class MemberApiController extends Controller
             ], 429);
         }
 
-        DB::table('member_registration_otps')
-            ->where('member_id', $row->member_id)
-            ->where('status', 'SENT')
-            ->update(['status' => 'EXPIRED', 'updated_at' => $now]);
+        // Keep the previous reset OTP active until the new email is successfully sent.
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        DB::table('member_registration_otps')->insert([
+        $otpId = DB::table('member_registration_otps')->insertGetId([
             'member_id' => $row->member_id,
             'email' => $email,
             'mobile_number' => null,
@@ -1126,7 +1143,8 @@ class MemberApiController extends Controller
             'resend_count' => $recentCount,
             'last_sent_at' => $now,
             'verified_at' => null,
-            'status' => 'SENT',
+            'status' => 'PENDING',
+            'purpose' => 'PASSWORD_RESET',
             'ip_address' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
             'created_at' => $now,
@@ -1135,7 +1153,21 @@ class MemberApiController extends Controller
 
         try {
             Mail::to($email)->send(new MemberEmailOtp($otp, (string) ($row->name ?? ''), 10));
+
+            DB::table('member_registration_otps')
+                ->where('member_id', $row->member_id)
+                ->where('purpose', 'PASSWORD_RESET')
+                ->where('status', 'SENT')
+                ->update(['status' => 'EXPIRED', 'updated_at' => now()]);
+
+            DB::table('member_registration_otps')
+                ->where('id', $otpId)
+                ->update(['status' => 'SENT', 'updated_at' => now()]);
         } catch (\Throwable $e) {
+            DB::table('member_registration_otps')
+                ->where('id', $otpId)
+                ->update(['status' => 'FAILED', 'updated_at' => now()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong. Please try again later.',
@@ -1158,7 +1190,7 @@ class MemberApiController extends Controller
     {
         $payload = $request->validate([
             'identifier' => ['required', 'string', 'max:120'],
-            'otp' => ['required', 'string', 'max:12'],
+            'otp' => ['required', 'string', 'regex:/^\d{6}$/'],
             'password' => ['required', 'string', 'min:6', 'max:255', 'confirmed'],
         ]);
 
@@ -1174,6 +1206,7 @@ class MemberApiController extends Controller
         $record = DB::table('member_registration_otps')
             ->where('member_id', $row->member_id)
             ->where('email', $email)
+            ->where('purpose', 'PASSWORD_RESET')
             ->where('status', 'SENT')
             ->orderByDesc('id')
             ->first();
@@ -1208,11 +1241,11 @@ class MemberApiController extends Controller
             ], 429);
         }
 
-        DB::table('member_registration_otps')
-            ->where('id', $record->id)
-            ->increment('attempts', 1, ['updated_at' => $now]);
-
         if (! hash_equals((string) $record->otp_hash, hash('sha256', $otp))) {
+            DB::table('member_registration_otps')
+                ->where('id', $record->id)
+                ->increment('attempts', 1, ['updated_at' => $now]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Incorrect code. Please try again.',

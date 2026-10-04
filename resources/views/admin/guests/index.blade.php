@@ -44,8 +44,91 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <button class="btn btn-outline-primary guest-btn-outline" type="button" data-bs-toggle="collapse" data-bs-target="#guestImportPanel" aria-expanded="false" aria-controls="guestImportPanel">Import</button>
+                <button type="button" class="btn btn-outline-primary guest-btn-outline" data-bs-toggle="modal" data-bs-target="#createGuestModal">Add guest</button>
                 <a href="#quickAddGuestMeal" class="btn btn-primary guest-btn-primary">Add guest meal</a>
             </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="createGuestModal" tabindex="-1" aria-labelledby="createGuestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createGuestModalLabel">Create guest</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form method="POST" action="{{ route('admin.guests.store') }}">
+                @csrf
+
+                <div class="modal-body">
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+                            <label class="form-label">Guest code</label>
+                            <input type="text" name="guest_code" class="form-control guest-control" placeholder="Auto G00001">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Date</label>
+                            <input type="date" name="date" class="form-control guest-control" value="{{ $today }}">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Guest Type</label>
+                            <select name="guest_type" class="form-select guest-control">
+                                <option value="REGULAR">Regular Guest</option>
+                                <option value="VIP">VIP Guest</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Host member</label>
+                            <select name="host_member_id" class="form-select guest-control">
+                                <option value="">None</option>
+                                @foreach($members as $member)
+                                    <option value="{{ $member->id }}">{{ $member->member_code }} - {{ $member->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Name</label>
+                            <input type="text" name="name" class="form-control guest-control" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Company / Came from</label>
+                            <input type="text" name="came_from" class="form-control guest-control">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Department</label>
+                            <select name="department_id" class="form-select guest-control" required>
+                                <option value="">Select department</option>
+                                @foreach($departments as $department)
+                                    <option value="{{ $department->id }}">
+                                        {{ is_object($department) ? ($department->code ?? '') : $department }} - {{ $department->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Remarks</label>
+                            <input type="text" name="remarks" class="form-control guest-control">
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary guest-btn-primary">Save guest</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -95,7 +178,7 @@
             <div class="row g-3 g-xl-4">
                 <div class="col-xl-6 col-12">
                     <div class="guest-secondary-box h-100">
-                        <h2 class="h6 mb-3">Create guest</h2>
+                        <h2 class="h6 mb-3" id="createGuest">Create guest</h2>
                         <form method="POST" action="{{ route('admin.guests.store') }}" class="row g-3">
                             @csrf
                             <div class="col-md-4">
@@ -106,6 +189,14 @@
                                 <label class="form-label">Date</label>
                                 <input type="date" name="date" class="form-control guest-control" value="{{ $today }}">
                             </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Guest Type</label>
+                            <select name="guest_type" class="form-select guest-control">
+                                <option value="REGULAR">Regular Guest</option>
+                                <option value="VIP">VIP Guest</option>
+                            </select>
+                        </div>
                             <div class="col-md-4">
                                 <label class="form-label">Host member</label>
                                 <select name="host_member_id" class="form-select guest-control">
@@ -740,7 +831,14 @@
                             <td>{{ $guest->guest_code ?: '-' }}</td>
                             <td>{{ optional($guest->date)->format('Y-m-d') ?: '-' }}</td>
                             <td>
-                                <div>{{ $guest->name }}</div>
+                                <div>
+                                    {{ $guest->name }}
+                                    @if(($guest->guest_type ?? 'REGULAR') === 'VIP')
+                                        <span class="badge bg-warning text-dark">VIP</span>
+                                    @else
+                                        <span class="badge bg-secondary">Regular</span>
+                                    @endif
+                                </div>
                                 @if($guest->remarks)
                                     <div class="small text-muted">{{ $guest->remarks }}</div>
                                 @endif
@@ -756,6 +854,12 @@
                                         @csrf
                                         <div class="col-md-4"><input type="date" name="date" class="form-control guest-control" value="{{ optional($guest->date)->format('Y-m-d') }}"></div>
                                         <div class="col-md-8"><input type="text" name="name" class="form-control guest-control" value="{{ $guest->name }}" required></div>
+                                        <div class="col-lg-6 col-12">
+                                            <select name="guest_type" class="form-select guest-control">
+                                                <option value="REGULAR" @selected(($guest->guest_type ?? 'REGULAR') === 'REGULAR')>Regular Guest</option>
+                                                <option value="VIP" @selected(($guest->guest_type ?? 'REGULAR') === 'VIP')>VIP Guest</option>
+                                            </select>
+                                        </div>
                                         <div class="col-lg-6 col-12"><input type="text" name="came_from" class="form-control guest-control" value="{{ $guest->came_from }}" placeholder="Company / Came From"></div>
                                         <div class="col-lg-6 col-12"><input type="text" name="remarks" class="form-control guest-control" value="{{ $guest->remarks }}" placeholder="Remarks"></div>
                                         <div class="col-lg-6 col-12">
@@ -781,12 +885,15 @@
                                             </div>
                                         </div>
                                         <div class="col-12 d-flex gap-2">
-                                            <button class="btn btn-sm btn-primary guest-btn-primary">Update</button>
+                                            <button type="submit" class="btn btn-sm btn-primary guest-btn-primary">
+                                                Update
+                                            </button>
+
                                         </div>
                                     </form>
-                                    <form method="POST" action="{{ route('admin.guests.delete.legacy', $guest) }}" class="mt-2" onsubmit="return confirm('Soft delete this guest?');">
+                                    <form method="POST" action="{{ route('admin.guests.delete.legacy', $guest) }}" class="mt-2" onsubmit="return confirm('Delete this guest? Guests with meal records cannot be deleted.');">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-danger">Soft Delete</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete Guest</button>
                                     </form>
                                 </details>
                             </td>
@@ -802,7 +909,7 @@
     <div class="card guest-panel h-100">
         <div class="card-header guest-panel-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
             <span>Guest Meals (Filtered Total: {{ number_format($summary, 2) }})</span>
-            <span class="small text-muted">Approval uses rate_type = GUEST by meal date</span>
+            <span class="small text-muted">Rate: Regular = GUEST | VIP = VIP_GUEST</span>
         </div>
         <div class="card-body table-responsive">
             <table class="table table-sm align-middle">
@@ -869,7 +976,7 @@
                                             <button class="btn btn-sm btn-success">Approve Draft</button>
                                         </form>
                                     @endif
-                                    <form method="POST" action="{{ route('admin.guests.meals.delete.legacy', $meal) }}" class="mt-2" onsubmit="return confirm('Delete this guest meal?');">
+                                    <form method="POST" action="{{ route('admin.guests.meals.delete.legacy', $meal) }}" class="mt-2" onsubmit="return confirm('Delete this meal? If approved, its ledger charge will also be reversed.');">
                                         @csrf
                                         <button class="btn btn-sm btn-outline-danger">Delete</button>
                                     </form>
@@ -903,6 +1010,11 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const guestModal = document.getElementById('createGuestModal');
+    if (guestModal && guestModal.parentElement !== document.body) {
+        document.body.appendChild(guestModal);
+    }
+
     document.querySelectorAll('select.js-guest-meal-search').forEach(function (el) {
         if (el.tomselect) return;
         new TomSelect(el, {
@@ -919,7 +1031,9 @@ document.addEventListener('DOMContentLoaded', function () {
 @endpush
 
 
-{{-- Guest print fix: added by audited patch --}}
-<link rel="stylesheet" href="{{ asset('css/guest-print-fix.css') }}?v=20260706_120827_120455">
-<script src="{{ asset('js/guest-print-fix.js') }}?v=20260706_120827_120455" defer></script>
+{{-- GUEST_PRINT_USE_NATIVE_AREA_20260918
+External clone-based print system disabled.
+This page already has its own @media print rules for
+.guest-meal-report-print-area.
+--}}
 

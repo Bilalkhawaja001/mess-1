@@ -26,7 +26,7 @@ class ProfileController extends Controller
             ->limit(20)
             ->get();
 
-        return view('member.mobile.profile', [
+        return view('member.app.profile.index', [
             'user' => $user,
             'member' => $member,
             'changeRequests' => $changeRequests,

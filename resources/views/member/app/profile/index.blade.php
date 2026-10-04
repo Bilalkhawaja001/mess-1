@@ -20,4 +20,15 @@
             @endforelse
         </div>
     </section>
+
+    <section class="app-card">
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit"
+                style="width:100%;padding:12px;border:0;border-radius:10px;background:#dc3545;color:#fff;font-weight:700;">
+                Logout
+            </button>
+        </form>
+    </section>
+
 @endsection
